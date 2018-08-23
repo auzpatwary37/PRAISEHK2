@@ -43,7 +43,7 @@ public interface AnalyticalModelTransitRoute{
 	 * @param network
 	 * @return
 	 */
-	public abstract double calcRouteTravelTime(AnalyticalModelNetwork network,Tuple<Double,Double>timeBean);
+	public abstract double calcRouteTravelTime(AnalyticalModelNetwork network,Tuple<Double,Double>timeBean,LinkedHashMap<String,Double>params,LinkedHashMap<String,Double>anaParams);
 	/**
 	 * returns the route total walking distance 
 	 * @return

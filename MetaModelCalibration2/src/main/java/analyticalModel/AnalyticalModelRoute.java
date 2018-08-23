@@ -20,7 +20,7 @@ public interface AnalyticalModelRoute{
 	 * This gives the travel time of the route 
 	 * @return
 	 */
-	public abstract double getTravelTime(AnalyticalModelNetwork network,Tuple<Double,Double>timeBean);
+	public abstract double getTravelTime(AnalyticalModelNetwork network,Tuple<Double,Double>timeBean,LinkedHashMap<String,Double>params,LinkedHashMap<String,Double>anaParams);
 	
 	/**
 	 * This one gives the total route distance 

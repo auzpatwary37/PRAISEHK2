@@ -1,6 +1,7 @@
 package analyticalModel1;
 
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.matsim.api.core.v01.network.Link;
@@ -77,14 +78,12 @@ public class CNLLink extends AnalyticalModelLink{
 	/**
 	 * employs BPR travel time function
 	 */
-	public double getLinkTravelTime(Tuple<Double,Double> timeBean) {
+	public double getLinkTravelTime(Tuple<Double,Double> timeBean,LinkedHashMap<String,Double>params,LinkedHashMap<String,Double>anaParams) {
 		if(!this.link.getAllowedModes().contains("train")) {
 		double totalpcu=super.getLinkCarVolume()+super.getLinkTransitVolume();
-		if(super.getLinkCarVolume()>0) {
-		}
 		double capacity=super.getCapacity()*(timeBean.getSecond()-timeBean.getFirst())/3600;
 		double freeflowTime=super.getLength()/super.getFreespeed();
-		double linkTravelTime=freeflowTime*(1+this.alpha*Math.pow(totalpcu/capacity, beta));
+		double linkTravelTime=freeflowTime*(1+anaParams.get("BPRalpha")*Math.pow(totalpcu/capacity, anaParams.get("BPRbeta")));
 		return linkTravelTime;
 		}else {
 			linkTravelTime=this.link.getLength()/(this.link.getFreespeed()*1000/(3600));

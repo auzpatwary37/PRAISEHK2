@@ -112,6 +112,22 @@ public class CNLSUEModel implements AnalyticalModel{
 		private Population lastPopulation;
 	
 	
+		//All the parameters name
+		
+		public final String MarginalUtilityofTravelCarName="MarginalUtilityofTravelCar";
+		public final String MarginalUtilityofDistanceCarName="MarginalUtilityofDistanceCar";
+		public final String MarginalUtilityofMoneyName="MarginalUtilityofMoney";
+		public final String DistanceBasedMoneyCostCarName="DistanceBasedMoneyCostCar";
+		public final String MarginalUtilityofTravelptName="MarginalUtilityofTravelpt";
+		public final String MarginalUtilityOfDistancePtName="MarginalUtilityOfDistancePt";
+		public final String MarginalUtilityofWaitingName="MarginalUtilityofWaiting";
+		public final String UtilityOfLineSwitchName="UtilityOfLineSwitch";
+		public final String MarginalUtilityOfWalkingName="MarginalUtilityOfWalking";
+		public final String DistanceBasedMoneyCostWalkName="DistanceBasedMoneyCostWalk";
+		public final String ModeConstantPtname="ModeConstantPt";
+		public final String ModeConstantCarName="ModeConstantCar";
+		public final String MarginalUtilityofPerformName="MarginalUtilityofPerform";
+		
 	/**
 	 * Blank Constructor
 	 */
@@ -162,7 +178,7 @@ public class CNLSUEModel implements AnalyticalModel{
 		this.Params.put("ModeConstantPt",config.planCalcScore().getOrCreateModeParams("pt").getConstant());
 		this.Params.put("ModeConstantCar",config.planCalcScore().getOrCreateModeParams("car").getConstant());
 		this.Params.put("MarginalUtilityofPerform", config.planCalcScore().getPerforming_utils_hr());
-		
+		this.Params.put("CapacityMultiplier", 1.0);
 	}
 	
 	public void setDefaultParameters(LinkedHashMap<String,Double> params) {

@@ -1,5 +1,6 @@
 package analyticalModel;
 
+import java.util.LinkedHashMap;
 import java.util.Set;
 
 import org.matsim.api.core.v01.Coord;
@@ -58,7 +59,7 @@ public abstract class AnalyticalModelLink implements Link{
 	 * 
 	 */
 	
-	public abstract double getLinkTravelTime(Tuple<Double,Double> timeBean);
+	public abstract double getLinkTravelTime(Tuple<Double,Double> timeBean,LinkedHashMap<String,Double>params,LinkedHashMap<String,Double>anaParams);
 	public void resetLinkVolume() {
 		this.linkCarVolume=0;
 		this.linkTransitPassenger=0;

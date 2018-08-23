@@ -34,10 +34,10 @@ public class CNLRoute implements AnalyticalModelRoute{
 	
 	
 	@Override
-	public double getTravelTime(AnalyticalModelNetwork network,Tuple<Double,Double>timeBean) {
+	public double getTravelTime(AnalyticalModelNetwork network,Tuple<Double,Double>timeBean,LinkedHashMap<String,Double> params,LinkedHashMap<String,Double>anaParams) {
 		this.travelTime=0;
 		for(Id<Link> lId:this.links) {
-			this.travelTime+=((CNLLink)network.getLinks().get(lId)).getLinkTravelTime(timeBean);
+			this.travelTime+=((CNLLink)network.getLinks().get(lId)).getLinkTravelTime(timeBean,params,anaParams);
 		}
 		return this.travelTime;
 	}
@@ -77,7 +77,7 @@ public class CNLRoute implements AnalyticalModelRoute{
 		double MUDistanceCar=parmas.get("MarginalUtilityofDistanceCar");
 		
 		this.RouteUtility=ModeConstant+
-				this.getTravelTime(network,timeBean)*MUTravelTime+
+				this.getTravelTime(network,timeBean,parmas,anaParmas)*MUTravelTime+
 				(MUDistanceCar+MUMoney*DistanceBasedMoneyCostCar)*this.getRouteDistance();
 				
  		return this.RouteUtility*anaParmas.get("LinkMiu");
