@@ -43,6 +43,7 @@ import analyticalModel.AnalyticalModelODpair;
 import analyticalModel.AnalyticalModelODpairs;
 import analyticalModel.AnalyticalModelRoute;
 import analyticalModel.AnalyticalModelTransitRoute;
+import analyticalModel.InternalParamCalibratorFunction;
 import analyticalModel.TransitLink;
 import de.xypron.jcobyla.Calcfc;
 import de.xypron.jcobyla.Cobyla;
@@ -51,6 +52,7 @@ import dynamicTransitRouter.fareCalculators.FareCalculator;
 import dynamicTransitRouter.fareCalculators.MTRFareCalculator;
 import dynamicTransitRouter.fareCalculators.UniformFareCalculator;
 import dynamicTransitRouter.fareCalculators.ZonalFareXMLParser;
+import measurements.Measurements;
 
 
 public class CNLSUEModel implements AnalyticalModel{
@@ -222,6 +224,7 @@ public class CNLSUEModel implements AnalyticalModel{
 				}
 			}
 		}
+		logger.info("Completed transit vehicle overlay.");
 	}
 	
 	
@@ -259,10 +262,10 @@ public class CNLSUEModel implements AnalyticalModel{
 			for(Id<AnalyticalModelODpair> odId:this.getDemand().get(timeBeanId).keySet()) {
 				double totalDemand=this.getDemand().get(timeBeanId).get(odId);
 				this.getCarDemand().get(timeBeanId).put(odId, 0.5*totalDemand);
-				//System.out.println();
 			}
+			logger.info("Startig from 0.5 auto and transit ratio");
 			if(this.getDemand().get(timeBeanId).size()!=this.carDemand.get(timeBeanId).size()) {
-				System.out.println("ERROR!!!!");
+				logger.error("carDemand and total demand do not have same no of OD pair. This should not happen. Please check");
 			}
 		}
 		
@@ -276,8 +279,8 @@ public class CNLSUEModel implements AnalyticalModel{
 			}
 			
 		}
-		System.out.println("Demand total = "+agentDemand);
-		System.out.println("Total Agent Trips = "+agentTrip);
+		logger.info("Demand total = "+agentDemand);
+		logger.info("Total Agent Trips = "+agentTrip);
 	
 	}
 	
@@ -427,6 +430,7 @@ public class CNLSUEModel implements AnalyticalModel{
 			
 			//This Check is to make sure the exp(utility) do not go to infinity.
 			if(u>300||u<-300) {
+				logger.error("utility is either too small or too large. Increase or decrease the link miu accordingly. The utility is "+u+" for route "+r.getRouteId());
 				throw new IllegalArgumentException("stop!!!");
 			}
 			totalUtility+=Math.exp(u);
@@ -444,6 +448,7 @@ public class CNLSUEModel implements AnalyticalModel{
 //		}
 		//If total utility is zero, then there should not be any route. For testing purpose, can be removed later 
 		if(totalUtility==0) {
+			logger.error("utility is zero. Please check.");
 			throw new IllegalArgumentException("Stop!!!!");
 		}
 		
@@ -456,6 +461,7 @@ public class CNLSUEModel implements AnalyticalModel{
 			double flow=u/totalUtility*demand;
 			//For testing purpose, can be removed later
 			if(flow==Double.NaN||flow==Double.POSITIVE_INFINITY) {
+				logger.error("The flow is NAN. This can happen for a number of reasons. Mostly is total utility of all the routes in a OD pair is zero");
 				throw new IllegalArgumentException("Wait!!!!Error!!!!");
 			}
 			routeFlows.put(r.getRouteId(),flow);
@@ -499,19 +505,20 @@ public class CNLSUEModel implements AnalyticalModel{
 					this.getNetworks().get(timeBeanId),this.fareCalculator,this.timeBeans.get(timeBeanId));
 				
 				if(u==Double.NaN) {
+					logger.error("The flow is NAN. This can happen for a number of reasons. Mostly is total utility of all the routes in a OD pair is zero");
 					throw new IllegalArgumentException("Utility is NAN!!!");
 				}
 			}else {
 				u=0;
 			}
 			if(u>300) {
-				System.out.println("STOP!!!");
+				logger.warn("STOP!!!Utility is too large >300");
 			}
 			this.getOdPairs().getODpairset().get(ODpairId).updateTrRouteUtility(r.getTrRouteId(), u,timeBeanId);
 			totalUtility+=Math.exp(u);
 		}
 		if(totalUtility==0) {
-			System.out.println("STopp!!!!");
+			logger.warn("STopp!!!! Total utility in the OD pair is zero. This can happen if there is no transit route in that OD pair.");
 		}
 		for(AnalyticalModelTransitRoute r:routes){
 			double totalDemand=this.getDemand().get(timeBeanId).get(ODpairId);
@@ -524,16 +531,15 @@ public class CNLSUEModel implements AnalyticalModel{
 					get(r.getTrRouteId());
 			double flow=q*Math.exp(utility)/totalUtility;
 			if(Double.isNaN(flow)||flow==Double.POSITIVE_INFINITY||flow==Double.NEGATIVE_INFINITY) {
+				logger.error("The flow is NAN. This can happen for a number of reasons. Mostly is total utility of all the routes in a OD pair is zero");
 				throw new IllegalArgumentException("Error!!!!");
 			}
 			routeFlows.put(r.getTrRouteId(),flow);
 					
 		}
-//		if(this.consecutiveSUEErrorIncrease.get(timeBeanId)>=3) {
-//			throw new IllegalArgumentException("Errors are worsenning...!!!");
-//		}
+
 		}
-		//System.out.println("test");
+		
 		Set<Id<TransitLink>>linksets=getOdPairs().getODpairset().get(ODpairId).getTrLinkIncidence().keySet();
 		for(Id<TransitLink> linkId:linksets){
 			if(this.getTransitLinks().get(timeBeanId).containsKey(linkId)) {
@@ -546,6 +552,7 @@ public class CNLSUEModel implements AnalyticalModel{
 				linkflow+=routeFlows.get(r.getTrRouteId());
 				}
 				if(Double.isNaN(linkflow)) {
+					logger.error("The flow is NAN. This can happen for a number of reasons. Mostly is total utility of all the routes in a OD pair is zero");
 					throw new IllegalArgumentException("Stop!!!");
 				}
 			}
@@ -585,7 +592,7 @@ public class CNLSUEModel implements AnalyticalModel{
 				}
 			}
 		}
-		//System.out.println(linkVolume.size());
+		
 		return linkVolume;
 	}
 	
@@ -657,12 +664,7 @@ public class CNLSUEModel implements AnalyticalModel{
 				}
 			}
 			squareSum+=update*update;
-			//System.out.println("Update = "+update);
 			((AnalyticalModelLink) this.getNetworks().get(timeBeanId).getLinks().get(linkId)).addLinkCarVolume(update);
-			//System.out.println("Updated Link volume = "+this.sueNetwork.getSUELinks().get(linkId).getLinkVolume());
-//			if(this.consecutiveSUEErrorIncrease.get(timeBeanId)>=3) {
-//				throw new IllegalArgumentException("Errors are worsenning...!!!");
-//			}
 		}
 		for(Id<TransitLink> trlinkId:transitlinkVolume.keySet()){
 			//System.out.println("testing");
@@ -671,9 +673,7 @@ public class CNLSUEModel implements AnalyticalModel{
 			double oldVolume=trl.getPassangerCount();
 			double update;
 			double counterPart=1/beta.get(timeBeanId).get(counter-1);
-			//this line is for non-weighted MSA(method of successive average)
-			//comment out the next line to change the process to weighted MSA
-			//counterPart=1/counter;
+			
 			update=counterPart*(newVolume-oldVolume);
 			if(oldVolume!=0) {
 				if(Math.abs(update)/oldVolume*100>this.tolleranceLink) {
@@ -686,8 +686,6 @@ public class CNLSUEModel implements AnalyticalModel{
 		
 		}
 		squareSum=Math.sqrt(squareSum);
-//		System.out.println("totalError for time Bean Id "+timeBeanId+" = "+squareSum );
-//		System.out.println("links not converged in time bean id "+timeBeanId+" = "+linkSum);
 		if(counter==1) {
 			this.error1.get(timeBeanId).clear();
 		}
@@ -708,7 +706,7 @@ public class CNLSUEModel implements AnalyticalModel{
 	 * @return
 	 */
 	protected boolean CheckConvergence(HashMap<Id<Link>,Double> linkVolume,HashMap<Id<TransitLink>,Double> transitlinkVolume, double tollerance,String timeBeanId,int counter){
-		//HashMap<Id<Link>,Double> currentLinkVolume=new HashMap<>();
+		
 		double squareSum=0;
 		double sum=0;
 		double error=0;
@@ -722,11 +720,7 @@ public class CNLSUEModel implements AnalyticalModel{
 				if(error==Double.POSITIVE_INFINITY||error==Double.NEGATIVE_INFINITY) {
 					throw new IllegalArgumentException("Error is infinity!!!");
 				}
-				if(error/newVolume*100>tollerance) {
-//					if(error>1) {
-////						System.out.println("Thats not right!!!");
-//					//throw new IllegalArgumentException("Wait we need to investigate!!!!");
-//					}
+				if(error/newVolume*100>tollerance) {					
 					sum+=1;
 				}
 			}
@@ -744,9 +738,7 @@ public class CNLSUEModel implements AnalyticalModel{
 				double newVolume=transitlinkVolume.get(transitlinkid);
 				error=Math.pow((currentVolume-newVolume),2);
 				if(error/newVolume*100>tollerance) {
-//					if(error>1) {
-//						System.out.println("Thats outraageous!!!");
-//					}
+
 					sum+=1;
 				}
 			}
@@ -763,7 +755,7 @@ public class CNLSUEModel implements AnalyticalModel{
 			this.error.get(timeBeanId).clear();
 		}
 		this.error.get(timeBeanId).add(squareSum);
-		System.out.println("ERROR amount for "+timeBeanId+" = "+squareSum);
+		logger.info("ERROR amount for "+timeBeanId+" = "+squareSum);
 		//System.out.println("in timeBean Id "+timeBeanId+" No of link not converged = "+sum);
 		
 		try {
@@ -808,6 +800,7 @@ public class CNLSUEModel implements AnalyticalModel{
 				//System.out.println("Car Proportion = "+carProportion);
 				Double cardemand=Math.exp(carUtility*modeMiu)/(Math.exp(carUtility*modeMiu)+Math.exp(transitUtility*modeMiu))*this.getDemand().get(timeBeanId).get(odPair.getODpairId());
 				if(cardemand==Double.NaN||cardemand==Double.POSITIVE_INFINITY||cardemand==Double.NEGATIVE_INFINITY) {
+					logger.error("Car Demand is invalid");
 					throw new IllegalArgumentException("car demand is invalid");
 				}
 				this.getCarDemand().get(timeBeanId).put(odPair.getODpairId(),cardemand);
@@ -818,8 +811,8 @@ public class CNLSUEModel implements AnalyticalModel{
 	
 	
 	
-	public void calibrateInternalParams(CountData countData,LinkedHashMap<String,Double> initialParam,LinkedHashMap<String,Double>currentParam) {
-		//TODO: fix it
+	public Map<Integer, Measurements> calibrateInternalParams(Map<Integer,Measurements> simMeasurements,Map<Integer,LinkedHashMap<String,Double>>params,LinkedHashMap<String,Double> initialParam,int currentParamNo) {
+		
 		double[] x=new double[initialParam.size()];
 
 		int j=0;
@@ -828,7 +821,7 @@ public class CNLSUEModel implements AnalyticalModel{
 			j++;
 		}
 
-		InternalParamCalibratorFunction iFunction=new InternalParamCalibratorFunction(countData,this,initialParam,currentParam);
+		InternalParamCalibratorFunction iFunction=new InternalParamCalibratorFunction(simMeasurements,params,this,initialParam,currentParamNo);
 		
 		//Call the optimization subroutine
 		CobylaExitStatus result = Cobyla.findMinimum(iFunction,x.length, x.length*2,
@@ -838,7 +831,7 @@ public class CNLSUEModel implements AnalyticalModel{
 			this.AnalyticalModelInternalParams.put(s, initialParam.get(s)*(x[i]/100+1));
 			i++;
 		}
-		iFunction.updateAnaCount();
+		return iFunction.getUpdatedAnaCount();
 	}
 	
 	

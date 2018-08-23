@@ -161,12 +161,15 @@ public class InternalParamCalibratorFunction implements Calcfc{
 				return anaParam;
 			}
 			public Map<Integer,Measurements> getUpdatedAnaCount() {
-				for(int i=0;i<=this.countData.getCurrentSimIteration();i++) {
-					HashMap<String,HashMap<Id<Link>,Double>> linkFlows=this.sue.perFormSUE(new LinkedHashMap<>(this.countData.GetParam(i)));
-					this.countData.updateAnalyticalModelData(linkFlows, i);
+				Map<Integer,Measurements> anaMeasurements=new HashMap<>();
+				for(int i=0;i<this.simMeasurements.size();i++) {
+					anaMeasurements.put(i,this.simMeasurements.get(i).clone());
+					Map<String,Map<Id<Link>,Double>> linkFlows=this.sue.perFormSUE(new LinkedHashMap<>(this.Parmas.get(i)));
+					anaMeasurements.get(i).updateMeasurements(linkFlows);
 				}
+				return anaMeasurements;
 			}
 			
 		}
 
-}
+
