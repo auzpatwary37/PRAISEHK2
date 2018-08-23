@@ -1,4 +1,4 @@
-package analyticalModel1;
+package analyticalModelImpl;
 
 import java.io.File;
 import java.io.FileWriter;

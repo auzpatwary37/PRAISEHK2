@@ -1,4 +1,4 @@
-package analyticalModel1;
+package analyticalModelImpl;
 
 import java.util.HashMap;
 import java.util.LinkedHashMap;

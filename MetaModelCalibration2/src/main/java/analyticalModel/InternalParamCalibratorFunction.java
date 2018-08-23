@@ -9,7 +9,7 @@ import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.network.Link;
 import org.matsim.core.utils.collections.Tuple;
 
-import analyticalModel1.CNLSUEModel;
+
 import de.xypron.jcobyla.Calcfc;
 import measurements.Measurement;
 import measurements.Measurements;
