@@ -144,6 +144,7 @@ public class CNLSUEModel implements AnalyticalModel{
 			this.error1.put(timeBeanId, new ArrayList<Double>());
 			
 		}
+		logger.info("Analytical model created successfully.");
 		
 	}
 	

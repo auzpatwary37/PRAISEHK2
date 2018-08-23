@@ -68,14 +68,8 @@ public class CNLTransitTransferLink extends TransitTransferLink {
 			double noOfVehicles=this.nextdLink.getFrequency();
 			currentOnboardPassenger=((CNLLink)network.getLinks().get(this.nextdLink.getLinkList().get(0)))
 				.getTransitPassengerVolume(this.nextdLink.getLineId()+"_"+this.nextdLink.getRouteId());
-//			if(this.currentOnboardPassenger>0) {
-//				System.out.println("Thats something....");
-//			}
-			this.waitingTime=headway*anaParams.get("Transferalpha")+
-					headway*Math.pow((this.passangerCount+this.currentOnboardPassenger)/(capacity*noOfVehicles),anaParams.get("Transferbeta"));
-			
-//				System.out.println("What the hell");
-//			}
+			this.waitingTime=headway*anaParams.get(CNLSUEModel.TransferalphaName)+
+					headway*Math.pow((this.passangerCount+this.currentOnboardPassenger)/(capacity*noOfVehicles),anaParams.get(CNLSUEModel.TransferbetaName));
 			if(this.waitingTime==Double.NaN||this.waitingTime==Double.POSITIVE_INFINITY) {
 				return this.waitingTime=86400;
 			}

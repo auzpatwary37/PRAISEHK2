@@ -59,28 +59,28 @@ public class CNLRoute implements AnalyticalModelRoute{
 	@Override
 	public double calcRouteUtility(LinkedHashMap<String, Double> parmas,LinkedHashMap<String, Double> anaParmas,AnalyticalModelNetwork network,Tuple<Double,Double>timeBean) {
 		
-		double MUTravelTime=parmas.get("MarginalUtilityofTravelCar")/3600.0-parmas.get("MarginalUtilityofPerform")/3600.0;
+		double MUTravelTime=parmas.get(CNLSUEModel.MarginalUtilityofTravelCarName)/3600.0-parmas.get(CNLSUEModel.MarginalUtilityofPerformName)/3600.0;
 		double ModeConstant;
-		if(parmas.get("ModeConstantCar")==null) {
+		if(parmas.get(CNLSUEModel.ModeConstantCarName)==null) {
 			ModeConstant=0;
 		}else {
-			ModeConstant=parmas.get("ModeConstantCar");
+			ModeConstant=parmas.get(CNLSUEModel.ModeConstantCarName);
 		}
-		Double MUMoney=parmas.get("MarginalUtilityofMoney");
+		Double MUMoney=parmas.get(CNLSUEModel.MarginalUtilityofMoneyName);
 		if(MUMoney==null) {
 			MUMoney=1.;
 		}
-		Double DistanceBasedMoneyCostCar=parmas.get("DistanceBasedMoneyCostCar");
+		Double DistanceBasedMoneyCostCar=parmas.get(CNLSUEModel.DistanceBasedMoneyCostCarName);
 		if(DistanceBasedMoneyCostCar==null) {
 			DistanceBasedMoneyCostCar=0.;
 		}
-		double MUDistanceCar=parmas.get("MarginalUtilityofDistanceCar");
+		double MUDistanceCar=parmas.get(CNLSUEModel.MarginalUtilityofDistanceCarName);
 		
 		this.RouteUtility=ModeConstant+
 				this.getTravelTime(network,timeBean,parmas,anaParmas)*MUTravelTime+
 				(MUDistanceCar+MUMoney*DistanceBasedMoneyCostCar)*this.getRouteDistance();
 				
- 		return this.RouteUtility*anaParmas.get("LinkMiu");
+ 		return this.RouteUtility*anaParmas.get(CNLSUEModel.LinkMiuName);
 	}
 	@Override
 	public double getOtherMoneyCost() {

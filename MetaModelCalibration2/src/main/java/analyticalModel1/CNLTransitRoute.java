@@ -7,7 +7,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-
+import org.apache.log4j.Logger;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.network.Link;
@@ -41,6 +41,9 @@ import dynamicTransitRouter.fareCalculators.MTRFareCalculator;
  * TODO: Fix Route Utility
  */
 public class CNLTransitRoute implements AnalyticalModelTransitRoute{
+	
+	private final Logger logger=Logger.getLogger(CNLTransitRoute.class);
+	
 	private TransitSchedule transitSchedule;
 	private Scenario scenario;
 	private final Id<AnalyticalModelTransitRoute> trRouteId;
@@ -64,11 +67,15 @@ public class CNLTransitRoute implements AnalyticalModelTransitRoute{
 		this.scenario=scenario;
 		this.transitSchedule=ts;
 		
-		
+		try {
 		if(!(ptlegList.get(0).getMode().equals("transit_walk") && ptlegList.get(ptlegList.size()-1).getMode().equals("transit_walk"))) {
-			System.out.println("Invalid trip legs, The trip must have at least two walk legs at the start and end");
+			logger.error("Invalid trip legs, The trip must have at least two walk legs at the start and end");
 		}else if (ptactivityList.size()!=ptlegList.size()+1) {
-			System.out.println("There must be exactly one more activity than no of trip legs");
+			logger.error("There must be exactly one more activity than no of trip legs");
+		}
+		throw new IllegalArgumentException("Invalid input for creating transit route");
+		}catch(Exception e) {
+			logger.error("could not create transit route, see error log.");
 		}
 		
 		
@@ -112,9 +119,6 @@ public class CNLTransitRoute implements AnalyticalModelTransitRoute{
 			}
 			
 		}
-		if(transferLinkCount!=directLinkCount+1) {
-			System.out.println("Sorry Assumption not valid!!!");
-		}
 		
 		for(int i=0;i<=Collections.max(tempTransferLinks.keySet());i++) {
 			this.transferLinks.add(tempTransferLinks.get(i));
@@ -155,13 +159,13 @@ public class CNLTransitRoute implements AnalyticalModelTransitRoute{
 	@Override
 	public double calcRouteUtility(LinkedHashMap<String, Double> params,LinkedHashMap<String, Double> anaParams,AnalyticalModelNetwork network,Map<String,FareCalculator>farecalc,Tuple<Double,Double>timeBean) {
 		
-		double MUTravelTime=params.get("MarginalUtilityofTravelpt")/3600.0-params.get("MarginalUtilityofPerform")/3600.0;
-		double MUDistance=params.get("MarginalUtilityOfDistancePt");
-		double MUWalkTime=params.get("MarginalUtilityOfWalking")/3600.0-params.get("MarginalUtilityofPerform")/3600.0;
-		double MUWaitingTime=params.get("MarginalUtilityofWaiting")/3600-params.get("MarginalUtilityofPerform")/3600.0;
-		double ModeConstant=params.get("ModeConstantPt");
-		double MUMoney=params.get("MarginalUtilityofMoney");
-		double DistanceBasedMoneyCostWalk=params.get("DistanceBasedMoneyCostWalk");
+		double MUTravelTime=params.get(CNLSUEModel.MarginalUtilityofTravelptName)/3600.0-params.get(CNLSUEModel.MarginalUtilityofPerformName)/3600.0;
+		double MUDistance=params.get(CNLSUEModel.MarginalUtilityOfDistancePtName);
+		double MUWalkTime=params.get(CNLSUEModel.MarginalUtilityOfWalkingName)/3600.0-params.get(CNLSUEModel.MarginalUtilityofPerformName)/3600.0;
+		double MUWaitingTime=params.get(CNLSUEModel.MarginalUtilityofWaitingName)/3600-params.get(CNLSUEModel.MarginalUtilityofPerformName)/3600.0;
+		double ModeConstant=params.get(CNLSUEModel.ModeConstantPtname);
+		double MUMoney=params.get(CNLSUEModel.MarginalUtilityofMoneyName);
+		double DistanceBasedMoneyCostWalk=params.get(CNLSUEModel.DistanceBasedMoneyCostWalkName);
 		double fare=this.getFare(transitSchedule, farecalc);
 		double travelTime=this.calcRouteTravelTime(network,timeBean,params,anaParams);
 		double walkTime=this.getRouteWalkingDistance()/1.4;
@@ -169,7 +173,7 @@ public class CNLTransitRoute implements AnalyticalModelTransitRoute{
 		double waitingTime=this.getRouteWaitingTime(anaParams,network);
 		double distance=this.getRouteDistance(network);
 		double utility=0;
-		double MUTransfer=params.get("UtilityOfLineSwitch");
+		double MUTransfer=params.get(CNLSUEModel.UtilityOfLineSwitchName);
 		
 		utility=ModeConstant+
 				travelTime*MUTravelTime+
@@ -180,9 +184,9 @@ public class CNLTransitRoute implements AnalyticalModelTransitRoute{
 				+MUTransfer*(this.transferLinks.size()-1)
 				+MUDistance*distance*MUMoney;
 		if(utility==0) {
-			System.out.println("Stop!!!");
+			logger.warn("Stop!!! route utility is zero.");
 		}
-		return utility*anaParams.get("LinkMiu");
+		return utility*anaParams.get(CNLSUEModel.LinkMiuName);
 	}
 	
 	
@@ -350,9 +354,7 @@ public class CNLTransitRoute implements AnalyticalModelTransitRoute{
 			i++;
 		}
 		CNLTransitRoute trRoute=new CNLTransitRoute(transferLinks,dlinks,this.scenario,this.transitSchedule,this.routeWalkingDistance,this.trRouteId.toString());
-		if(this.directLinks.size()!=trRoute.directLinks.size()||this.transferLinks.size()!=trRoute.transferLinks.size()) {
-			System.out.println("STOP!!!!");
-		}
+		
 		return trRoute ; 
 	}
 }	
