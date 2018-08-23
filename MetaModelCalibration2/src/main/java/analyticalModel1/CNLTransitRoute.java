@@ -163,7 +163,7 @@ public class CNLTransitRoute implements AnalyticalModelTransitRoute{
 		double MUMoney=params.get("MarginalUtilityofMoney");
 		double DistanceBasedMoneyCostWalk=params.get("DistanceBasedMoneyCostWalk");
 		double fare=this.getFare(transitSchedule, farecalc);
-		double travelTime=this.calcRouteTravelTime(network,timeBean);
+		double travelTime=this.calcRouteTravelTime(network,timeBean,params,anaParams);
 		double walkTime=this.getRouteWalkingDistance()/1.4;
 		double walkDist=this.getRouteWalkingDistance();
 		double waitingTime=this.getRouteWaitingTime(anaParams,network);
@@ -246,10 +246,10 @@ public class CNLTransitRoute implements AnalyticalModelTransitRoute{
 	}
 
 	@Override
-	public double calcRouteTravelTime(AnalyticalModelNetwork network,Tuple<Double,Double>timeBean) {
+	public double calcRouteTravelTime(AnalyticalModelNetwork network,Tuple<Double,Double>timeBean,LinkedHashMap<String,Double>params,LinkedHashMap<String,Double>anaParams) {
 		double routeTravelTime=0;
 		for(CNLTransitDirectLink dlink:this.directLinks) {
-			routeTravelTime+=dlink.getLinkTravelTime(network,timeBean);
+			routeTravelTime+=dlink.getLinkTravelTime(network,timeBean,params,anaParams);
 		}
 		return routeTravelTime;
 	}

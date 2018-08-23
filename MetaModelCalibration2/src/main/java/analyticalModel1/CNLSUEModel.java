@@ -16,6 +16,7 @@ import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.parsers.SAXParser;
 import javax.xml.parsers.SAXParserFactory;
 
+import org.apache.log4j.Logger;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.network.Link;
@@ -66,11 +67,8 @@ public class CNLSUEModel implements AnalyticalModel{
 	 * 
 	 */
 	
-	//TODO: Calibrate AnalyticalModelInternal Parameters
-	
-	
-	
-	//Parameters
+		private final Logger logger=Logger.getLogger(CNLSUEModel.class);
+
 		private Map<String,Double> consecutiveSUEErrorIncrease=new ConcurrentHashMap<>();
 		private LinkedHashMap<String,Double> AnalyticalModelInternalParams=new LinkedHashMap<>();
 		private LinkedHashMap<String,Double> Params=new LinkedHashMap<>();
@@ -81,14 +79,10 @@ public class CNLSUEModel implements AnalyticalModel{
 		private double gammaMSA=.1;//parameter for decreasing MSA step size
 		
 		//other Parameters for the Calibration Process
-		private double routePercentage=0.05;
 		private double tollerance=0.01;
 		private double tolleranceLink=0.1;
 		//user input
-		/**
-		 * Time Bean Has to be added in hours.
-		 * the tuples contain from and to hours data.
-		 */
+	
 		private Map<String, Tuple<Double,Double>> timeBeans;
 		
 		//MATSim Input
@@ -103,7 +97,7 @@ public class CNLSUEModel implements AnalyticalModel{
 		private Map<String,ArrayList<Double>> error=new ConcurrentHashMap<>();
 		private Map<String,ArrayList<Double>> error1=new ConcurrentHashMap<>();//This is related to weighted MSA of the SUE
 		
-		//TimebeanId vs demands hashmap
+		//TimebeanId vs demands map
 		private Map<String,HashMap<Id<AnalyticalModelODpair>,Double>> Demand=new ConcurrentHashMap<>();//Holds ODpair based demand
 		private Map<String,HashMap<Id<AnalyticalModelODpair>,Double>> carDemand=new ConcurrentHashMap<>(); 
 		private CNLODpairs odPairs;
@@ -113,27 +107,34 @@ public class CNLSUEModel implements AnalyticalModel{
 	
 	
 		//All the parameters name
+		//They are kept public to make it easily accessible as they are final they can not be modified
 		
-		public final String MarginalUtilityofTravelCarName="MarginalUtilityofTravelCar";
-		public final String MarginalUtilityofDistanceCarName="MarginalUtilityofDistanceCar";
-		public final String MarginalUtilityofMoneyName="MarginalUtilityofMoney";
-		public final String DistanceBasedMoneyCostCarName="DistanceBasedMoneyCostCar";
-		public final String MarginalUtilityofTravelptName="MarginalUtilityofTravelpt";
-		public final String MarginalUtilityOfDistancePtName="MarginalUtilityOfDistancePt";
-		public final String MarginalUtilityofWaitingName="MarginalUtilityofWaiting";
-		public final String UtilityOfLineSwitchName="UtilityOfLineSwitch";
-		public final String MarginalUtilityOfWalkingName="MarginalUtilityOfWalking";
-		public final String DistanceBasedMoneyCostWalkName="DistanceBasedMoneyCostWalk";
-		public final String ModeConstantPtname="ModeConstantPt";
-		public final String ModeConstantCarName="ModeConstantCar";
-		public final String MarginalUtilityofPerformName="MarginalUtilityofPerform";
+		public static final String MarginalUtilityofTravelCarName="MarginalUtilityofTravelCar";
+		public static final String MarginalUtilityofDistanceCarName="MarginalUtilityofDistanceCar";
+		public static final String MarginalUtilityofMoneyName="MarginalUtilityofMoney";
+		public static final String DistanceBasedMoneyCostCarName="DistanceBasedMoneyCostCar";
+		public static final String MarginalUtilityofTravelptName="MarginalUtilityofTravelpt";
+		public static final String MarginalUtilityOfDistancePtName="MarginalUtilityOfDistancePt";
+		public static final String MarginalUtilityofWaitingName="MarginalUtilityofWaiting";
+		public static final String UtilityOfLineSwitchName="UtilityOfLineSwitch";
+		public static final String MarginalUtilityOfWalkingName="MarginalUtilityOfWalking";
+		public static final String DistanceBasedMoneyCostWalkName="DistanceBasedMoneyCostWalk";
+		public static final String ModeConstantPtname="ModeConstantPt";
+		public static final String ModeConstantCarName="ModeConstantCar";
+		public static final String MarginalUtilityofPerformName="MarginalUtilityofPerform";
+		public static final String CapacityMultiplierName="CapacityMultiplier";
 		
-	/**
-	 * Blank Constructor
-	 */
+		public static final String BPRalphaName="BPRalpha";
+		public static final String BPRbetaName="BPRbeta";
+		public static final String LinkMiuName="LinkMiu";
+		public static final String ModeMiuName="ModeMiu";
+		public static final String TransferalphaName="Transferalpha";
+		public static final String TransferbetaName="Transferbeta";
+
+		
 	public CNLSUEModel(HashMap<String, Tuple<Double,Double>> timeBean) {
 		this.timeBeans=timeBean;
-		this.defaultParameterInitiation();
+		this.defaultParameterInitiation(null);
 		for(String timeBeanId:this.timeBeans.keySet()) {
 			this.getDemand().put(timeBeanId, new HashMap<Id<AnalyticalModelODpair>, Double>());
 			this.getCarDemand().put(timeBeanId, new HashMap<Id<AnalyticalModelODpair>, Double>());
@@ -150,35 +151,37 @@ public class CNLSUEModel implements AnalyticalModel{
 	 * This method loads default values to all the parameters 
 	 * Including the internal parameters
 	 */
-	private void defaultParameterInitiation(){
+	private void defaultParameterInitiation(Config config){
 		//Loads the Internal default parameters 
 		
-		this.AnalyticalModelInternalParams.put("LinkMiu", 0.008);
-		this.AnalyticalModelInternalParams.put("ModeMiu", 0.01);
-		this.AnalyticalModelInternalParams.put("BPRalpha", 0.15);
-		this.AnalyticalModelInternalParams.put("BPRbeta", 4.);
-		this.AnalyticalModelInternalParams.put("Transferalpha", 0.5);
-		this.AnalyticalModelInternalParams.put("Transferbeta", 1.);
+		this.AnalyticalModelInternalParams.put(CNLSUEModel.LinkMiuName, 0.008);
+		this.AnalyticalModelInternalParams.put(CNLSUEModel.ModeMiuName, 0.01);
+		this.AnalyticalModelInternalParams.put(CNLSUEModel.BPRalphaName, 0.15);
+		this.AnalyticalModelInternalParams.put(CNLSUEModel.BPRbetaName, 4.);
+		this.AnalyticalModelInternalParams.put(CNLSUEModel.TransferalphaName, 0.5);
+		this.AnalyticalModelInternalParams.put(CNLSUEModel.TransferbetaName, 1.);
 		this.loadAnalyticalModelInternalPamamsLimit();
 		
 		//Loads the External default Parameters
-		Config config=ConfigUtils.createConfig();
+		if(config==null) {
+			config=ConfigUtils.createConfig();
+		}
 		
 
-		this.Params.put("MarginalUtilityofTravelCar",config.planCalcScore().getOrCreateModeParams("car").getMarginalUtilityOfTraveling());
-		this.Params.put("MarginalUtilityofDistanceCar",config.planCalcScore().getOrCreateModeParams("car").getMarginalUtilityOfDistance());
-		this.Params.put("MarginalUtilityofMoney",config.planCalcScore().getMarginalUtilityOfMoney());
-		this.Params.put("DistanceBasedMoneyCostCar",config.planCalcScore().getOrCreateModeParams("car").getMonetaryDistanceRate());
-		this.Params.put("MarginalUtilityofTravelpt", config.planCalcScore().getOrCreateModeParams("pt").getMarginalUtilityOfTraveling());
-		this.Params.put("MarginalUtilityOfDistancePt", config.planCalcScore().getOrCreateModeParams("pt").getMarginalUtilityOfDistance());
-		this.Params.put("MarginalUtilityofWaiting",config.planCalcScore().getMarginalUtlOfWaitingPt_utils_hr());
-		this.Params.put("UtilityOfLineSwitch",config.planCalcScore().getUtilityOfLineSwitch());
-		this.Params.put("MarginalUtilityOfWalking", config.planCalcScore().getOrCreateModeParams("walk").getMarginalUtilityOfTraveling());
-		this.Params.put("DistanceBasedMoneyCostWalk", config.planCalcScore().getOrCreateModeParams("walk").getMonetaryDistanceRate());
-		this.Params.put("ModeConstantPt",config.planCalcScore().getOrCreateModeParams("pt").getConstant());
-		this.Params.put("ModeConstantCar",config.planCalcScore().getOrCreateModeParams("car").getConstant());
-		this.Params.put("MarginalUtilityofPerform", config.planCalcScore().getPerforming_utils_hr());
-		this.Params.put("CapacityMultiplier", 1.0);
+		this.Params.put(CNLSUEModel.MarginalUtilityofTravelCarName,config.planCalcScore().getOrCreateModeParams("car").getMarginalUtilityOfTraveling());
+		this.Params.put(CNLSUEModel.MarginalUtilityofDistanceCarName,config.planCalcScore().getOrCreateModeParams("car").getMarginalUtilityOfDistance());
+		this.Params.put(CNLSUEModel.MarginalUtilityofMoneyName,config.planCalcScore().getMarginalUtilityOfMoney());
+		this.Params.put(CNLSUEModel.DistanceBasedMoneyCostCarName,config.planCalcScore().getOrCreateModeParams("car").getMonetaryDistanceRate());
+		this.Params.put(CNLSUEModel.MarginalUtilityofTravelptName, config.planCalcScore().getOrCreateModeParams("pt").getMarginalUtilityOfTraveling());
+		this.Params.put(CNLSUEModel.MarginalUtilityOfDistancePtName, config.planCalcScore().getOrCreateModeParams("pt").getMarginalUtilityOfDistance());
+		this.Params.put(CNLSUEModel.MarginalUtilityofWaitingName,config.planCalcScore().getMarginalUtlOfWaitingPt_utils_hr());
+		this.Params.put(CNLSUEModel.UtilityOfLineSwitchName,config.planCalcScore().getUtilityOfLineSwitch());
+		this.Params.put(CNLSUEModel.MarginalUtilityOfWalkingName, config.planCalcScore().getOrCreateModeParams("walk").getMarginalUtilityOfTraveling());
+		this.Params.put(CNLSUEModel.DistanceBasedMoneyCostWalkName, config.planCalcScore().getOrCreateModeParams("walk").getMonetaryDistanceRate());
+		this.Params.put(CNLSUEModel.ModeConstantPtname,config.planCalcScore().getOrCreateModeParams("pt").getConstant());
+		this.Params.put(CNLSUEModel.ModeConstantCarName,config.planCalcScore().getOrCreateModeParams("car").getConstant());
+		this.Params.put(CNLSUEModel.MarginalUtilityofPerformName, config.planCalcScore().getPerforming_utils_hr());
+		this.Params.put(CNLSUEModel.CapacityMultiplierName, 1.0);
 	}
 	
 	public void setDefaultParameters(LinkedHashMap<String,Double> params) {
@@ -189,12 +192,12 @@ public class CNLSUEModel implements AnalyticalModel{
 	
 	
 	protected void loadAnalyticalModelInternalPamamsLimit() {
-		this.AnalyticalModelParamsLimit.put("LinkMiu", new Tuple<Double,Double>(0.008,0.2));
-		this.AnalyticalModelParamsLimit.put("ModeMiu", new Tuple<Double,Double>(0.01,0.5));
-		this.AnalyticalModelParamsLimit.put("BPRalpha", new Tuple<Double,Double>(0.10,0.20));
-		this.AnalyticalModelParamsLimit.put("BPRbeta", new Tuple<Double,Double>(3.,5.));
-		this.AnalyticalModelParamsLimit.put("Transferalpha", new Tuple<Double,Double>(0.25,0.75));
-		this.AnalyticalModelParamsLimit.put("Transferbeta", new Tuple<Double,Double>(0.75,1.5));
+		this.AnalyticalModelParamsLimit.put(CNLSUEModel.LinkMiuName, new Tuple<Double,Double>(0.0075,0.25));
+		this.AnalyticalModelParamsLimit.put(CNLSUEModel.ModeMiuName, new Tuple<Double,Double>(0.01,0.5));
+		this.AnalyticalModelParamsLimit.put(CNLSUEModel.BPRalphaName, new Tuple<Double,Double>(0.10,0.20));
+		this.AnalyticalModelParamsLimit.put(CNLSUEModel.BPRbetaName, new Tuple<Double,Double>(3.,5.));
+		this.AnalyticalModelParamsLimit.put(CNLSUEModel.TransferalphaName, new Tuple<Double,Double>(0.25,0.75));
+		this.AnalyticalModelParamsLimit.put(CNLSUEModel.TransferbetaName, new Tuple<Double,Double>(0.75,1.5));
 	}
 	
 	
@@ -286,7 +289,7 @@ public class CNLSUEModel implements AnalyticalModel{
 	 */
 	
 	@Override
-	public HashMap<String,HashMap<Id<Link>, Double>> perFormSUE(LinkedHashMap<String, Double> params) {
+	public Map<String,Map<Id<Link>, Double>> perFormSUE(LinkedHashMap<String, Double> params) {
 		return this.perFormSUE(params, this.AnalyticalModelInternalParams);
 	}
 	
@@ -297,13 +300,13 @@ public class CNLSUEModel implements AnalyticalModel{
 	 * @return
 	 */
 	@Override
-	public HashMap<String,HashMap<Id<Link>, Double>> perFormSUE(LinkedHashMap<String, Double> params,LinkedHashMap<String,Double> anaParams) {
+	public Map<String,Map<Id<Link>, Double>> perFormSUE(LinkedHashMap<String, Double> params,LinkedHashMap<String,Double> anaParams) {
 		this.resetCarDemand();
 		
 		LinkedHashMap<String,Double> inputParams=new LinkedHashMap<>(params);
 		LinkedHashMap<String,Double> inputAnaParams=new LinkedHashMap<>(anaParams);
 		//Loading missing parameters from the default values		
-		HashMap<String,HashMap<Id<Link>,Double>> outputLinkFlow=new HashMap<>();
+		Map<String,Map<Id<Link>,Double>> outputLinkFlow=new HashMap<>();
 		
 		//Checking and updating for the parameters 
 		for(Entry<String,Double> e:this.Params.entrySet()) {
@@ -783,6 +786,7 @@ public class CNLSUEModel implements AnalyticalModel{
 	 * @param timeBeanId
 	 */
 	protected void performModalSplit(LinkedHashMap<String,Double>params,LinkedHashMap<String,Double>anaParams,String timeBeanId) {
+		double modeMiu=anaParams.get(CNLSUEModel.ModeMiuName);
 		for(AnalyticalModelODpair odPair:this.getOdPairs().getODpairset().values()){
 			double demand=this.getDemand().get(timeBeanId).get(odPair.getODpairId());
 			if(demand!=0) { 
@@ -790,18 +794,18 @@ public class CNLSUEModel implements AnalyticalModel{
 			double transitUtility=odPair.getExpectedMaximumTransitUtility(params, anaParams, timeBeanId);
 			
 			if(carUtility==Double.NEGATIVE_INFINITY||transitUtility==Double.POSITIVE_INFINITY||
-					Math.exp(transitUtility*anaParams.get("ModeMiu"))==Double.POSITIVE_INFINITY) {
+					Math.exp(transitUtility*modeMiu)==Double.POSITIVE_INFINITY) {
 				this.getCarDemand().get(timeBeanId).put(odPair.getODpairId(), 0.0);
 				
 			}else if(transitUtility==Double.NEGATIVE_INFINITY||carUtility==Double.POSITIVE_INFINITY
-					||Math.exp(carUtility*anaParams.get("ModeMiu"))==Double.POSITIVE_INFINITY) {
+					||Math.exp(carUtility*modeMiu)==Double.POSITIVE_INFINITY) {
 				this.getCarDemand().get(timeBeanId).put(odPair.getODpairId(), this.getDemand().get(timeBeanId).get(odPair.getODpairId()));
 			}else if(carUtility==Double.NEGATIVE_INFINITY && transitUtility==Double.NEGATIVE_INFINITY){
 				this.getCarDemand().get(timeBeanId).put(odPair.getODpairId(), 0.);
 			}else {
-				double carProportion=Math.exp(carUtility*anaParams.get("ModeMiu"))/(Math.exp(carUtility*anaParams.get("ModeMiu"))+Math.exp(transitUtility*anaParams.get("ModeMiu")));
+				double carProportion=Math.exp(carUtility*modeMiu)/(Math.exp(carUtility*modeMiu)+Math.exp(transitUtility*modeMiu));
 				//System.out.println("Car Proportion = "+carProportion);
-				Double cardemand=Math.exp(carUtility*anaParams.get("ModeMiu"))/(Math.exp(carUtility*anaParams.get("ModeMiu"))+Math.exp(transitUtility*anaParams.get("ModeMiu")))*this.getDemand().get(timeBeanId).get(odPair.getODpairId());
+				Double cardemand=Math.exp(carUtility*modeMiu)/(Math.exp(carUtility*modeMiu)+Math.exp(transitUtility*modeMiu))*this.getDemand().get(timeBeanId).get(odPair.getODpairId());
 				if(cardemand==Double.NaN||cardemand==Double.POSITIVE_INFINITY||cardemand==Double.NEGATIVE_INFINITY) {
 					throw new IllegalArgumentException("car demand is invalid");
 				}

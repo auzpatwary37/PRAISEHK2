@@ -2,6 +2,7 @@ package analyticalModel;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 
 import org.matsim.api.core.v01.Id;
@@ -79,7 +80,7 @@ public abstract class TransitDirectLink extends TransitLink{
 	public String getRouteId() {
 		return routeId;
 	}
-	public abstract double getLinkTravelTime(AnalyticalModelNetwork network,Tuple<Double,Double>timeBean);
+	public abstract double getLinkTravelTime(AnalyticalModelNetwork network,Tuple<Double,Double>timeBean,LinkedHashMap<String,Double>params,LinkedHashMap<String,Double>anaParams);
 	public TransitSchedule getTs() {
 		return ts;
 	}

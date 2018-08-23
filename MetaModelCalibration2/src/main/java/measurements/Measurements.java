@@ -4,9 +4,12 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.matsim.api.core.v01.Id;
+import org.matsim.api.core.v01.network.Link;
 import org.matsim.core.utils.collections.Tuple;
 
 public class Measurements {
+	
+	
 	
 	private final Map<String,Tuple<Double,Double>> timeBean;
 	private Map<Id<Measurement>,Measurement> measurements=new HashMap<>();
@@ -42,5 +45,11 @@ public class Measurements {
 			m.addMeasurement(mm);
 		}
 		return m;
+	}
+	
+	public void updateMeasurements(Map<String,Map<Id<Link>,Double>> linkVolumes) {
+		for(Measurement m:this.measurements.values()) {
+			m.updateMeasurement(linkVolumes);
+		}
 	}
 }

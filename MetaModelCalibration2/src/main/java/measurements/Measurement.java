@@ -1,5 +1,6 @@
 package measurements;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -10,6 +11,11 @@ import org.matsim.core.utils.collections.Tuple;
 
 public class Measurement {
 	
+	/**
+	 * Some attributes name are kept as public and final string
+	 */
+	public final String linkListAttributeName="LINK_LIST";
+	
 	private final Id<Measurement> id;
 	private Map<String,Object> attributes=new HashMap<>();
 	private final Map<String,Tuple<Double,Double>> timeBean;
@@ -19,7 +25,7 @@ public class Measurement {
 	protected Measurement(String id, Map<String,Tuple<Double,Double>> timeBean) {
 		this.id=Id.create(id, Measurement.class);
 		this.timeBean=timeBean;
-		
+		this.attributes.put(linkListAttributeName, new ArrayList<Id<Link>>());
 	}
 	
 	public void addVolume(String timeBeanId,double volume) {
@@ -62,7 +68,44 @@ public class Measurement {
 		return m;
 	}
 	
+	/**
+	 * Default implementation of updater.
+	 * Should be overridden if necessary.
+	 * @param linkVolumes
+	 * is a Map<timeBeanId,Map<Id<Link>,Double>> containing link traffic volumes of all the time beans
+	 */
+	@SuppressWarnings("unchecked")
 	public void updateMeasurement(Map<String,Map<Id<Link>,Double>>linkVolumes) {
-		
+		if(((ArrayList<Id<Link>>)this.attributes.get(linkListAttributeName)).isEmpty()) {
+			logger.warn("MeasurementId: "+this.getId().toString()+" LinkList is empty!!! creating linkId from measurement ID");
+			((ArrayList<Id<Link>>)this.attributes.get(linkListAttributeName)).add(Id.createLinkId(this.getId().toString()));
+		}
+		if(this.volumes.size()==0) {
+			logger.warn("MeasurementId: "+this.getId().toString()+" Volume is empty!!! Updating volume for all time beans");
+			for(String s: this.timeBean.keySet()) {
+				if(linkVolumes.containsKey(s)) {
+					this.volumes.put(s, 0.);
+				}
+			}
+		}
+		for(String s:volumes.keySet()) {
+			double volume=0;
+			for(Id<Link>linkId:((ArrayList<Id<Link>>)this.attributes.get(linkListAttributeName))) {
+				try {
+					if(linkVolumes.get(s)==null) {
+						throw new IllegalArgumentException("linkVolumes does not contain volume information");
+					}
+					if(linkVolumes.get(s).get(linkId)==null) {
+						throw new IllegalArgumentException("linkVolumes does not contain volume information");
+					}
+					volume+=linkVolumes.get(s).get(linkId);
+				}catch(Exception e) {
+					logger.error("Illegal Argument Excepto. Could not update measurements. Volumes are missing for measurement Id: "+this.getId()+" timeBeanId: "
+							+s+" linkId: "+linkId);
+				}
+				
+			}
+			this.volumes.put(s, volume);
+		}
 	}
 }
