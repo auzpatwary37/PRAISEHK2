@@ -134,7 +134,7 @@ public class CNLSUEModel implements AnalyticalModel{
 		public static final String TransferbetaName="Transferbeta";
 
 		
-	public CNLSUEModel(HashMap<String, Tuple<Double,Double>> timeBean) {
+	public CNLSUEModel(Map<String, Tuple<Double, Double>> timeBean) {
 		this.timeBeans=timeBean;
 		this.defaultParameterInitiation(null);
 		for(String timeBeanId:this.timeBeans.keySet()) {

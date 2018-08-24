@@ -28,7 +28,7 @@ public class MeasurementsStorage {
 	}
 
 
-	public Measurements getSimLinkCount(LinkedHashMap<String,Double>param){
+	public Measurements getSimMeasurement(LinkedHashMap<String,Double>param){
 		return this.linkCounts.get(this.genearteParamId(param));
 	}
 	public static String genearteParamId(LinkedHashMap<String,Double> params) {
@@ -38,6 +38,11 @@ public class MeasurementsStorage {
 		}
 		return paramId;
 	}
+
+	public Measurements getCalibrationMeasurements() {
+		return calibrationMeasurements;
+	}
+
 
 	public void storeMeasurements(LinkedHashMap<String,Double>params,Measurements simMeasurements) {
 		this.linkCounts.put(this.genearteParamId(params), simMeasurements);
