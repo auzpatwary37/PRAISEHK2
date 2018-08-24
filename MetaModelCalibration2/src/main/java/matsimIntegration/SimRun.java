@@ -15,6 +15,6 @@ import analyticalModel.AnalyticalModel;
 public interface SimRun {
 	
 	public void run(AnalyticalModel sue,Config configIn,LinkedHashMap<String,Double> params,boolean generateOd,String threadNo,MeasurementsStorage storage);
-
-	public MeasurementsStorage getMeasurementsStorage();
+	
+	
 }

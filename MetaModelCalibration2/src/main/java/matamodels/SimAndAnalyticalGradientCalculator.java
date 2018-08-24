@@ -53,9 +53,9 @@ public class SimAndAnalyticalGradientCalculator {
 		this.currentIterCounter=currentIterCounter;
 		this.config=config;
 		this.originalParam=OriginalParam;
-		if(gradientCalculationMethod.equals("SPSA")) {
+		if(gradientCalculationMethod.equals(this.SPSAMethodName)) {
 			this.calcSPSAGradient(runParallel);
-		}else {
+		}else if(gradientCalculationMethod.equals(this.FDMethodName)){
 			this.calcFDGradient(runParallel);
 		}
 	}
