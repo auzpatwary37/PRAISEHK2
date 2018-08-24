@@ -68,4 +68,10 @@ public class LinearMetaModel extends MetaModelImpl{
 		return modelOutput;
 		
 	}
+
+
+	@Override
+	public String getMetaModelName() {
+		return this.LinearMetaModelName;
+	}
 }

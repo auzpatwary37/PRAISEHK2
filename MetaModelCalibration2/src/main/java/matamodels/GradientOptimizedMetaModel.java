@@ -79,4 +79,10 @@ public class GradientOptimizedMetaModel extends MetaModelImpl{
 		
 		return m;
 	}
+
+
+	@Override
+	public String getMetaModelName() {
+		return this.GradientBased_III_MetaModelName;
+	}
 }

@@ -133,4 +133,11 @@ public class AnalyticalQuadraticMetaModel extends MetaModelImpl{
 		
 		return H;
 	}
+
+
+
+	@Override
+	public String getMetaModelName() {
+		return this.AnalyticalQuadraticMetaModelName;
+	}
 }

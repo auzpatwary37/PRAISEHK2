@@ -91,4 +91,10 @@ public class AnalyticLinearMetaModel extends MetaModelImpl {
 		return modelOutput;
 		
 	}
+
+
+	@Override
+	public String getMetaModelName() {
+		return this.AnalyticalLinearMetaModelName;
+	}
 }

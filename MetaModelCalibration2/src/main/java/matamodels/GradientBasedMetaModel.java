@@ -65,4 +65,8 @@ public class GradientBasedMetaModel implements MetaModel{
 	public Id<Link> getLinkId(){
 		return this.linkId;
 	}
+	@Override
+	public String getMetaModelName() {
+		return this.GradientBased_I_MetaModelName;
+	}
 }

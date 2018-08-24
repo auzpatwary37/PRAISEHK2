@@ -120,4 +120,9 @@ public class QuadraticMetaModel extends MetaModelImpl{
 		
 		return H;
 	}
+
+	@Override
+	public String getMetaModelName() {
+		return this.QudaraticMetaModelName;
+	}
 }

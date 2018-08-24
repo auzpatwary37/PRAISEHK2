@@ -10,7 +10,6 @@ import java.util.LinkedHashMap;
 public interface MetaModel {
 	
 	
-	
 	/**
 	 * This will calculate the meta-model output
 	 * @param
@@ -33,4 +32,13 @@ public interface MetaModel {
 	 */
 	public double[] getMetaModelParams();
 	
+	public String getMetaModelName();
+	
+	public static final String LinearMetaModelName="Linear";
+	public static final String AnalyticalLinearMetaModelName="AnalyticalLinear";
+	public static final String QudaraticMetaModelName="Quadratic";
+	public static final String AnalyticalQuadraticMetaModelName="AnalyticalQuadratic";
+	public static final String GradientBased_I_MetaModelName="GD-I";
+	public static final String GradientBased_II_MetaModelName="GD-II";
+	public static final String GradientBased_III_MetaModelName="GD-III";
 }

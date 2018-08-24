@@ -138,5 +138,9 @@ public class GradientBaseOptimizedMetaModel extends MetaModelImpl{
 		public Id<Link> getLinkId(){
 			return this.linkId;
 		}
+		@Override
+		public String getMetaModelName() {
+			return this.GradientBased_II_MetaModelName;
+		}
 	}
 
