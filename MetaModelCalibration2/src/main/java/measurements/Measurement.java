@@ -38,6 +38,12 @@ public class Measurement {
 		}
 	}
 	
+	/**
+	 * Call to this method with this.linkListAttributeName String will 
+	 * return a ArrayList<Id<Link>> containing the link Ids of all the links in this measurement
+	 * @param attributeName
+	 * @return
+	 */
 	public Object getAttribute(String attributeName) {
 		return this.attributes.get(attributeName);
 	}
@@ -100,7 +106,7 @@ public class Measurement {
 					}
 					volume+=linkVolumes.get(s).get(linkId);
 				}catch(Exception e) {
-					logger.error("Illegal Argument Excepto. Could not update measurements. Volumes are missing for measurement Id: "+this.getId()+" timeBeanId: "
+					logger.error("Illegal Argument Excepton. Could not update measurements. Volumes are missing for measurement Id: "+this.getId()+" timeBeanId: "
 							+s+" linkId: "+linkId);
 				}
 				
