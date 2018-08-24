@@ -3,11 +3,16 @@ package matamodels;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Map.Entry;
+
+import org.matsim.api.core.v01.Id;
 
 import de.xypron.jcobyla.Calcfc;
 import de.xypron.jcobyla.Cobyla;
 import de.xypron.jcobyla.CobylaExitStatus;
+import measurements.Measurement;
+import measurements.Measurements;
 /**
  * 
  * @author Ashraf
@@ -16,11 +21,12 @@ import de.xypron.jcobyla.CobylaExitStatus;
 public abstract class MetaModelImpl implements MetaModel{
 	
 	
-	
+	protected final Id<Measurement> measurementId;
+	protected final String timeBeanId;
 	protected double[] MetaModelParams;
-	protected String timeBeanId;
-	protected HashMap<Integer,Double> simData=new HashMap<>();
-	protected HashMap<Integer,LinkedHashMap<String,Double>> params;
+	
+	protected Map<Integer,Double> simData=new HashMap<>();
+	protected Map<Integer,LinkedHashMap<String,Double>> params;
 	protected int noOfParams=0;
 	protected int noOfMetaModelParams;
 	/**
@@ -34,12 +40,14 @@ public abstract class MetaModelImpl implements MetaModel{
 	 * in the subclass.
 	 */
 	
-	protected MetaModelImpl(HashMap<Integer,HashMap<String,Double>> SimData,
-			HashMap<Integer, LinkedHashMap<String, Double>> paramsToCalibrate,String timeBeanId, int counter) {
-		for(Entry<Integer, HashMap<String, Double>> e:SimData.entrySet()) {
-			this.simData.put(e.getKey(),e.getValue().get(timeBeanId));
+	protected MetaModelImpl(Id<Measurement> measurementId,Map<Integer,Measurements> SimData,
+			Map<Integer, LinkedHashMap<String, Double>> paramsToCalibrate,String timeBeanId, int currentParamNo) {
+		
+		for(Entry<Integer, Measurements> e:SimData.entrySet()) {
+			this.simData.put(e.getKey(),e.getValue().getMeasurements().get(measurementId).getVolumes().get(timeBeanId));
 		}
-		this.params=new LinkedHashMap<>(paramsToCalibrate);
+		this.measurementId=measurementId;
+		this.params=new HashMap<>(paramsToCalibrate);
 		this.timeBeanId =timeBeanId;
 		this.noOfParams=params.get(0).size();
 	}
@@ -54,13 +62,18 @@ public abstract class MetaModelImpl implements MetaModel{
 	public String getTimeBeanId() {
 		return this.timeBeanId;
 	}
+	
+	@Override
+	public Id<Measurement> getMeasurementId(){
+		return this.measurementId;
+	}
 
 	@Override
 	public double[] getMetaModelParams() {
 		return this.MetaModelParams;
 	}
-	protected double calcEuclDistanceBasedWeight(HashMap<Integer,LinkedHashMap<String,Double>> params, int i, int counter) {
-		LinkedHashMap<String,Double> param1=params.get(counter);
+	protected double calcEuclDistanceBasedWeight(Map<Integer,LinkedHashMap<String,Double>> params, int i, int currentParamNo) {
+		LinkedHashMap<String,Double> param1=params.get(currentParamNo);
 		LinkedHashMap<String,Double> param2=params.get(i);
 		double squareDiff=0;
 		for(String s:param1.keySet()) {
@@ -74,7 +87,7 @@ public abstract class MetaModelImpl implements MetaModel{
 	 * @param counter
 	 */
 	
-	protected void calibrateMetaModel(final int counter) {
+	protected void calibrateMetaModel(final int currentParamNo) {
 		Calcfc optimization=new Calcfc() {
 
 			@Override
@@ -82,7 +95,7 @@ public abstract class MetaModelImpl implements MetaModel{
 				double objective=0;
 				MetaModelParams=x;
 				for(int i:params.keySet()) {
-					objective+=Math.pow(calcMetaModel(0, params.get(i))-simData.get(i),2)*calcEuclDistanceBasedWeight(params, i,counter);
+					objective+=Math.pow(calcMetaModel(0, params.get(i))-simData.get(i),2)*calcEuclDistanceBasedWeight(params, i,currentParamNo);
 				}
 				return objective;
 			}

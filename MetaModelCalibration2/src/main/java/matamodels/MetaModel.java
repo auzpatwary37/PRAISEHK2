@@ -3,6 +3,10 @@ package matamodels;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 
+import org.matsim.api.core.v01.Id;
+
+import measurements.Measurement;
+
 /**
  * @author Ashraf
  */
@@ -41,4 +45,6 @@ public interface MetaModel {
 	public static final String GradientBased_I_MetaModelName="GD-I";
 	public static final String GradientBased_II_MetaModelName="GD-II";
 	public static final String GradientBased_III_MetaModelName="GD-III";
+	
+	public Id<Measurement> getMeasurementId();
 }

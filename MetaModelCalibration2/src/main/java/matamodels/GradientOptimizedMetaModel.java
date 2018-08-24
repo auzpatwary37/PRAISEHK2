@@ -2,26 +2,31 @@ package matamodels;
 
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.Map;
+
+import org.matsim.api.core.v01.Id;
 
 import de.xypron.jcobyla.Calcfc;
 import de.xypron.jcobyla.Cobyla;
 import de.xypron.jcobyla.CobylaExitStatus;
+import measurements.Measurement;
+import measurements.Measurements;
 
 public class GradientOptimizedMetaModel extends MetaModelImpl{
 	
 	private LinkedHashMap<String,Double> simGrad;
 	private LinkedHashMap<String,Double> anaGrad;
-	private HashMap<Integer,Double> anaData=new HashMap<>();
+	private Map<Integer,Double> anaData=new HashMap<>();
 	private int currentParamIterNo=0;
 	
-	public GradientOptimizedMetaModel(HashMap<Integer, HashMap<String, Double>> SimData,HashMap<Integer, HashMap<String, Double>> anaData,
-			HashMap<Integer, LinkedHashMap<String, Double>> paramsToCalibrate, String timeBeanId, int currentParamIterNo,LinkedHashMap<String,Double>SimGradient,
+	public GradientOptimizedMetaModel(Id<Measurement>measurementId,Map<Integer, Measurements> SimData,Map<Integer, Measurements> anaData,
+			Map<Integer, LinkedHashMap<String, Double>> paramsToCalibrate, String timeBeanId, int currentParamIterNo,LinkedHashMap<String,Double>SimGradient,
 			LinkedHashMap<String,Double>anaGradient,int currentSimIter) {
-		super(SimData, paramsToCalibrate, timeBeanId, currentParamIterNo);
+		super(measurementId,SimData, paramsToCalibrate, timeBeanId, currentParamIterNo);
 		this.simGrad=SimGradient;
 		this.anaGrad=anaGradient;
 		for(Integer i:anaData.keySet()) {
-			this.anaData.put(i,anaData.get(i).get(timeBeanId));
+			this.anaData.put(i,anaData.get(i).getMeasurements().get(this.measurementId).getVolumes().get(timeBeanId));
 		}
 		this.noOfMetaModelParams=this.params.get(currentParamIterNo).size()+2;
 		this.MetaModelParams=new double[this.noOfMetaModelParams];

@@ -3,6 +3,7 @@ package matamodels;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Map.Entry;
 
 import org.matsim.api.core.v01.Id;
@@ -12,6 +13,8 @@ import org.matsim.api.core.v01.network.Link;
 import de.xypron.jcobyla.Calcfc;
 import de.xypron.jcobyla.Cobyla;
 import de.xypron.jcobyla.CobylaExitStatus;
+import measurements.Measurement;
+import measurements.Measurements;
 
 public class GradientBaseOptimizedMetaModel extends MetaModelImpl{
 		private static final double c=1.0;
@@ -19,11 +22,14 @@ public class GradientBaseOptimizedMetaModel extends MetaModelImpl{
 		private double[] metaParamShouldBe;
 		private LinkedHashMap<String,Double> currentParam;
 		private String timeBeanId;
-		private Id<Link> linkId;
 		private boolean addRidgePenalty=false;
 		private HashMap<Integer,Double> analyticalData=new HashMap<>();
 		private double ridgeCoefficient=1;
 		private int currentSimIter=0;
+		
+		/**
+		 * This is experimental currently set to 1
+		 */
 		double iterBasedIncreasingCost=0;
 		
 		/**
@@ -48,25 +54,25 @@ public class GradientBaseOptimizedMetaModel extends MetaModelImpl{
 		 * @param SimGradient
 		 * @param anaGradient
 		 */
-		public GradientBaseOptimizedMetaModel(HashMap<Integer,HashMap<String,Double>> SimData, HashMap<Integer,HashMap<String,Double>> AnalyticalData,
-				HashMap<Integer, LinkedHashMap<String, Double>> paramsToCalibrate,String timeBeanId, int counter,LinkedHashMap<String,Double>SimGradient,
+		public GradientBaseOptimizedMetaModel(Id<Measurement>measurementId,Map<Integer,Measurements> SimData, Map<Integer,Measurements> AnalyticalData,
+				Map<Integer, LinkedHashMap<String, Double>> paramsToCalibrate,String timeBeanId, int currentParamNo,LinkedHashMap<String,Double>SimGradient,
 				LinkedHashMap<String,Double>anaGradient,int currentIter) {
-			super(SimData, paramsToCalibrate, timeBeanId, counter);
-			this.currentParam=paramsToCalibrate.get(counter);
-			this.noOfMetaModelParams=paramsToCalibrate.get(counter).size()+1;
-			this.MetaModelParams=new double[paramsToCalibrate.get(counter).size()+1];
+			super(measurementId, SimData, paramsToCalibrate, timeBeanId, currentParamNo);
+			this.currentParam=paramsToCalibrate.get(currentParamNo);
+			this.noOfMetaModelParams=paramsToCalibrate.get(currentParamNo).size()+1;
+			this.MetaModelParams=new double[paramsToCalibrate.get(currentParamNo).size()+1];
 			
 			this.metaParamShouldBe=new double[this.MetaModelParams.length];
 			this.timeBeanId=timeBeanId;
 			this.currentSimIter=currentIter;
 			this.iterBasedIncreasingCost=this.currentSimIter/(1+this.currentSimIter)*c;
-			for(Entry<Integer,HashMap<String,Double>> e:AnalyticalData.entrySet()) {
-				this.analyticalData.put(e.getKey(),e.getValue().get(timeBeanId));
+			for(Entry<Integer,Measurements> e:AnalyticalData.entrySet()) {
+				this.analyticalData.put(e.getKey(),e.getValue().getMeasurements().get(this.measurementId).getVolumes().get(timeBeanId));
 				
 			}
 			
 			//this.currentParam=currentParam;
-			this.metaParamShouldBe[0]=SimData.get(counter).get(timeBeanId)-AnalyticalData.get(counter).get(timeBeanId);
+			this.metaParamShouldBe[0]=SimData.get(currentParamNo).getMeasurements().get(this.measurementId).getVolumes().get(timeBeanId)-AnalyticalData.get(currentParamNo).getMeasurements().get(this.measurementId).getVolumes().get(timeBeanId);
 			
 			
 			int i=1;
@@ -76,7 +82,7 @@ public class GradientBaseOptimizedMetaModel extends MetaModelImpl{
 				metaParamShouldBe[i]=SimGradient.get(s)-anaGradient.get(s);
 				i++;
 			}
-			this.calibrateMetaModel(counter);
+			this.calibrateMetaModel(currentParamNo);
 		}
 		@Override
 		public double calcMetaModel(double analyticalModelPart, LinkedHashMap<String, Double> param) {
@@ -135,9 +141,6 @@ public class GradientBaseOptimizedMetaModel extends MetaModelImpl{
 			return MetaModelParams;
 		}
 
-		public Id<Link> getLinkId(){
-			return this.linkId;
-		}
 		@Override
 		public String getMetaModelName() {
 			return this.GradientBased_II_MetaModelName;

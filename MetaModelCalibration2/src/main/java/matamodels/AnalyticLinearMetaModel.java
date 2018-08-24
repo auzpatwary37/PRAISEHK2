@@ -3,11 +3,16 @@ package matamodels;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Map.Entry;
+
+import org.matsim.api.core.v01.Id;
 
 import de.xypron.jcobyla.Calcfc;
 import de.xypron.jcobyla.Cobyla;
 import de.xypron.jcobyla.CobylaExitStatus;
+import measurements.Measurement;
+import measurements.Measurements;
 
 /**
  * 
@@ -31,18 +36,18 @@ public class AnalyticLinearMetaModel extends MetaModelImpl {
 	 */
 	private final boolean addRidgePenalty=true;
 	private final double ridgeCoefficient=1.0;
-	private ArrayList<Double> analyticalData=new ArrayList<>();
+	private Map<Integer,Double> analyticalData=new HashMap<>();
 	
-	public AnalyticLinearMetaModel(HashMap<Integer,HashMap<String,Double>> SimData, HashMap<Integer,HashMap<String,Double>> AnalyticalData,
-			HashMap<Integer, LinkedHashMap<String, Double>> paramsToCalibrate,String timeBeanId, int counter) {
+	public AnalyticLinearMetaModel(Id<Measurement> measurementId,Map<Integer,Measurements> SimData, Map<Integer,Measurements> AnalyticalData,
+			Map<Integer, LinkedHashMap<String, Double>> paramsToCalibrate,String timeBeanId, int currentParamNo) {
 		
-		super(SimData,paramsToCalibrate,timeBeanId,counter);
-		for(Entry<Integer,HashMap<String,Double>> e:AnalyticalData.entrySet()) {
-			this.analyticalData.add(e.getValue().get(timeBeanId));
+		super(measurementId,SimData,paramsToCalibrate,timeBeanId,currentParamNo);
+		for(Entry<Integer,Measurements> e:AnalyticalData.entrySet()) {
+			this.analyticalData.put(e.getKey(),e.getValue().getMeasurements().get(this.measurementId).getVolumes().get(timeBeanId));
 			
 		}
 		this.noOfMetaModelParams=this.noOfParams+2;
-		this.calibrateMetaModel(counter);
+		this.calibrateMetaModel(currentParamNo);
 		
 		this.params.clear();
 		this.simData.clear();
@@ -51,7 +56,7 @@ public class AnalyticLinearMetaModel extends MetaModelImpl {
 	}
 		
 	
-	public void calibrateMetaModel(final int counter) {
+	public void calibrateMetaModel(final int currentParamNo) {
 		Calcfc optimization=new Calcfc() {
 
 			@Override
@@ -59,7 +64,7 @@ public class AnalyticLinearMetaModel extends MetaModelImpl {
 				double objective=0;
 				MetaModelParams=x;
 				for(int i:params.keySet()) {
-					objective+=Math.pow(calcMetaModel(analyticalData.get(i), params.get(i))-simData.get(i),2)*calcEuclDistanceBasedWeight(params, i,counter);
+					objective+=Math.pow(calcMetaModel(analyticalData.get(i), params.get(i))-simData.get(i),2)*calcEuclDistanceBasedWeight(params, i,currentParamNo);
 				}
 				if(addRidgePenalty==true) {
 					for(double d:x) {

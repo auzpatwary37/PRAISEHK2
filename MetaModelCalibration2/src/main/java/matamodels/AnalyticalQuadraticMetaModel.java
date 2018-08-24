@@ -3,11 +3,16 @@ package matamodels;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Map.Entry;
+
+import org.matsim.api.core.v01.Id;
 
 import de.xypron.jcobyla.Calcfc;
 import de.xypron.jcobyla.Cobyla;
 import de.xypron.jcobyla.CobylaExitStatus;
+import measurements.Measurement;
+import measurements.Measurements;
 /**
  * 
  * @author Ashraf
@@ -29,16 +34,16 @@ public class AnalyticalQuadraticMetaModel extends MetaModelImpl{
 	 */
 	private HashMap<Integer,Double> analyticalData=new HashMap<>();
 	
-	public AnalyticalQuadraticMetaModel(HashMap<Integer,HashMap<String,Double>> SimData, HashMap<Integer,HashMap<String,Double>> AnalyticalData,
-			HashMap<Integer, LinkedHashMap<String, Double>> paramsToCalibrate,String timeBeanId, int counter) {
+	public AnalyticalQuadraticMetaModel(Id<Measurement>measurementId,Map<Integer,Measurements> SimData, Map<Integer,Measurements> AnalyticalData,
+			Map<Integer, LinkedHashMap<String, Double>> paramsToCalibrate,String timeBeanId, int currentParamNo) {
 		
-		super(SimData,paramsToCalibrate,timeBeanId,counter);
-		for(Entry<Integer,HashMap<String,Double>> e:AnalyticalData.entrySet()) {
-			this.analyticalData.put(e.getKey(),e.getValue().get(timeBeanId));
+		super(measurementId,SimData,paramsToCalibrate,timeBeanId,currentParamNo);
+		for(Entry<Integer,Measurements> e:AnalyticalData.entrySet()) {
+			this.analyticalData.put(e.getKey(),e.getValue().getMeasurements().get(this.measurementId).getVolumes().get(timeBeanId));
 			
 		}
 		this.noOfMetaModelParams=2+this.noOfParams+this.noOfParams*(this.noOfParams+1)/2;
-		this.calibrateMetaModel(counter);
+		this.calibrateMetaModel(currentParamNo);
 		this.params.clear();
 		this.simData.clear();
 		this.analyticalData.clear();

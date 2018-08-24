@@ -2,10 +2,15 @@ package matamodels;
 
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.Map;
+
+import org.matsim.api.core.v01.Id;
 
 import de.xypron.jcobyla.Calcfc;
 import de.xypron.jcobyla.Cobyla;
 import de.xypron.jcobyla.CobylaExitStatus;
+import measurements.Measurement;
+import measurements.Measurements;
 
 public class LinearMetaModel extends MetaModelImpl{
 
@@ -20,12 +25,12 @@ public class LinearMetaModel extends MetaModelImpl{
 	 */
 	
 	
-	public LinearMetaModel(HashMap<Integer,HashMap<String,Double>> SimData,
-			HashMap<Integer, LinkedHashMap<String, Double>> paramsToCalibrate,String timeBeanId, int counter) {
+	public LinearMetaModel(Id<Measurement>measurementId,Map<Integer,Measurements> SimData,
+			Map<Integer, LinkedHashMap<String, Double>> paramsToCalibrate,String timeBeanId, int currentParamNo) {
 		
-		super(SimData,paramsToCalibrate,timeBeanId,counter);
+		super(measurementId,SimData,paramsToCalibrate,timeBeanId,currentParamNo);
 		this.noOfMetaModelParams=this.noOfParams+1;
-		this.calibrateMetaModel(counter);
+		this.calibrateMetaModel(currentParamNo);
 		
 		//this.params.clear();
 		this.simData.clear();

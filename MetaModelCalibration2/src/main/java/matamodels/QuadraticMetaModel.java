@@ -2,10 +2,15 @@ package matamodels;
 
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.Map;
+
+import org.matsim.api.core.v01.Id;
 
 import de.xypron.jcobyla.Calcfc;
 import de.xypron.jcobyla.Cobyla;
 import de.xypron.jcobyla.CobylaExitStatus;
+import measurements.Measurement;
+import measurements.Measurements;
 
 /**
  * 
@@ -23,12 +28,12 @@ public class QuadraticMetaModel extends MetaModelImpl{
 	 */
 	
 	
-	public QuadraticMetaModel(HashMap<Integer,HashMap<String,Double>> SimData,
-			HashMap<Integer, LinkedHashMap<String, Double>> paramsToCalibrate,String timeBeanId, int counter) {
-		super(SimData, paramsToCalibrate, timeBeanId, counter);
+	public QuadraticMetaModel(Id<Measurement>measurementId,Map<Integer, Measurements> SimData,
+			Map<Integer, LinkedHashMap<String, Double>> paramsToCalibrate,String timeBeanId, int currentParamNo) {
+		super(measurementId,SimData, paramsToCalibrate, timeBeanId, currentParamNo);
 		
 		this.noOfMetaModelParams=1+this.noOfParams+this.noOfParams*(this.noOfParams+1)/2;
-		this.calibrateMetaModel(counter);
+		this.calibrateMetaModel(currentParamNo);
 		this.params.clear();
 		this.simData.clear();
 	}
@@ -82,7 +87,7 @@ public class QuadraticMetaModel extends MetaModelImpl{
 	}
 
 	@Override
-	protected void calibrateMetaModel(final int counter) {
+	protected void calibrateMetaModel(final int currentParamNo) {
 		Calcfc optimization=new Calcfc() {
 
 			@Override
@@ -90,7 +95,7 @@ public class QuadraticMetaModel extends MetaModelImpl{
 				double objective=0;
 				MetaModelParams=x;
 				for(int i:params.keySet()) {
-					objective+=Math.pow(calcMetaModel(0, params.get(i))-simData.get(i),2)*calcEuclDistanceBasedWeight(params, i,counter);
+					objective+=Math.pow(calcMetaModel(0, params.get(i))-simData.get(i),2)*calcEuclDistanceBasedWeight(params, i,currentParamNo);
 				}
 				for(double d:x) {
 					objective+=d*d;
