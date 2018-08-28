@@ -16,9 +16,6 @@ import cz.cvut.fit.jcool.core.Point;
 import cz.cvut.fit.jcool.utils.CentralDifferenceHessian;
 import de.xypron.jcobyla.Cobyla;
 import de.xypron.jcobyla.CobylaExitStatus;
-import ust.hk.praisehk.AnalyticalModels.AnalyticalModel;
-import ust.hk.praisehk.CNLSUEModel.OptimFunc;
-import ust.hk.praisehk.Counts.CountData;
 
 /**
  * generic implementation of AnalyticalModelOptimizer

@@ -7,13 +7,12 @@ import java.util.Map;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.network.Link;
 
+import analyticalModel.AnalyticalModel;
 import cz.cvut.fit.jcool.core.Gradient;
 import cz.cvut.fit.jcool.core.Hessian;
 import cz.cvut.fit.jcool.core.ObjectiveFunction;
 import cz.cvut.fit.jcool.core.Point;
-import ust.hk.praisehk.AnalyticalModels.AnalyticalModel;
-import ust.hk.praisehk.Counts.CountData;
-import ust.hk.praisehk.MetaModels.MetaModel;
+
 
 public class HessianObjective implements ObjectiveFunction {
 		private CountData countData;
