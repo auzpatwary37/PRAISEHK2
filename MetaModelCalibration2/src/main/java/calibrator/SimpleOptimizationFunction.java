@@ -19,8 +19,8 @@ public class SimpleOptimizationFunction extends OptimizationFunction{
 
 	protected SimpleOptimizationFunction(AnalyticalModel sueAssignment, Measurements realData, Map<Id<Measurement>, Map<String, MetaModel>> metaModels,
 			LinkedHashMap<String, Double> currentParams, double TrRadius,
-			Map<String, Tuple<Double, Double>> timeBean, LinkedHashMap<String, Tuple<Double, Double>> paramLimit) {
-		super(sueAssignment, realData,metaModels , currentParams, TrRadius, timeBean, paramLimit);
+			LinkedHashMap<String, Tuple<Double, Double>> paramLimit) {
+		super(sueAssignment, realData,metaModels , currentParams, TrRadius, paramLimit);
 		
 	}
 

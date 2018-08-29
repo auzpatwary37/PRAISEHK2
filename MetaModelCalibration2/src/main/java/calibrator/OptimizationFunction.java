@@ -28,13 +28,13 @@ public abstract class OptimizationFunction implements Calcfc  {
 	private final LinkedHashMap<String,Tuple<Double,Double>> paramLimit;
 	
 	protected OptimizationFunction(AnalyticalModel sueAssignment, Measurements calibrationMeasurements, Map<Id<Measurement>,Map<String,MetaModel>> metaModels,
-		LinkedHashMap<String,Double> currentParams, double TrRadius,Map<String,Tuple<Double,Double>> timeBean,
+		LinkedHashMap<String,Double> currentParams, double TrRadius,
 		LinkedHashMap<String,Tuple<Double,Double>> paramLimit) {
 		this.SUE=sueAssignment;
 		this.numberOfVariables=currentParams.values().size();
 		this.trustRegionRadius=TrRadius;
 		this.currentParams=currentParams;
-		this.timeBean=timeBean;
+		this.timeBean=calibrationMeasurements.getTimeBean();
 		this.RealData=calibrationMeasurements;
 		this.metaModels=metaModels;
 		this.paramLimit=paramLimit;

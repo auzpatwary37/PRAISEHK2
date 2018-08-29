@@ -8,14 +8,20 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.Map;
 
+import org.matsim.api.core.v01.Id;
 import org.matsim.core.utils.collections.Tuple;
 
+import analyticalModel.AnalyticalModel;
 import cz.cvut.fit.jcool.core.Hessian;
 import cz.cvut.fit.jcool.core.Point;
 import cz.cvut.fit.jcool.utils.CentralDifferenceHessian;
 import de.xypron.jcobyla.Cobyla;
 import de.xypron.jcobyla.CobylaExitStatus;
+import matamodels.MetaModel;
+import measurements.Measurement;
+import measurements.Measurements;
 
 /**
  * generic implementation of AnalyticalModelOptimizer
@@ -34,7 +40,7 @@ public class AnalyticalModelOptimizerImpl implements AnalyticalModelOptimizer{
 	private final LinkedHashMap<String,Double> currentParams;
 
 	
-	public AnalyticalModelOptimizerImpl(OptimizationFunction optimFunc,CountData countData) {
+	public AnalyticalModelOptimizerImpl(OptimizationFunction optimFunc) {
 			
 			this.currentParams=optimFunc.getCurrentParams();
 			this.noOfVariables=currentParams.size();
@@ -64,7 +70,7 @@ public class AnalyticalModelOptimizerImpl implements AnalyticalModelOptimizer{
 			}else {
 				this.HassinCalculator=new CentralDifferenceHessian();
 				Point CurrentPointforHessian=Point.at(currentPoint);
-				Hessian Hessian=this.HassinCalculator.hessianAt(new HessianObjective(optimFunc.getSUE(),countData,this),CurrentPointforHessian);
+				Hessian Hessian=this.HassinCalculator.hessianAt(new HessianObjective(optimFunc.getSUE(),optimFunc.getRealData(),this),CurrentPointforHessian);
 				try {
 					FileWriter fileWriter=new FileWriter(file);
 					double[] diag=new double[this.noOfVariables];
@@ -91,7 +97,15 @@ public class AnalyticalModelOptimizerImpl implements AnalyticalModelOptimizer{
 			}
 			this.optimFunction=optimFunc;
 			this.optimFunction.setHessian(hessian);
-		}
+	}
+	
+	public AnalyticalModelOptimizerImpl(AnalyticalModel SUE,Measurements realData, Map<Id<Measurement>,Map<String,MetaModel>>metaModels,LinkedHashMap<String,Double>currentParam,double trustRegionRadius,LinkedHashMap<String,Tuple<Double,Double>>paramLimit) {
+		this(new SimpleOptimizationFunction(SUE, realData, metaModels, currentParam, trustRegionRadius,paramLimit));
+	}
+	
+	
+	
+	
 
 	@Override
 	public OptimizationFunction getOptimizationFunction() {
@@ -103,8 +117,7 @@ public class AnalyticalModelOptimizerImpl implements AnalyticalModelOptimizer{
 		//initialization
 		double[] x=new double[noOfVariables];
 
-		int j=0;
-		for (Double d:x) {
+		for (int j=0;j<x.length;j++) {
 			x[j]=1;
 			j++;
 		}
