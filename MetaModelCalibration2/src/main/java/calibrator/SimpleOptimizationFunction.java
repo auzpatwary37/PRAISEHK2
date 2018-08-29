@@ -8,23 +8,26 @@ import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.network.Link;
 import org.matsim.core.utils.collections.Tuple;
 
-import ust.hk.praisehk.AnalyticalModels.AnalyticalModel;
-import ust.hk.praisehk.Counts.CountData;
-import ust.hk.praisehk.MetaModels.MetaModel;
+import analyticalModel.AnalyticalModel;
+import matamodels.MetaModel;
+import measurements.Measurement;
+import measurements.Measurements;
+
+
 
 public class SimpleOptimizationFunction extends OptimizationFunction{
 
-	protected SimpleOptimizationFunction(AnalyticalModel sueAssignment, CountData countData,
+	protected SimpleOptimizationFunction(AnalyticalModel sueAssignment, Measurements realData, Map<Id<Measurement>, Map<String, MetaModel>> metaModels,
 			LinkedHashMap<String, Double> currentParams, double TrRadius,
-			HashMap<String, Tuple<Double, Double>> timeBean, LinkedHashMap<String, Tuple<Double, Double>> paramLimit) {
-		super(sueAssignment, countData, currentParams, TrRadius, timeBean, paramLimit);
+			Map<String, Tuple<Double, Double>> timeBean, LinkedHashMap<String, Tuple<Double, Double>> paramLimit) {
+		super(sueAssignment, realData,metaModels , currentParams, TrRadius, timeBean, paramLimit);
 		
 	}
 
 	@Override
 	public double compute(int n, int m, double[] x, double[] constrains) {
 		LinkedHashMap<String, Double>params=ScaleUp(x);
-		HashMap<String,HashMap<Id<Link>,Double>> linkVolume=null;
+		Map<String,Map<Id<Link>,Double>> linkVolume=null;
 		this.getSUE().clearLinkCarandTransitVolume();
 		linkVolume=this.getSUE().perFormSUE(new LinkedHashMap<>(params));
 		double objective=calcMetaModelObjective(linkVolume, params);
@@ -37,14 +40,16 @@ public class SimpleOptimizationFunction extends OptimizationFunction{
 	}
 
 	@Override
-	public double calcMetaModelObjective(Map<String, HashMap<Id<Link>, Double>> linkVolume,
+	public double calcMetaModelObjective(Map<String, Map<Id<Link>, Double>> linkVolume,
 			LinkedHashMap<String, Double> params) {
+		
+		Measurements anaMeasurements=this.getRealData().clone();
 		double objective=0;
-		for(String timeBeanId:this.getTimeBean().keySet()) {
-			for(Id<Link> linkId:this.getRealData().get(timeBeanId).keySet()) {
-				double RealLinkCount=this.getRealData().get(timeBeanId).get(linkId);
-				double AnaLyticalModelLinkCount=linkVolume.get(timeBeanId).get(linkId);
-				MetaModel metaModel=this.getMetaModels().get(timeBeanId).get(linkId);
+		for(Measurement m:this.getRealData().getMeasurements().values()) {
+			for(String timeBean:m.getVolumes().keySet()) {
+				double RealLinkCount=this.getRealData().getMeasurements().get(m.getId()).getVolumes().get(timeBean);
+				double AnaLyticalModelLinkCount=anaMeasurements.getMeasurements().get(m.getId()).getVolumes().get(timeBean);
+				MetaModel metaModel=this.getMetaModels().get(m.getId()).get(timeBean);
 				objective+=Math.pow(RealLinkCount-metaModel.calcMetaModel(AnaLyticalModelLinkCount, params),2);
 			}
 		}
@@ -84,6 +89,20 @@ public class SimpleOptimizationFunction extends OptimizationFunction{
 		c[k]=this.getTrustRegionRadius()-Math.sqrt(trustRegionConst);
 		
 		return c;
+	}
+
+	@Override
+	public double calcMetaModelObjective(Measurements anaMeasurements, LinkedHashMap<String, Double> params) {
+		double objective=0;
+		for(Measurement m:this.getRealData().getMeasurements().values()) {
+			for(String timeBean:m.getVolumes().keySet()) {
+				double RealLinkCount=this.getRealData().getMeasurements().get(m.getId()).getVolumes().get(timeBean);
+				double AnaLyticalModelLinkCount=anaMeasurements.getMeasurements().get(m.getId()).getVolumes().get(timeBean);
+				MetaModel metaModel=this.getMetaModels().get(m.getId()).get(timeBean);
+				objective+=Math.pow(RealLinkCount-metaModel.calcMetaModel(AnaLyticalModelLinkCount, params),2);
+			}
+		}
+		return objective;
 	}
 	
 

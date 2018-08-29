@@ -12,17 +12,19 @@ import cz.cvut.fit.jcool.core.Gradient;
 import cz.cvut.fit.jcool.core.Hessian;
 import cz.cvut.fit.jcool.core.ObjectiveFunction;
 import cz.cvut.fit.jcool.core.Point;
+import measurements.Measurements;
 
 
 public class HessianObjective implements ObjectiveFunction {
-		private CountData countData;
+		private Measurements realData;
 		private AnalyticalModel sueAssignment;
 		private AnalyticalModelOptimizer optimizer;
 		private int dimension=0;
 		
-		public HessianObjective(AnalyticalModel sueAssignment, CountData countdata,AnalyticalModelOptimizer anaModelOptimizer) {
+		
+		public HessianObjective(AnalyticalModel sueAssignment, Measurements realdata,AnalyticalModelOptimizer anaModelOptimizer) {
 			this.sueAssignment=sueAssignment;
-			this.countData=countdata;
+			this.realData=realdata;
 			this.optimizer=anaModelOptimizer;
 			dimension=this.optimizer.getOptimizationFunction().getCurrentParams().size();
 		}
@@ -30,24 +32,13 @@ public class HessianObjective implements ObjectiveFunction {
 		public double valueAt(Point point) {
 			double[] x= point.toArray();
 			LinkedHashMap<String,Double> params=optimizer.getOptimizationFunction().ScaleUp(x);
-			HashMap<String,HashMap<Id<Link>,Double>>linkVolume=sueAssignment.perFormSUE(params);
+			Measurements anaData=this.realData.clone();
+			Map<String,Map<Id<Link>,Double>>linkVolume=sueAssignment.perFormSUE(params);
+			anaData.updateMeasurements(linkVolume);
 			double value=this.optimizer.getOptimizationFunction().calcMetaModelObjective(linkVolume, params);
 			return value;
 		}
 
-		public double calcMetaModelObjective(Map<String, HashMap<Id<Link>, Double>> linkVolume,
-				LinkedHashMap<String, Double> params) {
-			double objective=0;
-			for(String timeBeanId:this.sueAssignment.getTimeBeans().keySet()) {
-				for(Id<Link> linkId:this.countData.GetRealCountData().get(timeBeanId).keySet()) {
-					double RealLinkCount=this.countData.GetRealCountData().get(timeBeanId).get(linkId);
-					double AnaLyticalModelLinkCount=linkVolume.get(timeBeanId).get(linkId);
-					MetaModel metaModel=this.countData.getMetaModels().get(timeBeanId).get(linkId);
-					objective+=Math.pow(RealLinkCount-metaModel.calcMetaModel(AnaLyticalModelLinkCount, params),2);
-				}
-			}
-			return objective;
-		}
 		@Override
 		public int getDimension() {
 			return dimension;
