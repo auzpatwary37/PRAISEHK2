@@ -1,11 +1,16 @@
 package calibrator;
 
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
 
 import org.apache.log4j.Logger;
 import org.matsim.api.core.v01.Id;
+import org.matsim.core.utils.collections.Tuple;
 
 import analyticalModel.AnalyticalModel;
 import matamodels.AnalyticLinearMetaModel;
@@ -65,36 +70,26 @@ public class CalibratorImpl implements Calibrator {
 		this.sueAssignment=SUE;
 	}
 
-	public void updateSimMeasurement(Measurements m) {
+	@Override
+	public void updateSimMeasurements(Measurements m) {
 		this.simMeasurements.put(this.iterationNo, m);
 	}
 
-	public void updateAnaMeasurement(Measurements m) {
-		this.anaMeasurements.put(this.iterationNo, m);
-	}
-
-	public void updateMetaModelType(String type) {
-		switch(type) {
-
-		case MetaModel.AnalyticalLinearMetaModelName: this.metaModelType=type ;
-
-		case MetaModel.AnalyticalQuadraticMetaModelName: this.metaModelType=type;
-
-		case MetaModel.LinearMetaModelName: this.metaModelType=type;
-
-		case MetaModel.QudaraticMetaModelName: this.metaModelType=type;
-
-		case MetaModel.GradientBased_I_MetaModelName: this.metaModelType=type;
-
-		case MetaModel.GradientBased_II_MetaModelName: this.metaModelType=type;
-
-		case MetaModel.GradientBased_III_MetaModelName: this.metaModelType=type;
-
-		default : this.metaModelType=MetaModel.AnalyticalLinearMetaModelName;
-
+	@Override
+	public void updateAnalyticalMeasurement(Map<Integer, Measurements> measurements) {
+		if(this.anaMeasurements.size()!=measurements.size()) {
+			logger.error("Measurements size must match. Aborting update");
+			for(int i:this.anaMeasurements.keySet()) {
+				if(measurements.get(i)==null) {
+					logger.error("Measurements do not match. This is a fatal error!!!");
+					throw new IllegalArgumentException("Measurements do not match. This is a fatal error!!!Calibration will exit.");
+				}
+				this.anaMeasurements.put(i, measurements.get(i));
+			}
 		}
 	}
 
+	
 	/**
 	 * The input gradients can be null for non gradient based meatamodels.
 	 * The gradient must contain the same measurement IDs and volumes as the calibration measurements
@@ -102,20 +97,25 @@ public class CalibratorImpl implements Calibrator {
 	 * @param anaGradient
 	 * @throws IllegalArgumentException
 	 */
-	private void createMetaModel(Map<Id<Measurement>,Map<String,LinkedHashMap<String,Double>>>simGradient,Map<Id<Measurement>,Map<String,LinkedHashMap<String,Double>>> anaGradient) throws IllegalArgumentException {
-
+	@Override
+	public void createMetaModel(Map<Id<Measurement>,Map<String,LinkedHashMap<String,Double>>>simGradient,Map<Id<Measurement>,Map<String,LinkedHashMap<String,Double>>> anaGradient, String metaModelType) {
+		try {
 		if((this.metaModelType.equals(MetaModel.GradientBased_I_MetaModelName)||this.metaModelType.equals(MetaModel.GradientBased_II_MetaModelName)||this.metaModelType.equals(MetaModel.GradientBased_III_MetaModelName))&& (anaGradient==null||simGradient==null)) {
 			logger.error("Cannot create gradient based meta-model without gradient. switching to AnalyticalLinear");
 			throw new IllegalArgumentException("Gradient cannot be null");
 
 		}
+		}catch(Exception e) {
+			metaModelType=MetaModel.AnalyticalLinearMetaModelName;
+		}
 
 		for(Measurement m:this.calibrationMeasurements.getMeasurements().values()) {
+			this.metaModels.put(m.getId(), new HashMap<String,MetaModel>());
 			for(String timeBeanId:m.getVolumes().keySet()) {
 
 				MetaModel metaModel;
 
-				switch(this.metaModelType) {
+				switch(metaModelType) {
 
 				case MetaModel.AnalyticalLinearMetaModelName: metaModel=new AnalyticLinearMetaModel(m.getId(), this.simMeasurements, this.anaMeasurements, this.params, timeBeanId, this.currentParamNo) ;
 
@@ -133,9 +133,47 @@ public class CalibratorImpl implements Calibrator {
 
 				default : metaModel=new AnalyticLinearMetaModel(m.getId(), this.simMeasurements, this.anaMeasurements, this.params, timeBeanId, this.currentParamNo) ;
 
-
+				
 				}
+				this.metaModels.get(m.getId()).put(timeBeanId, metaModel);
 			}
 		}
 	}
+
+
+	
+
+	@Override
+	public LinkedHashMap<String, Double> drawRandomPoint(LinkedHashMap<String, Tuple<Double, Double>> paramLimit) {
+		LinkedHashMap<String, Double> randPoint=new LinkedHashMap<>();
+		for(String s: paramLimit.keySet()) {
+			double l=paramLimit.get(s).getFirst();
+			double u=paramLimit.get(s).getSecond();
+			randPoint.put(s,l+Math.random()*(u-l));
+		}
+		
+		return randPoint;
+	}
+
+
+	@Override
+	public void writeMeasurementComparison(String fileLoc) {
+		try {
+			FileWriter fw=new FileWriter(new File(fileLoc),false);
+			fw.append("MeasurementId,timeBeanId,RealCount,SimCount,metaModelPrediction,AbsPercentDifference,PercentDifference\n");
+			for(Measurement m: this.calibrationMeasurements.getMeasurements().values()) {
+				for(String timeBean:m.getVolumes().keySet()) {
+					fw.append(m.getId()+","+timeBean+","+this.calibrationMeasurements.getMeasurements().get(m.getId()).getVolumes().get(timeBean)+","+this.simMeasurements.get(this.iterationNo).getMeasurements())
+				}
+			}
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+	
+	private void CalcMetaModelPrediction(Id<Measurement>mId,String timeId) {
+		
+	}
+
 }

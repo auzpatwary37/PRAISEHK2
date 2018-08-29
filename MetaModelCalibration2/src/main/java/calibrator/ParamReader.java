@@ -33,6 +33,8 @@ import analyticalModel.AnalyticalModel;
  * Parameter Names should include all the parameter names mentioned in AnalyticalModel Interface for all subPopulations
  * subPopulation names containing GV may exclude the parameters related to PT 
  * 
+ * If There is no sub-population, then sub-population field should contain All. 
+ * 
  * @author Ashraf
  *
  */
@@ -41,7 +43,7 @@ public class ParamReader {
  * This file reads params and create the ParameterLimits
  */
 	private final File paramFile;
-	private final String defaultFileLoc="input/subPopParamAndLimit.csv";
+	private final String defaultFileLoc="src/main/resources/paramReaderTrial1.csv";
 	private ArrayList<String> subPopulationName=new ArrayList<>();
 	private LinkedHashMap<String,Double>DefaultParam=new LinkedHashMap<>();
 	private LinkedHashMap<String,Tuple<Double,Double>>paramLimit=new LinkedHashMap<>();
@@ -55,7 +57,7 @@ public class ParamReader {
 	
 	public ParamReader(String fileLoc) {
 		File file=new File(fileLoc);
-		if(!file.exists()) {
+		if(file.exists()) {
 			this.paramFile=file;
 		}else {
 			this.paramFile=new File(defaultFileLoc);
@@ -72,10 +74,14 @@ public class ParamReader {
 				Double upperLimit=Double.parseDouble(part[4]);
 				Double lowerLimit=Double.parseDouble(part[3]);
 				String paramId=part[2];
-				paramId=part[0]+" "+part[1];
+				if(subPopName=="") {
+					paramId=part[1];
+				}else {
+					paramId=part[0]+" "+part[1];
+				}
 				this.DefaultParam.put(part[6], paramValue);
 				this.paramLimit.put(part[6], new Tuple<Double,Double>(lowerLimit,upperLimit));
-				if(!this.subPopulationName.contains(subPopName) && !subPopName.equals("All")) {
+				if(!this.subPopulationName.contains(subPopName) && !subPopName.equals("All") && !subPopName.equals("")) {
 					this.subPopulationName.add(subPopName);
 				}
 				this.paramName.add(paramName);
@@ -182,6 +188,7 @@ public class ParamReader {
 		}
 		LinkedHashMap<String,Double> params=this.ScaleUp(Noparams);
 		
+		if(this.subPopulationName.size()!=0) {
 		for(String subPop:this.subPopulationName) {
 			if(!subPop.contains("GV")) {
 			configOut.planCalcScore().getOrCreateScoringParameters(subPop).getOrCreateModeParams("car").setMarginalUtilityOfTraveling(params.get(subPop+" "+AnalyticalModel.MarginalUtilityofTravelCarName));
@@ -208,10 +215,28 @@ public class ParamReader {
 				configOut.planCalcScore().getOrCreateScoringParameters(subPop).setPerforming_utils_hr(params.get(subPop+" "+AnalyticalModel.MarginalUtilityofPerformName));
 			}
 		}
-		configOut.qsim().setFlowCapFactor(params.get("All "+AnalyticalModel.CapacityMultiplierName));
+		}else {
+			configOut.planCalcScore().getOrCreateModeParams("car").setMarginalUtilityOfTraveling(params.get(AnalyticalModel.MarginalUtilityofTravelCarName));
+			configOut.planCalcScore().getOrCreateModeParams("car").setMarginalUtilityOfDistance(params.get(AnalyticalModel.MarginalUtilityofDistanceCarName));
+			configOut.planCalcScore().setMarginalUtilityOfMoney(params.get(AnalyticalModel.MarginalUtilityofMoneyName));
+			configOut.planCalcScore().getOrCreateModeParams("car").setMonetaryDistanceRate(params.get(AnalyticalModel.DistanceBasedMoneyCostCarName));
+			configOut.planCalcScore().getOrCreateModeParams("pt").setMarginalUtilityOfTraveling(params.get(AnalyticalModel.MarginalUtilityofTravelptName));
+			configOut.planCalcScore().getOrCreateModeParams("pt").setMonetaryDistanceRate(params.get(AnalyticalModel.MarginalUtilityOfDistancePtName));
+			configOut.planCalcScore().setMarginalUtlOfWaitingPt_utils_hr(params.get(AnalyticalModel.MarginalUtilityofWaitingName));
+			configOut.planCalcScore().setUtilityOfLineSwitch(params.get(AnalyticalModel.UtilityOfLineSwitchName));
+			configOut.planCalcScore().getOrCreateModeParams("walk").setMarginalUtilityOfTraveling(params.get(AnalyticalModel.MarginalUtilityOfWalkingName));
+			configOut.planCalcScore().getOrCreateModeParams("walk").setMonetaryDistanceRate(params.get(AnalyticalModel.DistanceBasedMoneyCostWalkName));
+			configOut.planCalcScore().getOrCreateModeParams("pt").setConstant(params.get(AnalyticalModel.ModeConstantPtname));
+			configOut.planCalcScore().getOrCreateModeParams("car").setConstant(params.get(AnalyticalModel.ModeConstantCarName));
+			configOut.planCalcScore().setPerforming_utils_hr(params.get(AnalyticalModel.MarginalUtilityofPerformName));
+		}
+		configOut.qsim().setFlowCapFactor(params.get(AnalyticalModel.CapacityMultiplierName));
 		return configOut;
 	}
 	
+	public static void main(String[] args) {
+		ParamReader pReader=new ParamReader("src/main/resources/paramReaderTrial1.csv");
+	}
 	
 	
 }
