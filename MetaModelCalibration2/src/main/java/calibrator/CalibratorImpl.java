@@ -12,6 +12,7 @@ import java.util.Map;
 
 import org.apache.log4j.Logger;
 import org.matsim.api.core.v01.Id;
+import org.matsim.api.core.v01.network.Link;
 import org.matsim.core.utils.collections.Tuple;
 
 import analyticalModel.AnalyticalModel;
@@ -27,15 +28,16 @@ import measurements.Measurement;
 import measurements.Measurements;
 
 
+
 public class CalibratorImpl implements Calibrator {
 
 	//Necessary Containers
 
-	private Map<Integer,Measurements> simMeasurements;
-	private Map<Integer,Measurements> anaMeasurements;
-	private Map<Id<Measurement>,Map<String,MetaModel>>metaModels;
-	private Map<Integer,LinkedHashMap<String,Double>>params;
-	private Map<Integer, Double[]> averageMetaModelParams;
+	private Map<Integer,Measurements> simMeasurements=new HashMap<>();
+	private Map<Integer,Measurements> anaMeasurements=new HashMap<>();
+	private Map<Id<Measurement>,Map<String,MetaModel>>metaModels=new HashMap<>();
+	private Map<Integer,LinkedHashMap<String,Double>>params=new HashMap<>();
+	private Map<Id<Measurement>,Map<String,MetaModel>> oldMetaModel=new HashMap<>();
 	
 	private Measurements calibrationMeasurements;
 
@@ -52,27 +54,36 @@ public class CalibratorImpl implements Calibrator {
 	private static final Logger logger=Logger.getLogger(CalibratorImpl.class);
 
 	//Trust region parameters
-
+	private String ObjectiveType=ObjectiveCalculator.TypeMeasurementAndTimeSpecific;
+	private boolean InternalModelParamCalibration=true;
 	private int maxIteration=100;
-	private double initialTrRadius=25;
-	private double maxTrRadius=2.5*this.initialTrRadius;
+	private double TrRadius=25;
+	private double maxTrRadius=2.5*this.TrRadius;
 	private double minTrRadius=0.001;
+	private double successiveRejection=0;
 	private double maxSuccesiveRejection=4;
 	private double minMetaParamChange=.001;
 	private double thresholdErrorRatio=.01;
 	private String metaModelType=MetaModel.AnalyticalLinearMetaModelName;
 	private double trusRegionIncreamentRatio=1.25;
 	private double trustRegionDecreamentRatio=0.9;
+	private ParamReader pReader;
+	private final String fileLoc;
+	private final boolean shouldPerformInternalParamCalibration;
 
-
-	public void resetIteration() {
+	
+	public CalibratorImpl(String fileLoc,boolean internalParameterCalibration,ParamReader pReader,double initialTRRadius,int maxSuccessiveRejection) {
+		this.fileLoc=fileLoc;
+		this.shouldPerformInternalParamCalibration=internalParameterCalibration;
+		this.pReader=pReader;
+		this.TrRadius=initialTRRadius;
+		this.currentParam=pReader.getInitialParam();
+		this.currentParamNo=0;
 		this.iterationNo=0;
+		this.maxSuccesiveRejection=maxSuccessiveRejection;
 	}
-
-
-	public void updateAnalyticalModel(AnalyticalModel SUE) {
-		this.sueAssignment=SUE;
-	}
+	
+	
 
 	@Override
 	public void updateSimMeasurements(Measurements m) {
@@ -112,8 +123,11 @@ public class CalibratorImpl implements Calibrator {
 		}catch(Exception e) {
 			metaModelType=MetaModel.AnalyticalLinearMetaModelName;
 		}
-
+		
 		for(Measurement m:this.calibrationMeasurements.getMeasurements().values()) {
+			if(this.iterationNo>0) {
+				this.oldMetaModel.put(m.getId(), this.metaModels.get(m.getId()));
+			}
 			this.metaModels.put(m.getId(), new HashMap<String,MetaModel>());
 			for(String timeBeanId:m.getVolumes().keySet()) {
 
@@ -122,29 +136,113 @@ public class CalibratorImpl implements Calibrator {
 				switch(metaModelType) {
 
 				case MetaModel.AnalyticalLinearMetaModelName: metaModel=new AnalyticLinearMetaModel(m.getId(), this.simMeasurements, this.anaMeasurements, this.params, timeBeanId, this.currentParamNo) ;
+				this.metaModelType=metaModelType;
 
 				case MetaModel.AnalyticalQuadraticMetaModelName: metaModel=new AnalyticalQuadraticMetaModel(m.getId(), this.simMeasurements, this.anaMeasurements, this.params, timeBeanId, this.currentParamNo);
-
+				this.metaModelType=metaModelType;
+				
 				case MetaModel.LinearMetaModelName: metaModel=new LinearMetaModel(m.getId(), this.simMeasurements, this.params, timeBeanId, this.currentParamNo);
-
+				this.metaModelType=metaModelType;
+				
 				case MetaModel.QudaraticMetaModelName: metaModel=new QuadraticMetaModel(m.getId(), this.simMeasurements, this.params, timeBeanId, this.currentParamNo) ;
-
+				this.metaModelType=metaModelType;
+				
 				case MetaModel.GradientBased_I_MetaModelName: metaModel=new GradientBasedMetaModel(m.getId(), this.simMeasurements, this.anaMeasurements, this.params, timeBeanId, this.currentParamNo,simGradient.get(m.getId()).get(timeBeanId), anaGradient.get(m.getId()).get(timeBeanId));
-
+				this.metaModelType=metaModelType;
+				
 				case MetaModel.GradientBased_II_MetaModelName: metaModel=new GradientBaseOptimizedMetaModel(m.getId(), this.simMeasurements, this.anaMeasurements, this.params, timeBeanId, this.currentParamNo, simGradient.get(m.getId()).get(timeBeanId), anaGradient.get(m.getId()).get(timeBeanId), this.iterationNo);
-
+				this.metaModelType=metaModelType;
+				
 				case MetaModel.GradientBased_III_MetaModelName: metaModel=new GradientOptimizedMetaModel(m.getId(), this.simMeasurements, this.anaMeasurements, this.params, timeBeanId, this.currentParamNo, simGradient.get(m.getId()).get(timeBeanId), anaGradient.get(m.getId()).get(timeBeanId), this.iterationNo);
-
+				this.metaModelType=metaModelType;
+				
 				default : metaModel=new AnalyticLinearMetaModel(m.getId(), this.simMeasurements, this.anaMeasurements, this.params, timeBeanId, this.currentParamNo) ;
-
+				this.metaModelType=MetaModel.AnalyticalLinearMetaModelName;
 				
 				}
 				this.metaModels.get(m.getId()).put(timeBeanId, metaModel);
+				
 			}
 		}
 	}
 
 
+	/**
+	 * This is the most important method algorithm of this class
+	 * The gradients can be null in case of non-gradient Based metaModel Type
+	 */
+	public LinkedHashMap<String,Double> generateNewParam(AnalyticalModel sue,Measurements simMeasurements,Map<Id<Measurement>,Map<String,LinkedHashMap<String,Double>>>simGradient,Map<Id<Measurement>,Map<String,LinkedHashMap<String,Double>>> anaGradient, String metaModelType) {
+		this.updateSimMeasurements(simMeasurements);
+		this.sueAssignment=sue;
+		Measurements anaMeasurements=this.calibrationMeasurements.clone();
+		Map<String,Map<Id<Link>,Double>>linkVolumes= sue.perFormSUE(new LinkedHashMap<>(this.trialParam));
+		anaMeasurements.updateMeasurements(linkVolumes);
+		this.anaMeasurements.put(this.iterationNo, anaMeasurements);
+		this.params.put(this.iterationNo, this.trialParam);
+		if(this.iterationNo>0) {
+			//Accept or reject the point
+			//update successive rejected point
+			//Run IterLogger
+			//Fix Tr Radius
+			this.writeMeasurementComparison(fileLoc);
+			double CurrentSimObjective=ObjectiveCalculator.calcObjective(this.calibrationMeasurements, this.simMeasurements.get(this.currentParam), this.ObjectiveType);
+			double CurrentMetaModelObjective=ObjectiveCalculator.calcObjective(this.calibrationMeasurements, this.CalcMetaModelPrediction(this.currentParamNo), this.ObjectiveType);
+			double trialSimObjective=ObjectiveCalculator.calcObjective(this.calibrationMeasurements, this.simMeasurements.get(this.iterationNo), this.ObjectiveType);
+			double trialMetaModelObjective=ObjectiveCalculator.calcObjective(this.calibrationMeasurements, this.CalcMetaModelPrediction(this.iterationNo), this.ObjectiveType);
+			double SimObjectiveChange=CurrentSimObjective-trialSimObjective;
+			double MetaObjectiveChange=CurrentMetaModelObjective-trialMetaModelObjective;
+			double rouk=SimObjectiveChange/MetaObjectiveChange;
+			boolean accepted=false;
+			if(SimObjectiveChange>0 && rouk>=this.thresholdErrorRatio) {
+				this.currentParam=this.trialParam;
+				this.currentParamNo=this.iterationNo;
+				this.TrRadius=Math.min(this.maxTrRadius, this.trusRegionIncreamentRatio*this.TrRadius);
+				this.successiveRejection=0;
+				accepted=true;
+			}else if(SimObjectiveChange>0 && rouk<this.thresholdErrorRatio){
+				this.currentParam=this.trialParam;
+				this.currentParamNo=this.iterationNo;
+				this.successiveRejection=0;
+				accepted=true;
+			}else {
+				this.successiveRejection++;
+				this.TrRadius=Math.max(this.minTrRadius, this.trustRegionDecreamentRatio*this.TrRadius);
+				accepted=false;
+				
+			}
+			
+			this.interLogger(fileLoc, this.iterationNo, this.currentParamNo, CurrentMetaModelObjective, CurrentSimObjective, trialMetaModelObjective, trialSimObjective, accepted, this.TrRadius, rouk,this.metaModelType, this.trialParam, sue);
+			}
+		
+		//InternalparamCalibration
+		if(this.successiveRejection>this.maxSuccesiveRejection && this.shouldPerformInternalParamCalibration==true) {
+			Map<Integer,Measurements>newAnaMeasurements=this.sueAssignment.calibrateInternalParams(this.simMeasurements, this.params,this.sueAssignment.getAnalyticalModelInternalParams(), this.currentParamNo);
+			this.updateAnalyticalMeasurement(newAnaMeasurements);
+		}
+			
+		
+		//Generating metaModels
+		
+		this.createMetaModel(simGradient, anaGradient, metaModelType);
+		
+		//Calculating new Point
+		if(this.iterationNo>0) {
+			if(this.calcAverageMetaParamsChange()<this.minMetaParamChange) {
+				trialParam=this.drawRandomPoint(this.pReader.getInitialParamLimit());
+			}else {
+				AnalyticalModelOptimizer anaOptimizer=new AnalyticalModelOptimizerImpl(sue, this.calibrationMeasurements, this.metaModels, this.currentParam, this.TrRadius, this.pReader.getParamLimit(), metaModelType);
+				this.trialParam=anaOptimizer.performOptimization();
+			}
+			
+		}else {
+			AnalyticalModelOptimizer anaOptimizer=new AnalyticalModelOptimizerImpl(sue, this.calibrationMeasurements, this.metaModels, this.currentParam, this.TrRadius, this.pReader.getParamLimit(), metaModelType);
+			this.trialParam=anaOptimizer.performOptimization();
+		}
+		
+		
+		this.iterationNo++;
+		return this.trialParam;
+	}
 	
 
 	@Override
@@ -163,7 +261,7 @@ public class CalibratorImpl implements Calibrator {
 	@Override
 	public void writeMeasurementComparison(String fileLoc) {
 		try {
-			FileWriter fw=new FileWriter(new File(fileLoc+"CountData"+this.iterationNo+".csv"),false);
+			FileWriter fw=new FileWriter(new File(fileLoc+"Comparison"+this.iterationNo+".csv"),false);
 			fw.append("MeasurementId,timeBeanId,RealCount,currentSimCount,trialSimCount\n");
 			for(Measurement m: this.calibrationMeasurements.getMeasurements().values()) {
 				for(String timeBean:m.getVolumes().keySet()) {
@@ -180,18 +278,27 @@ public class CalibratorImpl implements Calibrator {
 		}
 	}
 	
-	private void CalcMetaModelPrediction(String fileLoc,Id<Measurement>mId,String timeId) {
-		
+	
+	private Measurements CalcMetaModelPrediction(int iterNo) {
+		Measurements metaModelMeasurements=this.calibrationMeasurements.clone();
+		for(Measurement m: this.calibrationMeasurements.getMeasurements().values()) {
+			for(String timeBeanId:m.getVolumes().keySet()) {
+				metaModelMeasurements.getMeasurements().get(m.getId()).addVolume(timeBeanId, this.metaModels.get(m.getId()).get(timeBeanId).calcMetaModel(this.anaMeasurements.get(iterNo).getMeasurements().get(m.getId()).getVolumes().get(timeBeanId), this.params.get(iterNo)));
+			}
+		}
+		return metaModelMeasurements;
 	}
 	
-	public void interLogger(String fileLoc,int IterNo, int currentParamNo, double CurrentAnalyticalObjective,
+	
+	
+	private void interLogger(String fileLoc,int IterNo, int currentParamNo, double CurrentAnalyticalObjective,
 			double currentSimObjective, double newAnalyticalObjective, double newSimObjective, boolean Accepted,
-			double currentTrRadius, double currentrouK, LinkedHashMap<String, Double> Params,AnalyticalModel sue) {
+			double currentTrRadius, double currentrouK,String metaModelType, LinkedHashMap<String, Double> Params,AnalyticalModel sue) {
 		
 	String sp=",";
 	String nl="\n";
 	String header="IterNo"+sp+"CurrentParamNo"+sp+"CurrentAnalyticalObjective"
-			+sp+"CurrentSimObjective"+sp+"newAnalyticalObjective"+sp+"newSimObjective"+sp+"Accepted"+sp+"TrustRegionRadius"+sp+"rouK"+sp+"Params"+sp+"InternalParams";
+			+sp+"CurrentSimObjective"+sp+"newAnalyticalObjective"+sp+"newSimObjective"+sp+"Accepted"+sp+"TrustRegionRadius"+sp+"rouK"+sp+"MetaModelType"+sp+"Params"+sp+"InternalParams";
 	
 	
 	try {
@@ -200,7 +307,7 @@ public class CalibratorImpl implements Calibrator {
 		fw.append(header+nl);
 		fw.append(IterNo+sp+currentParamNo+sp+CurrentAnalyticalObjective+
 				sp+currentSimObjective+sp+newAnalyticalObjective+sp+newSimObjective+sp+Accepted
-				+sp+currentTrRadius+sp+currentrouK);
+				+sp+currentTrRadius+sp+currentrouK+sp+metaModelType);
 		for(double d:Params.values()) {
 			fw.append(sp+d);
 			}
@@ -211,8 +318,8 @@ public class CalibratorImpl implements Calibrator {
 		
 		fw.append(nl);
 		if(this.iterationNo==1) {
-			fw.append("0th sim objective"+ObjectiveCalculator.calcObjective(calibrationMeasurements, this.simMeasurements.get(0), ObjectiveCalculator.TypeMeasurementAndTimeSpecific)+sp);
-			fw.append("0th meta objective"+ObjectiveCalculator.calcObjective(calibrationMeasurements, this.anaMeasurements.get(0), metaModels,this.params.get(0), ObjectiveCalculator.TypeMeasurementAndTimeSpecific));
+			fw.append("0th sim objective"+sp+ObjectiveCalculator.calcObjective(calibrationMeasurements, this.simMeasurements.get(0), this.ObjectiveType+sp));
+			fw.append("0th meta objective"+sp+ObjectiveCalculator.calcObjective(calibrationMeasurements, this.anaMeasurements.get(0), metaModels,this.params.get(0), this.ObjectiveType));
 		}
 		fw.flush();
 		fw.close();
@@ -225,29 +332,36 @@ public class CalibratorImpl implements Calibrator {
 	
 	
 	
-	private Double[] calcAverageMetaParams(int iter) {
-		Double[] z=null;
+	private double calcAverageMetaParamsChange() {
+		boolean comparable=true;
+		double z=0;
 		int k=0;
+		outerloop:
 		for(Id<Measurement> m:this.metaModels.keySet()) {
 			for(String timeId:this.metaModels.get(m).keySet()) {
-				double[] params=this.metaModels.get(m).get(timeId).getMetaModelParams();
-				
-				if(z==null) {
-					z=new Double[params.length];
-					for(int i=0;i<z.length;i++) {
-						z[i]=0.;
-					}
+				if(!this.oldMetaModel.get(m).get(timeId).getMetaModelName().equals(this.metaModels.get(m).get(timeId).getMetaModelName())) {
+					logger.warn("Non comparable metamodel types. Method will exit.");
+					comparable=false;
+					break outerloop;
+					
+				}else {
+				double[] oldparams=this.metaModels.get(m).get(timeId).getMetaModelParams();
+				double[] newParams=this.oldMetaModel.get(m).get(timeId).getMetaModelParams();
+				double distance=0;
+				for(int i=0;i<oldparams.length;i++) {
+					distance+=Math.pow(oldparams[i]-newParams[i],2);
 				}
-				for(int i=0;i<z.length;i++) {
-					z[i]+=params[i];
-				}
+				distance=Math.sqrt(distance);
+				z+=distance;
 				k++;
+				}
+				
 			}
 		}
-		for(int i=0;i<z.length;i++) {
-			z[i]=z[i]/k;
+		z=z/k;
+		if(comparable==false) {
+			return this.minMetaParamChange+5;// this 5 is arbitrary. ensures greater than min threshold
 		}
-		this.averageMetaModelParams.put(this.iterationNo, z);
 		return z;
 		
 	}

@@ -13,6 +13,7 @@ import org.matsim.core.utils.collections.Tuple;
 import org.matsim.pt.transitSchedule.api.TransitSchedule;
 
 import dynamicTransitRouter.fareCalculators.FareCalculator;
+import measurements.Measurements;
 
 
 
@@ -64,4 +65,8 @@ public interface AnalyticalModel {
 	public static final String ModeConstantCarName="ModeConstantCar";
 	public static final String MarginalUtilityofPerformName="MarginalUtilityofPerform";
 	public static final String CapacityMultiplierName="CapacityMultiplier";
+	
+	public Map<Integer, Measurements> calibrateInternalParams(Map<Integer, Measurements> simMeasurements,
+			Map<Integer, LinkedHashMap<String, Double>> params, LinkedHashMap<String, Double> initialParam,
+			int currentParamNo);
 }
