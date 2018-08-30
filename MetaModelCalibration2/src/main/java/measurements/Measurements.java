@@ -1,6 +1,9 @@
 package measurements;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -16,7 +19,7 @@ import org.matsim.core.utils.collections.Tuple;
 /**
  * A simplified class for holding measurements 
  * Same for both Simulation measurement analytical Measurement and RealCount measurement 
- * 
+ * TODO: Add linkIds to the reader and writers
  *
  * @author h
  *
@@ -91,15 +94,39 @@ public class Measurements {
 	public void writeCSVMeasurements(String fileLoc) {
 		try {
 			FileWriter fw=new FileWriter(new File(fileLoc),false);
-			fw.append("timeId,MeasurementId,PCUCount\n");
+			fw.append("MeasurementId,timeId,PCUCount\n");
 			for(Measurement m:this.measurements.values()) {
 				for(String timeId:m.getVolumes().keySet())
-				fw.append(timeId+","+m.getId().toString()+","+m.getVolumes().get(timeId)+"\n");
+				fw.append(m.getId().toString()+","+timeId+","+m.getVolumes().get(timeId)+"\n");
 			}
 			fw.flush();
 			fw.close();
 		} catch (IOException e) {
 			
+			e.printStackTrace();
+		}
+	}
+	
+	public void updateMeasurementsFromFile(String fileLoc) {
+		try {
+			BufferedReader bf=new BufferedReader(new FileReader(new File(fileLoc)));
+			bf.readLine();
+			String line;
+			while((line=bf.readLine())!=null) {
+				String[] part=line.split(",");
+				Id<Measurement> measurementId=Id.create(part[0].trim(), Measurement.class);
+				if(!this.measurements.containsKey(measurementId)) {
+					this.createAnadAddMeasurement(measurementId.toString());
+				}
+				String timeBeanId=part[1].trim();
+				this.measurements.get(measurementId).addVolume(timeBeanId, Double.parseDouble(part[2].trim()));
+			}
+			bf.close();
+		} catch (FileNotFoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	}
