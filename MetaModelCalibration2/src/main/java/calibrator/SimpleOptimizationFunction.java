@@ -17,11 +17,12 @@ import measurements.Measurements;
 
 public class SimpleOptimizationFunction extends OptimizationFunction{
 
+	private final String type;
 	protected SimpleOptimizationFunction(AnalyticalModel sueAssignment, Measurements realData, Map<Id<Measurement>, Map<String, MetaModel>> metaModels,
 			LinkedHashMap<String, Double> currentParams, double TrRadius,
-			LinkedHashMap<String, Tuple<Double, Double>> paramLimit) {
+			LinkedHashMap<String, Tuple<Double, Double>> paramLimit,String objectiveType) {
 		super(sueAssignment, realData,metaModels , currentParams, TrRadius, paramLimit);
-		
+		this.type=objectiveType;
 	}
 
 	@Override
@@ -44,16 +45,8 @@ public class SimpleOptimizationFunction extends OptimizationFunction{
 			LinkedHashMap<String, Double> params) {
 		
 		Measurements anaMeasurements=this.getRealData().clone();
-		double objective=0;
-		for(Measurement m:this.getRealData().getMeasurements().values()) {
-			for(String timeBean:m.getVolumes().keySet()) {
-				double RealLinkCount=this.getRealData().getMeasurements().get(m.getId()).getVolumes().get(timeBean);
-				double AnaLyticalModelLinkCount=anaMeasurements.getMeasurements().get(m.getId()).getVolumes().get(timeBean);
-				MetaModel metaModel=this.getMetaModels().get(m.getId()).get(timeBean);
-				objective+=Math.pow(RealLinkCount-metaModel.calcMetaModel(AnaLyticalModelLinkCount, params),2);
-			}
-		}
-		return objective;
+		anaMeasurements.updateMeasurements(linkVolume);
+		return this.calcMetaModelObjective(anaMeasurements, params);
 	}
 
 	@Override
@@ -94,14 +87,16 @@ public class SimpleOptimizationFunction extends OptimizationFunction{
 	@Override
 	public double calcMetaModelObjective(Measurements anaMeasurements, LinkedHashMap<String, Double> params) {
 		double objective=0;
+		Measurements metaMeasurements=this.getRealData().clone();
 		for(Measurement m:this.getRealData().getMeasurements().values()) {
 			for(String timeBean:m.getVolumes().keySet()) {
-				double RealLinkCount=this.getRealData().getMeasurements().get(m.getId()).getVolumes().get(timeBean);
 				double AnaLyticalModelLinkCount=anaMeasurements.getMeasurements().get(m.getId()).getVolumes().get(timeBean);
 				MetaModel metaModel=this.getMetaModels().get(m.getId()).get(timeBean);
-				objective+=Math.pow(RealLinkCount-metaModel.calcMetaModel(AnaLyticalModelLinkCount, params),2);
+				metaMeasurements.getMeasurements().get(m.getId()).addVolume(timeBean, metaModel.calcMetaModel(AnaLyticalModelLinkCount, params));
 			}
 		}
+		
+		objective=ObjectiveCalculator.calcObjective(this.getRealData(), metaMeasurements,type);
 		return objective;
 	}
 	

@@ -3,6 +3,8 @@ package calibrator;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -24,6 +26,7 @@ import matamodels.QuadraticMetaModel;
 import measurements.Measurement;
 import measurements.Measurements;
 
+
 public class CalibratorImpl implements Calibrator {
 
 	//Necessary Containers
@@ -32,7 +35,8 @@ public class CalibratorImpl implements Calibrator {
 	private Map<Integer,Measurements> anaMeasurements;
 	private Map<Id<Measurement>,Map<String,MetaModel>>metaModels;
 	private Map<Integer,LinkedHashMap<String,Double>>params;
-
+	private Map<Integer, Double[]> averageMetaModelParams;
+	
 	private Measurements calibrationMeasurements;
 
 	private int iterationNo=0;
@@ -159,20 +163,92 @@ public class CalibratorImpl implements Calibrator {
 	@Override
 	public void writeMeasurementComparison(String fileLoc) {
 		try {
-			FileWriter fw=new FileWriter(new File(fileLoc),false);
-			fw.append("MeasurementId,timeBeanId,RealCount,SimCount,metaModelPrediction,AbsPercentDifference,PercentDifference\n");
+			FileWriter fw=new FileWriter(new File(fileLoc+"CountData"+this.iterationNo+".csv"),false);
+			fw.append("MeasurementId,timeBeanId,RealCount,currentSimCount,trialSimCount\n");
 			for(Measurement m: this.calibrationMeasurements.getMeasurements().values()) {
 				for(String timeBean:m.getVolumes().keySet()) {
-					fw.append(m.getId()+","+timeBean+","+this.calibrationMeasurements.getMeasurements().get(m.getId()).getVolumes().get(timeBean)+","+this.simMeasurements.get(this.iterationNo).getMeasurements())
-				}
+					
+					fw.append(m.getId()+","+timeBean+","+this.calibrationMeasurements.getMeasurements().get(m.getId()).getVolumes().get(timeBean)+","+
+				this.simMeasurements.get(this.currentParamNo).getMeasurements().get(m.getId()).getVolumes().get(timeBean)+","+this.simMeasurements.get(this.iterationNo).getMeasurements().get(m.getId()).getVolumes().get(timeBean)+"\n");
+					}
 			}
+		fw.flush();
+		fw.close();
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	}
 	
-	private void CalcMetaModelPrediction(Id<Measurement>mId,String timeId) {
+	private void CalcMetaModelPrediction(String fileLoc,Id<Measurement>mId,String timeId) {
+		
+	}
+	
+	public void interLogger(String fileLoc,int IterNo, int currentParamNo, double CurrentAnalyticalObjective,
+			double currentSimObjective, double newAnalyticalObjective, double newSimObjective, boolean Accepted,
+			double currentTrRadius, double currentrouK, LinkedHashMap<String, Double> Params,AnalyticalModel sue) {
+		
+	String sp=",";
+	String nl="\n";
+	String header="IterNo"+sp+"CurrentParamNo"+sp+"CurrentAnalyticalObjective"
+			+sp+"CurrentSimObjective"+sp+"newAnalyticalObjective"+sp+"newSimObjective"+sp+"Accepted"+sp+"TrustRegionRadius"+sp+"rouK"+sp+"Params"+sp+"InternalParams";
+	
+	
+	try {
+		FileWriter fw=new FileWriter(fileLoc+"iterLogger.csv");
+		fw.append(LocalDateTime.now().toString());
+		fw.append(header+nl);
+		fw.append(IterNo+sp+currentParamNo+sp+CurrentAnalyticalObjective+
+				sp+currentSimObjective+sp+newAnalyticalObjective+sp+newSimObjective+sp+Accepted
+				+sp+currentTrRadius+sp+currentrouK);
+		for(double d:Params.values()) {
+			fw.append(sp+d);
+			}
+		ArrayList<Double> zz=new ArrayList<>(sue.getAnalyticalModelInternalParams().values());
+		for(double d:zz) {
+			fw.append(sp+d);
+		}
+		
+		fw.append(nl);
+		if(this.iterationNo==1) {
+			fw.append("0th sim objective"+ObjectiveCalculator.calcObjective(calibrationMeasurements, this.simMeasurements.get(0), ObjectiveCalculator.TypeMeasurementAndTimeSpecific)+sp);
+			fw.append("0th meta objective"+ObjectiveCalculator.calcObjective(calibrationMeasurements, this.anaMeasurements.get(0), metaModels,this.params.get(0), ObjectiveCalculator.TypeMeasurementAndTimeSpecific));
+		}
+		fw.flush();
+		fw.close();
+		}catch (IOException e) {
+		// TODO Auto-generated catch block
+		e.printStackTrace();
+	}
+	}
+	
+	
+	
+	
+	private Double[] calcAverageMetaParams(int iter) {
+		Double[] z=null;
+		int k=0;
+		for(Id<Measurement> m:this.metaModels.keySet()) {
+			for(String timeId:this.metaModels.get(m).keySet()) {
+				double[] params=this.metaModels.get(m).get(timeId).getMetaModelParams();
+				
+				if(z==null) {
+					z=new Double[params.length];
+					for(int i=0;i<z.length;i++) {
+						z[i]=0.;
+					}
+				}
+				for(int i=0;i<z.length;i++) {
+					z[i]+=params[i];
+				}
+				k++;
+			}
+		}
+		for(int i=0;i<z.length;i++) {
+			z[i]=z[i]/k;
+		}
+		this.averageMetaModelParams.put(this.iterationNo, z);
+		return z;
 		
 	}
 
