@@ -63,7 +63,7 @@ public class Measurements {
 	public Measurements clone() {
 		Measurements m=new Measurements(this.timeBean);
 		for(Measurement mm: this.measurements.values()) {
-			m.addMeasurement(mm);
+			m.addMeasurement(mm.clone());
 		}
 		return m;
 	}
