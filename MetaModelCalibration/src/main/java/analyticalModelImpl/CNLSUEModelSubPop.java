@@ -24,6 +24,7 @@ import dynamicTransitRouter.fareCalculators.FareCalculator;
 
 /**
  * This is a multi-od pair implementation of the AnalyticalModel CNLSUEModel
+ * 
  * @author h
  *
  */
