@@ -45,18 +45,20 @@ public class AnaModelControlerListener implements StartupListener,BeforeMobsimLi
 	private String fileLoc;
 	@Inject
 	private LinkCountEventHandler pcuVolumeCounter;
+	private MeasurementsStorage storage;
 	
 	private int maxIter;
 	private final Map<String, FareCalculator> farecalc;
 	
 	@Inject
 	public AnaModelControlerListener(Scenario scenario,AnalyticalModel sueAssignment, 
-			Map<String,FareCalculator> farecalc,@Named("fileLoc") String fileLoc,@Named("generateRoutesAndOD") boolean generateRoutesAndOD){
+			Map<String,FareCalculator> farecalc,@Named("fileLoc") String fileLoc,@Named("generateRoutesAndOD") boolean generateRoutesAndOD, MeasurementsStorage storage){
 		this.SueAssignment=sueAssignment;
 		this.farecalc=farecalc;
 		this.scenario=scenario;
 		this.fileLoc=fileLoc;
 		this.generateOD=generateRoutesAndOD;
+		this.storage=storage;
 	}
 	
 	@Inject
@@ -80,8 +82,9 @@ public class AnaModelControlerListener implements StartupListener,BeforeMobsimLi
 		
 		int counter=event.getIteration();
 		if(counter==this.maxIter) {
-			this.countData.updateSimulationModelData(this.pcuVolumeCounter.geenerateLinkCounts());
-			this.writeCSVCountData(fileLoc+"CountData_"+this.countData.getCurrentSimIteration()+".csv");
+			Measurements m=storage.getCalibrationMeasurements().clone();
+			m.updateMeasurements(this.pcuVolumeCounter.geenerateLinkCounts());
+			m.writeCSVMeasurements(fileLoc);
 		}
 		
 	}
@@ -96,45 +99,13 @@ public class AnaModelControlerListener implements StartupListener,BeforeMobsimLi
 
 	@Override
 	public void notifyShutdown(ShutdownEvent event) {
-		new PopulationWriter(event.getServices().getScenario().getPopulation()).write(fileLoc+"population_"+countData.getCurrentSimIteration()+".xml");
-		
 		if(this.generateOD) {
-			//System.out.println();
 		this.SueAssignment.generateRoutesAndOD(event.getServices().getScenario().getPopulation(),
 				event.getServices().getScenario().getNetwork(),
 				event.getServices().getScenario().getTransitSchedule(),
 				event.getServices().getScenario(), this.farecalc);
 		}	
 
-		
-	}
-	
-	private void writeCSVCountData(String fileLoc) {
-		Double simObjective=0.;
-		String d=",";
-		String n="\n";
-		String header="StationId"+d+"Time"+d+"LinkId"+d+"From Node Id"+d+"From Node X"+
-				d+"From Node Y"+d+"To Node Id"+d+"To Node X"+d+"To Node Y"+d+"PCU Car Volume"+d+"RealCount"+"\n";
-		try {
-			FileWriter fileWriter=new FileWriter(fileLoc);
-			fileWriter.append(header);
-			for(CountStation cs:this.countData.getCountstationsByLink().values()) {
-				for(String timeId:this.countData.getTimeBean().keySet()) {
-					Node FromNode=this.scenario.getNetwork().getLinks().get(cs.getLinkId()).getFromNode();
-					Node ToNode=this.scenario.getNetwork().getLinks().get(cs.getLinkId()).getToNode();
-					fileWriter.append(cs.getCountStationId()+d+timeId+d+cs.getLinkId()+d+FromNode.getId()+d+FromNode.getCoord().getX()+d+FromNode.getCoord().getY()
-							+d+ToNode.getId()+d+ToNode.getCoord().getX()+d+ToNode.getCoord().getY()+d+
-							cs.getSimCount(this.countData.getCurrentSimIteration(), timeId)+d+cs.getRealCount(timeId));
-					fileWriter.append(n);
-					simObjective+=Math.pow(cs.getSimCount(this.countData.getCurrentSimIteration(), timeId)-cs.getRealCount(timeId),2);
-				}
-			}
-			fileWriter.append("simObjective,"+simObjective);
-			fileWriter.close();
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
 		
 	}
 		

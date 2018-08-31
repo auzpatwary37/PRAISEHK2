@@ -6,24 +6,25 @@ import org.matsim.core.controler.AbstractModule;
 
 import com.google.inject.name.Names;
 
+import analyticalModel.AnalyticalModel;
 
-import ust.hk.praisehk.AnalyticalModels.AnalyticalModel;
-import ust.hk.praisehk.Counts.CountData;
+
+
 
 public class AnaModelCalibrationModule extends AbstractModule{
-	private CountData countData;
+	private MeasurementsStorage storage;
 	private AnalyticalModel sueAssignment;
 	private final String fileLoc;
 	private boolean generateRoutesAndOD=true;
 
 	
-	public AnaModelCalibrationModule(CountData countData,AnalyticalModel sueAssignment,String FileLoc) {
-		this.countData=countData;
+	public AnaModelCalibrationModule(MeasurementsStorage countData,AnalyticalModel sueAssignment,String FileLoc) {
+		this.storage=countData;
 		this.sueAssignment=sueAssignment;
 		this.fileLoc=FileLoc;
 		}	
-	public AnaModelCalibrationModule(CountData countData,AnalyticalModel sueAssignment,String FileLoc,boolean generateRouteAndOD) {
-		this.countData=countData;
+	public AnaModelCalibrationModule(MeasurementsStorage countData,AnalyticalModel sueAssignment,String FileLoc,boolean generateRouteAndOD) {
+		this.storage=countData;
 		this.sueAssignment=sueAssignment;
 		this.fileLoc=FileLoc;
 		this.generateRoutesAndOD=generateRouteAndOD;
@@ -31,12 +32,12 @@ public class AnaModelCalibrationModule extends AbstractModule{
 		}
 	
 	public void install() {
-		bind(CountData.class).toInstance(this.countData);
+		bind(MeasurementsStorage.class).toInstance(this.storage);
 		bind(AnalyticalModel.class).toInstance(this.sueAssignment);
 		bind(String.class).annotatedWith(Names.named("fileLoc")).toInstance(this.fileLoc);
 		this.addControlerListenerBinding().to(AnaModelControlerListener.class);
-		this.addEventHandlerBinding().toInstance(new LinkCountEventHandler(this.countData));
-		bind(LinkCountEventHandler.class).toInstance(new LinkCountEventHandler(this.countData));
+		this.addEventHandlerBinding().toInstance(new LinkCountEventHandler(this.storage.getCalibrationMeasurements()));
+		bind(LinkCountEventHandler.class).toInstance(new LinkCountEventHandler(this.storage.getCalibrationMeasurements()));
 		bind(boolean.class).annotatedWith(Names.named("generateRoutesAndOD")).toInstance(this.generateRoutesAndOD);
 	}
 }

@@ -58,7 +58,7 @@ public class Measurements {
 	
 	/**
 	 * Will deep clone the measurement and provide a new measurement exactly same as the current measurement 
-	 * Modifying the current measurement will not affect the new created measurement and vis-versa
+	 * Modifying the current measurement will not affect the new created measurement and vise-versa The attributes are not deep copied
 	 */
 	public Measurements clone() {
 		Measurements m=new Measurements(this.timeBean);
