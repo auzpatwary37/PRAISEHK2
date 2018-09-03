@@ -34,7 +34,7 @@ public class LinkCountEventHandler implements LinkEnterEventHandler, TransitDriv
 	private Map<Id<Vehicle>,Double> transitVehicles=new HashMap<>();
 	private final Map<String, Tuple<Double,Double>> timeBean;
 	private Measurements calibrationMeasurements;
-	//private CountData countdata;
+	
 	@Inject
 	private Scenario scenario;
 	

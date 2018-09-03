@@ -46,6 +46,8 @@ public class AnaModelControlerListener implements StartupListener,BeforeMobsimLi
 	@Inject
 	private LinkCountEventHandler pcuVolumeCounter;
 	private MeasurementsStorage storage;
+	@Inject
+	private @Named("CurrentParam") paramContainer currentParam;
 	
 	private int maxIter;
 	private final Map<String, FareCalculator> farecalc;
@@ -85,6 +87,7 @@ public class AnaModelControlerListener implements StartupListener,BeforeMobsimLi
 			Measurements m=storage.getCalibrationMeasurements().clone();
 			m.updateMeasurements(this.pcuVolumeCounter.geenerateLinkCounts());
 			m.writeCSVMeasurements(fileLoc);
+			this.storage.storeMeasurements(this.currentParam.getParam(), m);
 		}
 		
 	}

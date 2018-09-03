@@ -16,19 +16,19 @@ public class AnaModelCalibrationModule extends AbstractModule{
 	private AnalyticalModel sueAssignment;
 	private final String fileLoc;
 	private boolean generateRoutesAndOD=true;
-
+	private paramContainer currentParam;
 	
 	public AnaModelCalibrationModule(MeasurementsStorage countData,AnalyticalModel sueAssignment,String FileLoc) {
 		this.storage=countData;
 		this.sueAssignment=sueAssignment;
 		this.fileLoc=FileLoc;
 		}	
-	public AnaModelCalibrationModule(MeasurementsStorage countData,AnalyticalModel sueAssignment,String FileLoc,boolean generateRouteAndOD) {
+	public AnaModelCalibrationModule(MeasurementsStorage countData,AnalyticalModel sueAssignment,String FileLoc,LinkedHashMap<String,Double> currentParam,boolean generateRouteAndOD) {
 		this.storage=countData;
 		this.sueAssignment=sueAssignment;
 		this.fileLoc=FileLoc;
 		this.generateRoutesAndOD=generateRouteAndOD;
-
+		this.currentParam=new paramContainer(currentParam);
 		}
 	
 	public void install() {
@@ -39,5 +39,6 @@ public class AnaModelCalibrationModule extends AbstractModule{
 		this.addEventHandlerBinding().toInstance(new LinkCountEventHandler(this.storage.getCalibrationMeasurements()));
 		bind(LinkCountEventHandler.class).toInstance(new LinkCountEventHandler(this.storage.getCalibrationMeasurements()));
 		bind(boolean.class).annotatedWith(Names.named("generateRoutesAndOD")).toInstance(this.generateRoutesAndOD);
+		bind (paramContainer.class).annotatedWith(Names.named("CurrentParam")).toInstance(this.currentParam);
 	}
 }
