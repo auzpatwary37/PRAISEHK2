@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.apache.log4j.Logger;
+import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.network.Link;
 import org.matsim.core.utils.collections.Tuple;
@@ -14,14 +15,23 @@ public class Measurement {
 	/**
 	 * Some attributes name are kept as public and final string
 	 */
-	public final String linkListAttributeName="LINK_LIST";
+	public static final String linkListAttributeName="LINK_LIST";
 	
 	private final Id<Measurement> id;
 	private Map<String,Object> attributes=new HashMap<>();
 	private final Map<String,Tuple<Double,Double>> timeBean;
 	private Map<String,Double> volumes=new HashMap<>();
 	private static final Logger logger=Logger.getLogger(Measurement.class);
+	private Coord coord=null;
 	
+	public Coord getCoord() {
+		return coord;
+	}
+
+	public void setCoord(Coord coord) {
+		this.coord = coord;
+	}
+
 	protected Measurement(String id, Map<String,Tuple<Double,Double>> timeBean) {
 		this.id=Id.create(id, Measurement.class);
 		this.timeBean=timeBean;
@@ -74,6 +84,12 @@ public class Measurement {
 		return m;
 	}
 	
+	
+	
+	public Map<String, Object> getAttributes() {
+		return attributes;
+	}
+
 	/**
 	 * Default implementation of updater.
 	 * Should be overridden if necessary.

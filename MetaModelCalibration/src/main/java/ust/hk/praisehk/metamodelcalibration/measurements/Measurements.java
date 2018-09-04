@@ -35,7 +35,7 @@ public class Measurements {
 		this.timeBean=timeBean;
 	}
 	
-	public static Measurements createMeasurements(HashMap<String,Tuple<Double,Double>> timeBean) {
+	public static Measurements createMeasurements(Map<String,Tuple<Double,Double>> timeBean) {
 		return new Measurements(timeBean);
 	}
 	
