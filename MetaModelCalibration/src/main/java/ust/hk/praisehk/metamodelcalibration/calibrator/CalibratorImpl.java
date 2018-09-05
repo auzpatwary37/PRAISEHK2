@@ -55,8 +55,6 @@ public class CalibratorImpl implements Calibrator {
 
 	//Trust region parameters
 	private String ObjectiveType=ObjectiveCalculator.TypeMeasurementAndTimeSpecific;
-	private boolean InternalModelParamCalibration=true;
-	private int maxIteration=100;
 	private double TrRadius=25;
 	private double maxTrRadius=2.5*this.TrRadius;
 	private double minTrRadius=0.001;
@@ -181,8 +179,10 @@ public class CalibratorImpl implements Calibrator {
 		this.updateSimMeasurements(simMeasurements);
 		this.sueAssignment=sue;
 		Measurements anaMeasurements=this.calibrationMeasurements.clone();
-		Map<String,Map<Id<Link>,Double>>linkVolumes= sue.perFormSUE(new LinkedHashMap<>(this.trialParam));
-		anaMeasurements.updateMeasurements(linkVolumes);
+		if(!metaModelType.equals(MetaModel.LinearMetaModelName)&&!metaModelType.equals(MetaModel.QudaraticMetaModelName)) {
+			Map<String,Map<Id<Link>,Double>>linkVolumes= sue.perFormSUE(new LinkedHashMap<>(this.trialParam));
+			anaMeasurements.updateMeasurements(linkVolumes);
+		}
 		this.anaMeasurements.put(this.iterationNo, anaMeasurements);
 		this.params.put(this.iterationNo, this.trialParam);
 		if(this.iterationNo>0) {
@@ -236,12 +236,12 @@ public class CalibratorImpl implements Calibrator {
 			if(this.calcAverageMetaParamsChange()<this.minMetaParamChange) {
 				trialParam=this.drawRandomPoint(this.pReader.getInitialParamLimit());
 			}else {
-				AnalyticalModelOptimizer anaOptimizer=new AnalyticalModelOptimizerImpl(sue, this.calibrationMeasurements, this.metaModels, this.currentParam, this.TrRadius, this.pReader.getParamLimit(), metaModelType);
+				AnalyticalModelOptimizer anaOptimizer=new AnalyticalModelOptimizerImpl(sue, this.calibrationMeasurements, this.metaModels, this.currentParam, this.TrRadius, this.pReader.getParamLimit(),this.ObjectiveType ,metaModelType);
 				this.trialParam=anaOptimizer.performOptimization();
 			}
 			
 		}else {
-			AnalyticalModelOptimizer anaOptimizer=new AnalyticalModelOptimizerImpl(sue, this.calibrationMeasurements, this.metaModels, this.currentParam, this.TrRadius, this.pReader.getParamLimit(), metaModelType);
+			AnalyticalModelOptimizer anaOptimizer=new AnalyticalModelOptimizerImpl(sue, this.calibrationMeasurements, this.metaModels, this.currentParam, this.TrRadius, this.pReader.getParamLimit(),this.ObjectiveType, metaModelType);
 			this.trialParam=anaOptimizer.performOptimization();
 		}
 		
@@ -371,5 +371,135 @@ public class CalibratorImpl implements Calibrator {
 		return z;
 		
 	}
+
+	//-----------------------------Getter Setter------------------------------------------------------
+
+	@Override
+	public double getTrRadius() {
+		return TrRadius;
+	}
+
+
+	@Override	
+	public String getObjectiveType() {
+		return ObjectiveType;
+	}
+
+
+	@Override
+	public double getMaxTrRadius() {
+		return maxTrRadius;
+	}
+
+
+	@Override
+	public double getMinTrRadius() {
+		return minTrRadius;
+	}
+
+
+	@Override
+	public double getSuccessiveRejection() {
+		return successiveRejection;
+	}
+
+
+	@Override
+	public double getMaxSuccesiveRejection() {
+		return maxSuccesiveRejection;
+	}
+
+
+	@Override
+	public double getMinMetaParamChange() {
+		return minMetaParamChange;
+	}
+
+
+	@Override
+	public double getThresholdErrorRatio() {
+		return thresholdErrorRatio;
+	}
+
+
+	@Override
+	public double getTrusRegionIncreamentRatio() {
+		return trusRegionIncreamentRatio;
+	}
+
+
+	@Override
+	public double getTrustRegionDecreamentRatio() {
+		return trustRegionDecreamentRatio;
+	}
+
+
+	@Override
+	public String getFileLoc() {
+		return fileLoc;
+	}
+
+
+	@Override
+	public boolean isShouldPerformInternalParamCalibration() {
+		return shouldPerformInternalParamCalibration;
+	}
+
+
+	@Override
+	public int getCurrentParamNo() {
+		return currentParamNo;
+	}
+
+
+	@Override
+	public LinkedHashMap<String, Double> getCurrentParam() {
+		return currentParam;
+	}
+
+
+	@Override
+	public void setObjectiveType(String objectiveType) {
+		ObjectiveType = objectiveType;
+	}
+
+
+	@Override
+	public void setMaxTrRadius(double maxTrRadius) {
+		this.maxTrRadius = maxTrRadius;
+	}
+
+
+	@Override
+	public void setMinTrRadius(double minTrRadius) {
+		this.minTrRadius = minTrRadius;
+	}
+
+
+	@Override
+	public void setMinMetaParamChange(double minMetaParamChange) {
+		this.minMetaParamChange = minMetaParamChange;
+	}
+
+
+	@Override
+	public void setThresholdErrorRatio(double thresholdErrorRatio) {
+		this.thresholdErrorRatio = thresholdErrorRatio;
+	}
+
+
+	@Override
+	public void setTrusRegionIncreamentRatio(double trusRegionIncreamentRatio) {
+		this.trusRegionIncreamentRatio = trusRegionIncreamentRatio;
+	}
+
+
+	@Override
+	public void setTrustRegionDecreamentRatio(double trustRegionDecreamentRatio) {
+		this.trustRegionDecreamentRatio = trustRegionDecreamentRatio;
+	}
+	
+	
+	
 
 }

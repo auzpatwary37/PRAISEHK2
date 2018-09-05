@@ -108,7 +108,7 @@ public class SimAndAnalyticalGradientCalculator {
 			anaLinkCountPlus.updateMeasurements(sue.perFormSUE(thetaPlus));
 			sue=new CNLSUEModel(this.storage.getTimeBean());
 			sue.setDefaultParameters(originalParam);
-			simRun.run(sue, this.config, thetaMinus, true,currentIterCounter+"_thread0",this.storage);
+			simRun.run(sue, this.config, thetaMinus, true,currentIterCounter+"_thread1",this.storage);
 			simLinkCountMinus=this.storage.getSimMeasurement(thetaMinus);
 			anaLinkCountMinus=simLinkCountMinus.clone();
 			anaLinkCountMinus.updateMeasurements(sue.perFormSUE(thetaMinus));

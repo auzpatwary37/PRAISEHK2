@@ -16,13 +16,14 @@ import ust.hk.praisehk.metamodelcalibration.measurements.Measurements;
 
 
 public class SimpleOptimizationFunction extends OptimizationFunction{
-
+	private final String metaModelType;
 	private final String type;
 	protected SimpleOptimizationFunction(AnalyticalModel sueAssignment, Measurements realData, Map<Id<Measurement>, Map<String, MetaModel>> metaModels,
 			LinkedHashMap<String, Double> currentParams, double TrRadius,
-			LinkedHashMap<String, Tuple<Double, Double>> paramLimit,String objectiveType) {
+			LinkedHashMap<String, Tuple<Double, Double>> paramLimit,String objectiveType,String MetaModelType) {
 		super(sueAssignment, realData,metaModels , currentParams, TrRadius, paramLimit);
 		this.type=objectiveType;
+		this.metaModelType=MetaModelType;
 	}
 
 	@Override
@@ -30,7 +31,10 @@ public class SimpleOptimizationFunction extends OptimizationFunction{
 		LinkedHashMap<String, Double>params=ScaleUp(x);
 		Map<String,Map<Id<Link>,Double>> linkVolume=null;
 		this.getSUE().clearLinkCarandTransitVolume();
-		linkVolume=this.getSUE().perFormSUE(new LinkedHashMap<>(params));
+		
+		if(!this.metaModelType.equals(MetaModel.LinearMetaModelName) && !this.metaModelType.equals(MetaModel.QudaraticMetaModelName)) {
+			linkVolume=this.getSUE().perFormSUE(new LinkedHashMap<>(params));
+		}
 		double objective=calcMetaModelObjective(linkVolume, params);
 		int d=0;
 		for(double xi:calcConstrain(x,this.getParamLimit())) {
@@ -45,7 +49,9 @@ public class SimpleOptimizationFunction extends OptimizationFunction{
 			LinkedHashMap<String, Double> params) {
 		
 		Measurements anaMeasurements=this.getRealData().clone();
-		anaMeasurements.updateMeasurements(linkVolume);
+		if(linkVolume!=null) {
+			anaMeasurements.updateMeasurements(linkVolume);
+		}
 		return this.calcMetaModelObjective(anaMeasurements, params);
 	}
 

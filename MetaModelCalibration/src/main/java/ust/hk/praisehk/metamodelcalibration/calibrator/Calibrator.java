@@ -27,6 +27,74 @@ public interface Calibrator {
 			Map<Id<Measurement>, Map<String, LinkedHashMap<String, Double>>> simGradient,
 			Map<Id<Measurement>, Map<String, LinkedHashMap<String, Double>>> anaGradient, String metaModelType);
 
+	//----------------------GetterSetters--------------------------------------------------------------
+
+	/**
+	 * This Trust Region Radius is important for gradient calculation
+	 * @return
+	 */
+	public double getTrRadius();
+
+
+	public String getObjectiveType();
+
+
+	public double getMaxTrRadius();
+
+
+	public double getMinTrRadius();
+
+
+	public double getSuccessiveRejection();
+
+
+	public double getMaxSuccesiveRejection();
+
+
+	public double getMinMetaParamChange();
+
+
+	public double getThresholdErrorRatio();
+
+
+	public double getTrusRegionIncreamentRatio();
+
+
+	public double getTrustRegionDecreamentRatio();
+
+
+	public String getFileLoc();
+
+
+	public boolean isShouldPerformInternalParamCalibration();
+
+
+	public int getCurrentParamNo();
+
+
+	public LinkedHashMap<String, Double> getCurrentParam();
+
+
+	public void setObjectiveType(String objectiveType);
+
+
+	public void setMaxTrRadius(double maxTrRadius);
+
+
+	public void setMinTrRadius(double minTrRadius);
+
+
+	public void setMinMetaParamChange(double minMetaParamChange);
+
+
+	public void setThresholdErrorRatio(double thresholdErrorRatio);
+
+
+	public void setTrusRegionIncreamentRatio(double trusRegionIncreamentRatio);
+
+
+	public void setTrustRegionDecreamentRatio(double trustRegionDecreamentRatio);
+
 
 
 }
