@@ -70,10 +70,12 @@ public class CNLTransitRoute implements AnalyticalModelTransitRoute{
 		try {
 		if(!(ptlegList.get(0).getMode().equals("transit_walk") && ptlegList.get(ptlegList.size()-1).getMode().equals("transit_walk"))) {
 			logger.error("Invalid trip legs, The trip must have at least two walk legs at the start and end");
+			throw new IllegalArgumentException("Invalid input for creating transit route");
 		}else if (ptactivityList.size()!=ptlegList.size()+1) {
 			logger.error("There must be exactly one more activity than no of trip legs");
+			throw new IllegalArgumentException("Invalid input for creating transit route");
 		}
-		throw new IllegalArgumentException("Invalid input for creating transit route");
+		
 		}catch(Exception e) {
 			logger.error("could not create transit route, see error log.");
 		}
