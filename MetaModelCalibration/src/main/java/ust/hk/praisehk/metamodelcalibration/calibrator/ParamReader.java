@@ -10,6 +10,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map.Entry;
 
+import org.apache.log4j.Logger;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.config.ConfigWriter;
@@ -53,7 +54,7 @@ public class ParamReader {
 	private LinkedHashMap<String,Double>initialParam=new LinkedHashMap<>();
 	private LinkedHashMap<String,Tuple<Double,Double>>initialParamLimit=new LinkedHashMap<>();
 	
-	
+	private static final Logger logger=Logger.getLogger(ParamReader.class);
 	
 	public ParamReader(String fileLoc) {
 		File file=new File(fileLoc);
@@ -74,7 +75,7 @@ public class ParamReader {
 				Double upperLimit=Double.parseDouble(part[4]);
 				Double lowerLimit=Double.parseDouble(part[3]);
 				String paramId=part[2];
-				if(subPopName=="") {
+				if(subPopName.equals("")) {
 					paramId=part[1];
 				}else {
 					paramId=part[0]+" "+part[1];
@@ -171,14 +172,23 @@ public class ParamReader {
 	}
 	
 	
+	public LinkedHashMap<String,Double> ScaleDown(LinkedHashMap<String,Double>param){
+		LinkedHashMap<String,Double> scaledDownParam=new LinkedHashMap<String,Double>();
+		for(String s:param.keySet()) {
+			if(this.ParamNoCode.get(s)==null) {
+				logger.error("Invalid Parameter inputted");
+			}
+			scaledDownParam.put(this.ParamNoCode.get(s), param.get(s));
+		}
+		return scaledDownParam;
+	}
 	
 	
 	
 	
 	
-	
-	public Config SetParamToConfig(Config config, LinkedHashMap<String, Double> Noparams) {
-		
+	public Config SetParamToConfig(Config config, LinkedHashMap<String, Double> Nparams) {
+		LinkedHashMap<String,Double>Noparams=new LinkedHashMap<>(Nparams);
 		new ConfigWriter(config).write("config_Intermediate.xml");
 		Config configOut=ConfigUtils.loadConfig("config_Intermediate.xml");
 		for(String s:this.DefaultParam.keySet()) {

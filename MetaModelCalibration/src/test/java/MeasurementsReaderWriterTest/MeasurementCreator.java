@@ -1,8 +1,11 @@
 package MeasurementsReaderWriterTest;
 
+import static org.junit.Assert.assertEquals;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 
+import org.junit.Test;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.network.Link;
 import org.matsim.core.utils.collections.Tuple;
@@ -13,7 +16,9 @@ import ust.hk.praisehk.metamodelcalibration.measurements.MeasurementsReader;
 import ust.hk.praisehk.metamodelcalibration.measurements.MeasurementsWriter;
 
 public class MeasurementCreator {
-	public static void main(String[] args) {
+	
+	@Test
+	public void tryReadAndWrite() {
 		HashMap<String,Tuple<Double,Double>>timeBeans=new HashMap<>();
 		timeBeans.put("BeforeMorningPeak", new Tuple<Double,Double>(0.0,25200.));
 		timeBeans.put("MorningPeak", new Tuple<Double,Double>(25200.,36000.));
@@ -54,5 +59,6 @@ public class MeasurementCreator {
 		new MeasurementsWriter(m).write("src/main/resources/Measurements1.xml");
 		Measurements m2=new MeasurementsReader().readMeasurements("src/main/resources/Measurements.xml");
 		
+		assertEquals(m,m2);
 	}
 }

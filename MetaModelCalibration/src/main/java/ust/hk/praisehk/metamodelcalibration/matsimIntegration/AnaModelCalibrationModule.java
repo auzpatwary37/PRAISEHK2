@@ -7,6 +7,7 @@ import org.matsim.core.controler.AbstractModule;
 import com.google.inject.name.Names;
 
 import ust.hk.praisehk.metamodelcalibration.analyticalModel.AnalyticalModel;
+import ust.hk.praisehk.metamodelcalibration.measurements.Measurements;
 
 
 
@@ -40,5 +41,6 @@ public class AnaModelCalibrationModule extends AbstractModule{
 		bind(LinkCountEventHandler.class).toInstance(new LinkCountEventHandler(this.storage.getCalibrationMeasurements()));
 		bind(boolean.class).annotatedWith(Names.named("generateRoutesAndOD")).toInstance(this.generateRoutesAndOD);
 		bind (paramContainer.class).annotatedWith(Names.named("CurrentParam")).toInstance(this.currentParam);
+		bind(Measurements.class).annotatedWith(Names.named("CalibrationCounts")).toInstance(this.storage.getCalibrationMeasurements());
 	}
 }
