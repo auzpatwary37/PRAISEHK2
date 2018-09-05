@@ -186,7 +186,12 @@ public class ParamReader {
 	
 	
 	
-	
+	/**
+	 * This param Should be no no code format. If not use the scale down method in pReader to scale down
+	 * @param config
+	 * @param Nparams
+	 * @return
+	 */
 	public Config SetParamToConfig(Config config, LinkedHashMap<String, Double> Nparams) {
 		LinkedHashMap<String,Double>Noparams=new LinkedHashMap<>(Nparams);
 		new ConfigWriter(config).write("config_Intermediate.xml");
@@ -244,9 +249,6 @@ public class ParamReader {
 		return configOut;
 	}
 	
-	public static void main(String[] args) {
-		ParamReader pReader=new ParamReader("src/main/resources/paramReaderTrial1.csv");
-	}
 	
 	
 }

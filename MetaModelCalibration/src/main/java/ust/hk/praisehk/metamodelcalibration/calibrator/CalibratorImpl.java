@@ -72,7 +72,7 @@ public class CalibratorImpl implements Calibrator {
 	private final boolean shouldPerformInternalParamCalibration;
 
 	
-	public CalibratorImpl(String fileLoc,boolean internalParameterCalibration,ParamReader pReader,double initialTRRadius,int maxSuccessiveRejection) {
+	public CalibratorImpl(Measurements calibrationMeasurements,String fileLoc,boolean internalParameterCalibration,ParamReader pReader,double initialTRRadius,int maxSuccessiveRejection) {
 		this.fileLoc=fileLoc;
 		this.shouldPerformInternalParamCalibration=internalParameterCalibration;
 		this.pReader=pReader;
@@ -85,13 +85,22 @@ public class CalibratorImpl implements Calibrator {
 	
 	
 
-	@Override
-	public void updateSimMeasurements(Measurements m) {
+	/**
+	 * This will update sim measurements
+	 * As sim measurements can not be generated without sim iteration, This do not take iteration no as input 
+	 * Rather will assume the input measurement is the measurement of current iteration
+	 * @param m
+	 */
+	private void updateSimMeasurements(Measurements m) {
 		this.simMeasurements.put(this.iterationNo, m);
 	}
 
-	@Override
-	public void updateAnalyticalMeasurement(Map<Integer, Measurements> measurements) {
+	/**
+	 * This method is useful for internal parameter calibration
+	 * It will update all the analytical model measurements at once  
+	 * @param anaMeasurements a map of iterationNo vs Analytical model Measurements
+	 */
+	private void updateAnalyticalMeasurement(Map<Integer, Measurements> measurements) {
 		if(this.anaMeasurements.size()!=measurements.size()) {
 			logger.error("Measurements size must match. Aborting update");
 			for(int i:this.anaMeasurements.keySet()) {
@@ -112,8 +121,7 @@ public class CalibratorImpl implements Calibrator {
 	 * @param anaGradient
 	 * @throws IllegalArgumentException
 	 */
-	@Override
-	public void createMetaModel(Map<Id<Measurement>,Map<String,LinkedHashMap<String,Double>>>simGradient,Map<Id<Measurement>,Map<String,LinkedHashMap<String,Double>>> anaGradient, String metaModelType) {
+	private void createMetaModel(Map<Id<Measurement>,Map<String,LinkedHashMap<String,Double>>>simGradient,Map<Id<Measurement>,Map<String,LinkedHashMap<String,Double>>> anaGradient, String metaModelType) {
 		try {
 		if((this.metaModelType.equals(MetaModel.GradientBased_I_MetaModelName)||this.metaModelType.equals(MetaModel.GradientBased_II_MetaModelName)||this.metaModelType.equals(MetaModel.GradientBased_III_MetaModelName))&& (anaGradient==null||simGradient==null)) {
 			logger.error("Cannot create gradient based meta-model without gradient. switching to AnalyticalLinear");
@@ -167,10 +175,8 @@ public class CalibratorImpl implements Calibrator {
 	}
 
 
-	/**
-	 * This is the most important method algorithm of this class
-	 * The gradients can be null in case of non-gradient Based metaModel Type
-	 */
+	
+	@Override
 	public LinkedHashMap<String,Double> generateNewParam(AnalyticalModel sue,Measurements simMeasurements,Map<Id<Measurement>,Map<String,LinkedHashMap<String,Double>>>simGradient,Map<Id<Measurement>,Map<String,LinkedHashMap<String,Double>>> anaGradient, String metaModelType) {
 		this.updateSimMeasurements(simMeasurements);
 		this.sueAssignment=sue;
@@ -185,7 +191,7 @@ public class CalibratorImpl implements Calibrator {
 			//Run IterLogger
 			//Fix Tr Radius
 			this.writeMeasurementComparison(fileLoc);
-			double CurrentSimObjective=ObjectiveCalculator.calcObjective(this.calibrationMeasurements, this.simMeasurements.get(this.currentParam), this.ObjectiveType);
+			double CurrentSimObjective=ObjectiveCalculator.calcObjective(this.calibrationMeasurements, this.simMeasurements.get(this.currentParamNo), this.ObjectiveType);
 			double CurrentMetaModelObjective=ObjectiveCalculator.calcObjective(this.calibrationMeasurements, this.CalcMetaModelPrediction(this.currentParamNo), this.ObjectiveType);
 			double trialSimObjective=ObjectiveCalculator.calcObjective(this.calibrationMeasurements, this.simMeasurements.get(this.iterationNo), this.ObjectiveType);
 			double trialMetaModelObjective=ObjectiveCalculator.calcObjective(this.calibrationMeasurements, this.CalcMetaModelPrediction(this.iterationNo), this.ObjectiveType);
@@ -245,8 +251,8 @@ public class CalibratorImpl implements Calibrator {
 	}
 	
 
-	@Override
-	public LinkedHashMap<String, Double> drawRandomPoint(LinkedHashMap<String, Tuple<Double, Double>> paramLimit) {
+
+	private LinkedHashMap<String, Double> drawRandomPoint(LinkedHashMap<String, Tuple<Double, Double>> paramLimit) {
 		LinkedHashMap<String, Double> randPoint=new LinkedHashMap<>();
 		for(String s: paramLimit.keySet()) {
 			double l=paramLimit.get(s).getFirst();
