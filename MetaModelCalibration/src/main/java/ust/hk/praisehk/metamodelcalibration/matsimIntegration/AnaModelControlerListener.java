@@ -1,17 +1,9 @@
 package ust.hk.praisehk.metamodelcalibration.matsimIntegration;
 
-import java.io.FileWriter;
-import java.io.IOException;
-import java.util.LinkedHashMap;
 import java.util.Map;
 
-
-
 import org.matsim.api.core.v01.Scenario;
-import org.matsim.api.core.v01.network.Node;
-import org.matsim.api.core.v01.population.PopulationWriter;
 import org.matsim.core.api.experimental.events.EventsManager;
-import org.matsim.core.config.ConfigWriter;
 import org.matsim.core.controler.events.AfterMobsimEvent;
 import org.matsim.core.controler.events.BeforeMobsimEvent;
 import org.matsim.core.controler.events.IterationEndsEvent;

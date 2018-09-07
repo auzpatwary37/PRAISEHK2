@@ -9,7 +9,6 @@ import java.util.Map;
 import java.util.Random;
 
 import org.matsim.api.core.v01.Id;
-import org.matsim.api.core.v01.network.Link;
 import org.matsim.core.config.Config;
 
 import ust.hk.praisehk.metamodelcalibration.analyticalModel.AnalyticalModel;

@@ -11,7 +11,6 @@ import org.matsim.pt.transitSchedule.api.TransitSchedule;
 
 import ust.hk.praisehk.metamodelcalibration.analyticalModel.AnalyticalModelRoute;
 import ust.hk.praisehk.metamodelcalibration.analyticalModel.AnalyticalModelTransitRoute;
-import ust.hk.praisehk.metamodelcalibration.analyticalModel.Trip;
 import ust.hk.praisehk.metamodelcalibration.analyticalModel.TripChain;
 
 

@@ -1,11 +1,11 @@
 package ust.hk.praisehk.metamodelcalibration.matsimIntegration;
 
-import java.util.LinkedHashMap;
 import java.util.Map;
+
 import org.matsim.api.core.v01.population.PopulationWriter;
-import org.matsim.core.config.ConfigWriter;
 import org.matsim.core.controler.events.ShutdownEvent;
 import org.matsim.core.controler.listener.ShutdownListener;
+
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
 

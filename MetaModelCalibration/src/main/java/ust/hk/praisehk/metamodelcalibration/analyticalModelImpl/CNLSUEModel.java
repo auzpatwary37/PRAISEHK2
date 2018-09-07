@@ -12,37 +12,24 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
-import javax.xml.parsers.ParserConfigurationException;
-import javax.xml.parsers.SAXParser;
-import javax.xml.parsers.SAXParserFactory;
-
 import org.apache.log4j.Logger;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.network.Network;
-import org.matsim.api.core.v01.population.Leg;
-import org.matsim.api.core.v01.population.Person;
-import org.matsim.api.core.v01.population.PlanElement;
 import org.matsim.api.core.v01.population.Population;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
-import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.core.utils.collections.Tuple;
 import org.matsim.pt.transitSchedule.api.Departure;
 import org.matsim.pt.transitSchedule.api.TransitLine;
 import org.matsim.pt.transitSchedule.api.TransitRoute;
 import org.matsim.pt.transitSchedule.api.TransitSchedule;
 import org.matsim.vehicles.Vehicles;
-import org.xml.sax.SAXException;
 
-import de.xypron.jcobyla.Calcfc;
 import de.xypron.jcobyla.Cobyla;
 import de.xypron.jcobyla.CobylaExitStatus;
 import dynamicTransitRouter.fareCalculators.FareCalculator;
-import dynamicTransitRouter.fareCalculators.MTRFareCalculator;
-import dynamicTransitRouter.fareCalculators.UniformFareCalculator;
-import dynamicTransitRouter.fareCalculators.ZonalFareXMLParser;
 import ust.hk.praisehk.metamodelcalibration.analyticalModel.AnalyticalModel;
 import ust.hk.praisehk.metamodelcalibration.analyticalModel.AnalyticalModelLink;
 import ust.hk.praisehk.metamodelcalibration.analyticalModel.AnalyticalModelNetwork;

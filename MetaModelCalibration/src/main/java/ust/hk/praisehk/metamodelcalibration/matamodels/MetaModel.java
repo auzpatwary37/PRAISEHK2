@@ -1,6 +1,5 @@
 package ust.hk.praisehk.metamodelcalibration.matamodels;
 
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 
 import org.matsim.api.core.v01.Id;

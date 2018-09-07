@@ -4,10 +4,7 @@ import java.util.LinkedHashMap;
 
 import org.matsim.core.controler.AbstractModule;
 
-import com.google.inject.Singleton;
 import com.google.inject.name.Names;
-
-import ust.hk.praisehk.metamodelcalibration.measurements.Measurements;
 
 
 

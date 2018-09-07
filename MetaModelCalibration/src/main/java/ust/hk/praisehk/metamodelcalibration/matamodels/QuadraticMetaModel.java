@@ -1,6 +1,5 @@
 package ust.hk.praisehk.metamodelcalibration.matamodels;
 
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 

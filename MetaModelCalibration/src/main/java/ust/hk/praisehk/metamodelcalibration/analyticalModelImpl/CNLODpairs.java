@@ -1,13 +1,11 @@
 package ust.hk.praisehk.metamodelcalibration.analyticalModelImpl;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.network.Network;
-import org.matsim.api.core.v01.network.Node;
 import org.matsim.api.core.v01.population.Plan;
 import org.matsim.api.core.v01.population.Population;
 import org.matsim.core.utils.collections.Tuple;

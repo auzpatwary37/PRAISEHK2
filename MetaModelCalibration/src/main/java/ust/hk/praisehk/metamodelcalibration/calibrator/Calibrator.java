@@ -4,10 +4,8 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 import org.matsim.api.core.v01.Id;
-import org.matsim.core.utils.collections.Tuple;
 
 import ust.hk.praisehk.metamodelcalibration.analyticalModel.AnalyticalModel;
-import ust.hk.praisehk.metamodelcalibration.matamodels.MetaModel;
 import ust.hk.praisehk.metamodelcalibration.measurements.Measurement;
 import ust.hk.praisehk.metamodelcalibration.measurements.Measurements;
 

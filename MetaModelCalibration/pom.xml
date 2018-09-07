@@ -40,6 +40,8 @@
 				</executions>
 			</plugin>
 		</plugins>
+		
+		
 	</build>
 	<repositories>
 		<!--Note that in general repositories are not transitive, so they need 
@@ -96,12 +98,7 @@
 			<artifactId>commons-lang3</artifactId>
 			<version>3.7</version>
 		</dependency>
-		<!-- https://mvnrepository.com/artifact/commons-logging/commons-logging -->
-		<dependency>
-			<groupId>commons-logging</groupId>
-			<artifactId>commons-logging</artifactId>
-			<version>1.2</version>
-		</dependency>
+		
 		<!-- https://mvnrepository.com/artifact/com.healthmarketscience.jackcess/jackcess -->
 		<dependency>
 			<groupId>com.healthmarketscience.jackcess</groupId>
