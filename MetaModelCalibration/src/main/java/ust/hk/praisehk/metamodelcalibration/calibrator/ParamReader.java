@@ -111,6 +111,17 @@ public class ParamReader {
 	public LinkedHashMap<String, Tuple<Double, Double>> getInitialParamLimit() {
 		return initialParamLimit;
 	}
+	
+	
+
+	public void setInitialParam(LinkedHashMap<String, Double> initialParam) {
+		this.initialParam = initialParam;
+	}
+
+
+	public void setInitialParamLimit(LinkedHashMap<String, Tuple<Double, Double>> initialParamLimit) {
+		this.initialParamLimit = initialParamLimit;
+	}
 
 
 	public LinkedHashMap<String, Double> getDefaultParamPaper() {

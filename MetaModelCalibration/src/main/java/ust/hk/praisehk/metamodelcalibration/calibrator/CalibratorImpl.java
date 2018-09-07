@@ -44,8 +44,8 @@ public class CalibratorImpl implements Calibrator {
 	private int iterationNo=0;
 	private int currentParamNo=0;
 
-	private LinkedHashMap<String,Double> currentParam=new LinkedHashMap<>();
-	private LinkedHashMap<String,Double> trialParam=new LinkedHashMap<>();
+	private LinkedHashMap<String,Double> currentParam;
+	private LinkedHashMap<String,Double> trialParam;
 
 
 
@@ -75,7 +75,8 @@ public class CalibratorImpl implements Calibrator {
 		this.shouldPerformInternalParamCalibration=internalParameterCalibration;
 		this.pReader=pReader;
 		this.TrRadius=initialTRRadius;
-		this.currentParam=pReader.getInitialParam();
+		this.currentParam=new LinkedHashMap<>(pReader.getInitialParam());
+		this.trialParam=new LinkedHashMap<>(this.currentParam);
 		this.currentParamNo=0;
 		this.iterationNo=0;
 		this.maxSuccesiveRejection=maxSuccessiveRejection;
@@ -139,29 +140,37 @@ public class CalibratorImpl implements Calibrator {
 			for(String timeBeanId:m.getVolumes().keySet()) {
 
 				MetaModel metaModel;
-
+				
 				switch(metaModelType) {
 
 				case MetaModel.AnalyticalLinearMetaModelName: metaModel=new AnalyticLinearMetaModel(m.getId(), this.simMeasurements, this.anaMeasurements, this.params, timeBeanId, this.currentParamNo) ;
 				this.metaModelType=metaModelType;
+				//break;
 
 				case MetaModel.AnalyticalQuadraticMetaModelName: metaModel=new AnalyticalQuadraticMetaModel(m.getId(), this.simMeasurements, this.anaMeasurements, this.params, timeBeanId, this.currentParamNo);
 				this.metaModelType=metaModelType;
+				break;
 				
 				case MetaModel.LinearMetaModelName: metaModel=new LinearMetaModel(m.getId(), this.simMeasurements, this.params, timeBeanId, this.currentParamNo);
 				this.metaModelType=metaModelType;
+				break;
 				
 				case MetaModel.QudaraticMetaModelName: metaModel=new QuadraticMetaModel(m.getId(), this.simMeasurements, this.params, timeBeanId, this.currentParamNo) ;
 				this.metaModelType=metaModelType;
+				break;
 				
 				case MetaModel.GradientBased_I_MetaModelName: metaModel=new GradientBasedMetaModel(m.getId(), this.simMeasurements, this.anaMeasurements, this.params, timeBeanId, this.currentParamNo,simGradient.get(m.getId()).get(timeBeanId), anaGradient.get(m.getId()).get(timeBeanId));
 				this.metaModelType=metaModelType;
+				break;
 				
 				case MetaModel.GradientBased_II_MetaModelName: metaModel=new GradientBaseOptimizedMetaModel(m.getId(), this.simMeasurements, this.anaMeasurements, this.params, timeBeanId, this.currentParamNo, simGradient.get(m.getId()).get(timeBeanId), anaGradient.get(m.getId()).get(timeBeanId), this.iterationNo);
 				this.metaModelType=metaModelType;
+				break;
+				
 				
 				case MetaModel.GradientBased_III_MetaModelName: metaModel=new GradientOptimizedMetaModel(m.getId(), this.simMeasurements, this.anaMeasurements, this.params, timeBeanId, this.currentParamNo, simGradient.get(m.getId()).get(timeBeanId), anaGradient.get(m.getId()).get(timeBeanId), this.iterationNo);
 				this.metaModelType=metaModelType;
+				break;
 				
 				default : metaModel=new AnalyticLinearMetaModel(m.getId(), this.simMeasurements, this.anaMeasurements, this.params, timeBeanId, this.currentParamNo) ;
 				this.metaModelType=MetaModel.AnalyticalLinearMetaModelName;
