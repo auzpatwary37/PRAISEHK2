@@ -70,6 +70,14 @@ public class CNLSUEModel implements AnalyticalModel{
 	 */
 	
 		private final Logger logger=Logger.getLogger(CNLSUEModel.class);
+		private String fileLoc="traget/";
+		public String getFileLoc() {
+			return fileLoc;
+		}
+
+		public void setFileLoc(String fileLoc) {
+			this.fileLoc = fileLoc;
+		}
 
 		private Map<String,Double> consecutiveSUEErrorIncrease=new ConcurrentHashMap<>();
 		private LinkedHashMap<String,Double> AnalyticalModelInternalParams=new LinkedHashMap<>();
@@ -240,10 +248,6 @@ public class CNLSUEModel implements AnalyticalModel{
 		
 		this.setTs(transitSchedule);
 		for(String timeBeanId:this.timeBeans.keySet()) {
-			if(this.getDemand().get(timeBeanId).size()!=this.carDemand.get(timeBeanId).size()) {
-				System.out.println("ERROR!!!!");
-			}
-			
 			this.getConsecutiveSUEErrorIncrease().put(timeBeanId, 0.);
 			this.getDemand().put(timeBeanId, new HashMap<>(this.getOdPairs().getdemand(timeBeanId)));
 			for(Id<AnalyticalModelODpair> odId:this.getDemand().get(timeBeanId).keySet()) {
@@ -746,7 +750,7 @@ public class CNLSUEModel implements AnalyticalModel{
 		//System.out.println("in timeBean Id "+timeBeanId+" No of link not converged = "+sum);
 		
 		try {
-			CNLSUEModel.writeData(timeBeanId+","+counter+","+squareSum+","+sum, "ErrorData"+timeBeanId+".csv");
+			CNLSUEModel.writeData(timeBeanId+","+counter+","+squareSum+","+sum, this.fileLoc+"ErrorData"+timeBeanId+".csv");
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();

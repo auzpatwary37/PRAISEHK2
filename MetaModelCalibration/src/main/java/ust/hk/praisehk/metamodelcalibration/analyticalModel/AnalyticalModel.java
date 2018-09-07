@@ -51,6 +51,10 @@ public interface AnalyticalModel {
 
 	public LinkedHashMap<String, Tuple<Double, Double>> getAnalyticalModelParamsLimit();
 	
+	public String getFileLoc();
+	
+	public void setFileLoc(String fileLoc);
+	
 	public static final String MarginalUtilityofTravelCarName="MarginalUtilityofTravelCar";
 	public static final String MarginalUtilityofDistanceCarName="MarginalUtilityofDistanceCar";
 	public static final String MarginalUtilityofMoneyName="MarginalUtilityofMoney";
