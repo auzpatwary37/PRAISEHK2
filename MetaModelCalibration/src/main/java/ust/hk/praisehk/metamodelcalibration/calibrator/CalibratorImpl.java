@@ -79,6 +79,7 @@ public class CalibratorImpl implements Calibrator {
 		this.currentParamNo=0;
 		this.iterationNo=0;
 		this.maxSuccesiveRejection=maxSuccessiveRejection;
+		this.calibrationMeasurements=calibrationMeasurements;
 	}
 	
 	
