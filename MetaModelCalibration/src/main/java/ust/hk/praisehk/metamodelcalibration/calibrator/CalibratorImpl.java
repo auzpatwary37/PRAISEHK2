@@ -318,9 +318,11 @@ public class CalibratorImpl implements Calibrator {
 	
 	
 	try {
-		FileWriter fw=new FileWriter(fileLoc+"iterLogger.csv");
+		FileWriter fw=new FileWriter(fileLoc+"iterLogger.csv",true);
 		fw.append(LocalDateTime.now().toString());
-		fw.append(header+nl);
+		if(this.iterationNo==0) {
+			fw.append(header+nl);
+		}
 		fw.append(IterNo+sp+currentParamNo+sp+CurrentAnalyticalObjective+
 				sp+currentSimObjective+sp+newAnalyticalObjective+sp+newSimObjective+sp+Accepted
 				+sp+currentTrRadius+sp+currentrouK+sp+metaModelType);
@@ -334,8 +336,8 @@ public class CalibratorImpl implements Calibrator {
 		
 		fw.append(nl);
 		if(this.iterationNo==1) {
-			fw.append("0th sim objective"+sp+ObjectiveCalculator.calcObjective(calibrationMeasurements, this.simMeasurements.get(0), this.ObjectiveType+sp));
-			fw.append("0th meta objective"+sp+ObjectiveCalculator.calcObjective(calibrationMeasurements, this.anaMeasurements.get(0), metaModels,this.params.get(0), this.ObjectiveType));
+			fw.append("0th sim objective"+sp+ObjectiveCalculator.calcObjective(calibrationMeasurements, this.simMeasurements.get(0), this.ObjectiveType+sp)+"\n");
+			fw.append("0th meta objective"+sp+ObjectiveCalculator.calcObjective(calibrationMeasurements, this.anaMeasurements.get(0), metaModels,this.params.get(0), this.ObjectiveType)+"\n");
 		}
 		fw.flush();
 		fw.close();
