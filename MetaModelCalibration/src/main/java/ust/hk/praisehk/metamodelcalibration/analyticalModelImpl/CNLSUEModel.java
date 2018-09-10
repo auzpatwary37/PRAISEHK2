@@ -272,6 +272,7 @@ public class CNLSUEModel implements AnalyticalModel{
 	
 	@Override
 	public Map<String,Map<Id<Link>, Double>> perFormSUE(LinkedHashMap<String, Double> params) {
+		
 		return this.perFormSUE(params, this.AnalyticalModelInternalParams);
 	}
 	

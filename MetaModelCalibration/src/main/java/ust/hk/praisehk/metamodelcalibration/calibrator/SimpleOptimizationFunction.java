@@ -17,12 +17,14 @@ import ust.hk.praisehk.metamodelcalibration.measurements.Measurements;
 public class SimpleOptimizationFunction extends OptimizationFunction{
 	private final String metaModelType;
 	private final String type;
+	private final ParamReader pReader;
 	protected SimpleOptimizationFunction(AnalyticalModel sueAssignment, Measurements realData, Map<Id<Measurement>, Map<String, MetaModel>> metaModels,
 			LinkedHashMap<String, Double> currentParams, double TrRadius,
-			LinkedHashMap<String, Tuple<Double, Double>> paramLimit,String objectiveType,String MetaModelType) {
+			LinkedHashMap<String, Tuple<Double, Double>> paramLimit,String objectiveType,String MetaModelType,ParamReader pReader) {
 		super(sueAssignment, realData,metaModels , currentParams, TrRadius, paramLimit);
 		this.type=objectiveType;
 		this.metaModelType=MetaModelType;
+		this.pReader=pReader;
 	}
 
 	@Override
@@ -32,7 +34,7 @@ public class SimpleOptimizationFunction extends OptimizationFunction{
 		this.getSUE().clearLinkCarandTransitVolume();
 		
 		if(!this.metaModelType.equals(MetaModel.LinearMetaModelName) && !this.metaModelType.equals(MetaModel.QudaraticMetaModelName)) {
-			linkVolume=this.getSUE().perFormSUE(new LinkedHashMap<>(params));
+			linkVolume=this.getSUE().perFormSUE(this.pReader.ScaleUp(new LinkedHashMap<>(params)));
 		}
 		double objective=calcMetaModelObjective(linkVolume, params);
 		int d=0;
