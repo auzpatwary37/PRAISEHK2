@@ -56,6 +56,9 @@ public class CalibratorImpl implements Calibrator {
 	//Trust region parameters
 	private String ObjectiveType=ObjectiveCalculator.TypeMeasurementAndTimeSpecific;
 	private double TrRadius=25;
+	
+
+
 	private double maxTrRadius=2.5*this.TrRadius;
 	private double minTrRadius=0.001;
 	private double successiveRejection=0;
@@ -511,7 +514,11 @@ public class CalibratorImpl implements Calibrator {
 		this.trustRegionDecreamentRatio = trustRegionDecreamentRatio;
 	}
 	
-	
+	public void setTrRadius(double trRadius) {
+		if(this.iterationNo==0) {
+			TrRadius = trRadius;
+		}
+	}
 	
 
 }

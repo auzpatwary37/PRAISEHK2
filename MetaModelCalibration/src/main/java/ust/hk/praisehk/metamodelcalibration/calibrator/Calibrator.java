@@ -93,6 +93,6 @@ public interface Calibrator {
 
 	public void setTrustRegionDecreamentRatio(double trustRegionDecreamentRatio);
 
-
+	public void setTrRadius(double trRadius);
 
 }
