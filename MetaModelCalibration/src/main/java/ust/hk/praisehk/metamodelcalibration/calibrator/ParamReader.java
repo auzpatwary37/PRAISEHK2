@@ -158,7 +158,7 @@ public class ParamReader {
 		return paramName;
 	}
 	
-	public HashMap<String, Tuple<Double,Double>> getDefaultTimeBean() {
+	public static HashMap<String, Tuple<Double,Double>> getDefaultTimeBean() {
 		HashMap<String, Tuple<Double,Double>> timeBean=new HashMap<>();
 		timeBean.put("BeforeMorningPeak", new Tuple<Double,Double>(0.0,25200.));
 		timeBean.put("MorningPeak", new Tuple<Double,Double>(25200.,36000.));
