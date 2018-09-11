@@ -193,7 +193,7 @@ public class CalibratorImpl implements Calibrator {
 		this.sueAssignment=sue;
 		Measurements anaMeasurements=this.calibrationMeasurements.clone();
 		if(!metaModelType.equals(MetaModel.LinearMetaModelName)&&!metaModelType.equals(MetaModel.QudaraticMetaModelName)) {
-			Map<String,Map<Id<Link>,Double>>linkVolumes= sue.perFormSUE(new LinkedHashMap<>(this.trialParam));
+			Map<String,Map<Id<Link>,Double>>linkVolumes= sue.perFormSUE(this.pReader.ScaleUp(this.trialParam));
 			anaMeasurements.updateMeasurements(linkVolumes);
 		}
 		this.anaMeasurements.put(this.iterationNo, anaMeasurements);
@@ -329,7 +329,7 @@ public class CalibratorImpl implements Calibrator {
 	try {
 		FileWriter fw=new FileWriter(fileLoc+"iterLogger.csv",true);
 		
-		if(this.iterationNo==0) {
+		if(this.iterationNo==1) {
 			fw.append(header+nl);
 		}
 		fw.append(LocalDateTime.now().toString()+sp);

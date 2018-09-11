@@ -189,7 +189,7 @@ public class ParamReader {
 		LinkedHashMap<String,Double> scaledParam=new LinkedHashMap<String,Double>();
 		for(Entry<String, String> e:this.ParamNoCode.entrySet()) {
 			if(param.get(e.getValue())==null) {
-				scaledParam.put(e.getKey(),this.DefaultParam.get(e.getValue()));
+				//scaledParam.put(e.getKey(),this.DefaultParam.get(e.getValue()));
 			}else {
 				scaledParam.put(e.getKey(), param.get(e.getValue()));
 			}
@@ -224,12 +224,13 @@ public class ParamReader {
 	
 	
 	/**
-	 * This param Should be no no code format. If not use the scale down method in pReader to scale down
+	 * This param Should be in No code-value format. But if not it will  be converted automatically. 
 	 * @param config
 	 * @param Nparams
 	 * @return
 	 */
-	public Config SetParamToConfig(Config config, LinkedHashMap<String, Double> Nparams) {
+	public Config SetParamToConfig(Config config, LinkedHashMap<String, Double> noparams) {
+		LinkedHashMap<String,Double> Nparams=this.ScaleDown(noparams);
 		LinkedHashMap<String,Double>Noparams=new LinkedHashMap<>(Nparams);
 		new ConfigWriter(config).write("config_Intermediate.xml");
 		Config configOut=ConfigUtils.loadConfig("config_Intermediate.xml");
