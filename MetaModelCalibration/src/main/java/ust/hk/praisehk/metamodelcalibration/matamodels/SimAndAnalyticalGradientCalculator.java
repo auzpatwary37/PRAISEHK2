@@ -13,6 +13,7 @@ import org.matsim.core.config.Config;
 
 import ust.hk.praisehk.metamodelcalibration.analyticalModel.AnalyticalModel;
 import ust.hk.praisehk.metamodelcalibration.analyticalModelImpl.CNLSUEModel;
+import ust.hk.praisehk.metamodelcalibration.calibrator.ParamReader;
 import ust.hk.praisehk.metamodelcalibration.matsimIntegration.MeasurementsStorage;
 import ust.hk.praisehk.metamodelcalibration.matsimIntegration.SimRun;
 import ust.hk.praisehk.metamodelcalibration.measurements.Measurement;
@@ -34,15 +35,16 @@ public class SimAndAnalyticalGradientCalculator {
 	private MeasurementsStorage storage;
 	private Config config;
 	private SimRun simRun;
+	private final ParamReader pReader;
 	private Map<Id<Measurement>,Map<String,LinkedHashMap<String,Double>>> simGradient=new HashMap<>();
 	private Map<Id<Measurement>,Map<String,LinkedHashMap<String,Double>>> anaGradient=new HashMap<>();
 	private LinkedHashMap<String,Double> originalGrad=new LinkedHashMap<>();
 	private LinkedHashMap<String,Double> currentParam;
-	private LinkedHashMap<String,Double> originalParam;
 	private double c=0.1;
 	private int currentIterCounter;
 	public SimAndAnalyticalGradientCalculator(Config config,MeasurementsStorage storage,SimRun simRun,
-			LinkedHashMap<String,Double>atParam, double c,String gradientCalculationMethod,LinkedHashMap<String,Double>OriginalParam,int currentIterCounter,boolean runParallel) {
+			LinkedHashMap<String,Double>atParam, double c,String gradientCalculationMethod,int currentIterCounter,boolean runParallel,ParamReader pReader) {
+		this.pReader=pReader;
 		this.storage=storage;
 		this.currentParam=atParam;
 		this.simRun=simRun;
@@ -51,7 +53,6 @@ public class SimAndAnalyticalGradientCalculator {
 		}
 		this.currentIterCounter=currentIterCounter;
 		this.config=config;
-		this.originalParam=OriginalParam;
 		if(gradientCalculationMethod.equals(this.SPSAMethodName)) {
 			this.calcSPSAGradient(runParallel);
 		}else if(gradientCalculationMethod.equals(this.FDMethodName)){
@@ -78,8 +79,11 @@ public class SimAndAnalyticalGradientCalculator {
 		if(runParallel) {
 			Thread[] threads=new Thread[2];
 			simandAnaRunRunnable[] functionEvals=new simandAnaRunRunnable[2];
-			functionEvals[0]=new simandAnaRunRunnable(this.config, this.simRun, thetaPlus,this.originalParam,currentIterCounter+"_thread0",this.storage);
-			functionEvals[1]=new simandAnaRunRunnable(this.config, this.simRun, thetaMinus,this.originalParam,currentIterCounter+"_thread1",this.storage);
+			
+			Config configThetaPlus=pReader.SetParamToConfig(this.config, thetaPlus);
+			Config configThetaMinus=pReader.SetParamToConfig(this.config, thetaMinus);
+			functionEvals[0]=new simandAnaRunRunnable(configThetaPlus, this.simRun, thetaPlus,currentIterCounter+"_thread0",this.storage,this.pReader);
+			functionEvals[1]=new simandAnaRunRunnable(configThetaMinus, this.simRun, thetaMinus,currentIterCounter+"_thread1",this.storage,this.pReader);
 			
 			threads[0]=new Thread(functionEvals[0]);
 			threads[1]=new Thread(functionEvals[1]);
@@ -100,17 +104,19 @@ public class SimAndAnalyticalGradientCalculator {
 			
 		}else {
 			CNLSUEModel sue=new CNLSUEModel(this.storage.getTimeBean());
-			sue.setDefaultParameters(this.originalParam);
-			simRun.run(sue, this.config, thetaPlus, true,currentIterCounter+"_thread0",this.storage);
+			sue.setDefaultParameters(pReader.ScaleUp(pReader.getDefaultParam()));
+			Config config=pReader.SetParamToConfig(this.config, thetaPlus);
+			simRun.run(sue, config, thetaPlus, true,currentIterCounter+"_thread0",this.storage);
 			simLinkCountPlus=this.storage.getSimMeasurement(thetaPlus);
 			anaLinkCountPlus=simLinkCountPlus.clone();
-			anaLinkCountPlus.updateMeasurements(sue.perFormSUE(thetaPlus));
+			anaLinkCountPlus.updateMeasurements(sue.perFormSUE(pReader.ScaleUp(thetaPlus)));
 			sue=new CNLSUEModel(this.storage.getTimeBean());
-			sue.setDefaultParameters(originalParam);
-			simRun.run(sue, this.config, thetaMinus, true,currentIterCounter+"_thread1",this.storage);
+			sue.setDefaultParameters(pReader.ScaleUp(pReader.getDefaultParam()));
+			config=pReader.SetParamToConfig(this.config, thetaMinus);
+			simRun.run(sue, config, thetaMinus, true,currentIterCounter+"_thread1",this.storage);
 			simLinkCountMinus=this.storage.getSimMeasurement(thetaMinus);
 			anaLinkCountMinus=simLinkCountMinus.clone();
-			anaLinkCountMinus.updateMeasurements(sue.perFormSUE(thetaMinus));
+			anaLinkCountMinus.updateMeasurements(sue.perFormSUE(pReader.ScaleUp(thetaMinus)));
 		}
 		//time
 		for(Measurement m:this.storage.getCalibrationMeasurements().getMeasurements().values()) {
@@ -175,23 +181,30 @@ public class SimAndAnalyticalGradientCalculator {
 	            LinkedHashMap<String,Double>pMinus=new LinkedHashMap<>(p);
 	            if(runParallel!=true) {
 	            	AnalyticalModel sue=new CNLSUEModel(this.storage.getTimeBean());
-	    			sue.setDefaultParameters(originalParam);
-	            	simRun.run(sue, this.config, pPlus, true,currentIterCounter+s+"_thread0",storage);
+	    			sue.setDefaultParameters(pReader.ScaleUp(pReader.getDefaultParam()));
+	    			Config configPPlus=pReader.SetParamToConfig(this.config, pPlus);
+	            	simRun.run(sue, configPPlus, pPlus, true,currentIterCounter+s+"_thread0",storage);
 	    			
 	    			simLinkCountPlus=this.storage.getSimMeasurement(pPlus);
 	    			anaLinkCountPlus=simLinkCountPlus.clone();
-	    			anaLinkCountPlus.updateMeasurements(sue.perFormSUE(pPlus));
+	    			anaLinkCountPlus.updateMeasurements(sue.perFormSUE(pReader.ScaleUp(pPlus)));
 	    			sue=new CNLSUEModel(this.storage.getTimeBean());
-	    			sue.setDefaultParameters(originalParam);
-	    			simRun.run(sue, this.config, pMinus, true,currentIterCounter+s+"_thread0",storage);
+	    			sue.setDefaultParameters(pReader.ScaleUp(pReader.getDefaultParam()));
+	    			
+	    			Config configPMinus=pReader.SetParamToConfig(this.config, pMinus);
+	    			
+	    			simRun.run(sue, configPMinus, pMinus, true,currentIterCounter+s+"_thread0",storage);
 	    			simLinkCountMinus=storage.getSimMeasurement(pMinus);
 	    			anaLinkCountMinus=simLinkCountMinus.clone();
-	    			anaLinkCountMinus.updateMeasurements(sue.perFormSUE(pMinus));
+	    			anaLinkCountMinus.updateMeasurements(sue.perFormSUE(pReader.ScaleUp(pMinus)));
 	            }else {
 	            	Thread[] threads=new Thread[2];
 	    			simandAnaRunRunnable[] functionEvals=new simandAnaRunRunnable[2];
-	    			functionEvals[0]=new simandAnaRunRunnable(this.config, this.simRun, pPlus,this.originalParam,currentIterCounter+s+"_thread0",storage);
-	    			functionEvals[1]=new simandAnaRunRunnable(this.config, this.simRun, pMinus,this.originalParam,currentIterCounter+s+"_thread1",storage);
+	    			
+	    			Config configPPlus=pReader.SetParamToConfig(this.config, pPlus);
+	    			Config configPMinus=pReader.SetParamToConfig(this.config, pMinus);
+	    			functionEvals[0]=new simandAnaRunRunnable(configPPlus, this.simRun, pPlus,currentIterCounter+s+"_thread0",storage,this.pReader);
+	    			functionEvals[1]=new simandAnaRunRunnable(configPMinus, this.simRun, pMinus,currentIterCounter+s+"_thread1",storage,this.pReader);
 	    			
 	    			threads[0]=new Thread(functionEvals[0]);
 	    			threads[1]=new Thread(functionEvals[1]);
@@ -298,23 +311,24 @@ class simandAnaRunRunnable implements Runnable{
 	private Measurements simCount;
 	private String threadNo;
 	private MeasurementsStorage storage;
+	private final ParamReader pReader;
 	
-	public simandAnaRunRunnable(Config config,SimRun simRun,LinkedHashMap<String,Double>atParam,LinkedHashMap<String,Double> originalParam,String threadNo,MeasurementsStorage storage){
+	public simandAnaRunRunnable(Config config,SimRun simRun,LinkedHashMap<String,Double>atParam,String threadNo,MeasurementsStorage storage, final ParamReader pReader){
 		this.storage=storage;
 		this.simRun=simRun;
 		this.config=config;
 		this.atParam=atParam;
 		this.sue=new CNLSUEModel(this.storage.getTimeBean());
-		this.sue.setDefaultParameters(originalParam);
+		this.sue.setDefaultParameters(pReader.ScaleUp(pReader.getDefaultParam()));
 		this.threadNo=threadNo;
-		
+		this.pReader=pReader;
 	}
 	@Override
 	public void run() {
 		simRun.run(sue, this.config, this.atParam, true,threadNo,storage);
 		this.simCount=this.storage.getSimMeasurement(atParam);
 		this.anaCount=this.simCount.clone();
-		this.anaCount.updateMeasurements(sue.perFormSUE(atParam));
+		this.anaCount.updateMeasurements(sue.perFormSUE(pReader.ScaleUp(atParam)));
 		}
 	public Measurements getAnaCount() {
 		return anaCount;

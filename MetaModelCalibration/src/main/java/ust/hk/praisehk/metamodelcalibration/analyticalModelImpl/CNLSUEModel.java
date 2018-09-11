@@ -265,6 +265,9 @@ public class CNLSUEModel implements AnalyticalModel{
 	/**
 	 * This method has three part.
 	 * 
+	 * The parameter inputed must be in ParamName-Value format.
+	 * The paramter name should include only the parameters that are present int the default Param
+	 * 
 	 * 1. Modal Split.
 	 * 2. SUE assignment.
 	 * 3. SUE Transit Assignment. 
@@ -272,7 +275,10 @@ public class CNLSUEModel implements AnalyticalModel{
 	
 	@Override
 	public Map<String,Map<Id<Link>, Double>> perFormSUE(LinkedHashMap<String, Double> params) {
-		
+		if(!(this.Params.keySet()).containsAll(params.keySet())) {
+			logger.error("The parameters key do not match with the default parameter keys. Invalid Parameter!! Did you send the wrong parameter format?");
+			throw new IllegalArgumentException("The parameters key do not match with the default parameter keys. Invalid Parameter!! Did you send the wrong parameter format?");
+		}
 		return this.perFormSUE(params, this.AnalyticalModelInternalParams);
 	}
 	

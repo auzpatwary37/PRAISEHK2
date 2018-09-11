@@ -46,12 +46,21 @@ public class ParamReader {
 	private final File paramFile;
 	private final String defaultFileLoc="src/main/resources/paramReaderTrial1.csv";
 	private ArrayList<String> subPopulationName=new ArrayList<>();
+	
+	//In No Code Format
 	private LinkedHashMap<String,Double>DefaultParam=new LinkedHashMap<>();
+	
+	//In No Code Format
 	private LinkedHashMap<String,Tuple<Double,Double>>paramLimit=new LinkedHashMap<>();
 	private ArrayList<String>paramName=new ArrayList<>();
-	private LinkedHashMap<String,Double> defaultParamPaper=new LinkedHashMap<>();
+	
+	//String-NoCode pair
 	private LinkedHashMap<String,String> ParamNoCode=new LinkedHashMap<>();
+	
+	//In No Code Format
 	private LinkedHashMap<String,Double>initialParam=new LinkedHashMap<>();
+	
+	//In No Code Format (This include limit for only the parameters that are inculded in the initial param)
 	private LinkedHashMap<String,Tuple<Double,Double>>initialParamLimit=new LinkedHashMap<>();
 	
 	private static final Logger logger=Logger.getLogger(ParamReader.class);
@@ -124,15 +133,6 @@ public class ParamReader {
 	}
 
 
-	public LinkedHashMap<String, Double> getDefaultParamPaper() {
-		return defaultParamPaper;
-	}
-
-
-	public void setDefaultParamPaper(LinkedHashMap<String, Double> defaultParamPaper) {
-		this.defaultParamPaper = defaultParamPaper;
-	}
-
 
 	public String getDefaultFileLoc() {
 		return defaultFileLoc;
@@ -169,8 +169,23 @@ public class ParamReader {
 	}
 	
 	
-	
-	public LinkedHashMap<String,Double> ScaleUp(LinkedHashMap<String,Double>param){
+	/**
+	 * This will scale up the parameter from no format to Parameter name format
+	 * The sent parameter is not changed. A new parameter is generated and returned
+	 * If the parameter sent is already in String format, than nothing will be changed.
+	 * @param param
+	 * @return
+	 */
+	public LinkedHashMap<String,Double> ScaleUp(LinkedHashMap<String,Double>param) throws IllegalArgumentException{
+		if((this.ParamNoCode.values()).containsAll(param.keySet())) {
+			
+		}else if((this.ParamNoCode.keySet()).containsAll(param.keySet())) {
+			logger.warn("Parameter is already scaled up, i.e. in ParamName-Value format. Method will exit.");
+			return new LinkedHashMap<String,Double>(param);
+		}else {
+			logger.error("Invalid input. Params can be either in ParamName-Value format or ParamCode-Value Format");
+			throw new IllegalArgumentException("Invalid input. Params can be either in ParamName-Value format or ParamCode-Value Format");
+		}
 		LinkedHashMap<String,Double> scaledParam=new LinkedHashMap<String,Double>();
 		for(Entry<String, String> e:this.ParamNoCode.entrySet()) {
 			if(param.get(e.getValue())==null) {
@@ -182,13 +197,24 @@ public class ParamReader {
 		return scaledParam;
 	}
 	
-	
-	public LinkedHashMap<String,Double> ScaleDown(LinkedHashMap<String,Double>param){
+	/**
+	 * This method will convert the ParameterName-Value format parameters to ParameterNo-Value Format
+	 * @param param
+	 * @return
+	 */
+	public LinkedHashMap<String,Double> ScaleDown(LinkedHashMap<String,Double>param) throws IllegalArgumentException{
+		if((this.ParamNoCode.values()).containsAll(param.keySet())) {
+			logger.warn("Parameter is already scaled down, i.e. in ParamNo-Value format. Method will exit.");
+			return new LinkedHashMap<String,Double>(param);
+		}else if((this.ParamNoCode.keySet()).containsAll(param.keySet())) {
+			
+		}else {
+			logger.error("Invalid input. Params can be either in ParamName-Value format or ParamCode-Value Format");
+			throw new IllegalArgumentException("Invalid input. Params can be either in ParamName-Value format or ParamCode-Value Format");
+		}
+		
 		LinkedHashMap<String,Double> scaledDownParam=new LinkedHashMap<String,Double>();
 		for(String s:param.keySet()) {
-			if(this.ParamNoCode.get(s)==null) {
-				logger.error("Invalid Parameter inputted");
-			}
 			scaledDownParam.put(this.ParamNoCode.get(s), param.get(s));
 		}
 		return scaledDownParam;
