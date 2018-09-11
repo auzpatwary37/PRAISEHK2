@@ -316,16 +316,17 @@ public class CalibratorImpl implements Calibrator {
 		
 	String sp=",";
 	String nl="\n";
-	String header="IterNo"+sp+"CurrentParamNo"+sp+"CurrentAnalyticalObjective"
+	String header="time"+sp+"IterNo"+sp+"CurrentParamNo"+sp+"CurrentAnalyticalObjective"
 			+sp+"CurrentSimObjective"+sp+"newAnalyticalObjective"+sp+"newSimObjective"+sp+"Accepted"+sp+"TrustRegionRadius"+sp+"rouK"+sp+"MetaModelType"+sp+"Params"+sp+"InternalParams";
 	
 	
 	try {
 		FileWriter fw=new FileWriter(fileLoc+"iterLogger.csv",true);
-		fw.append(LocalDateTime.now().toString());
+		
 		if(this.iterationNo==0) {
 			fw.append(header+nl);
 		}
+		fw.append(LocalDateTime.now().toString()+sp);
 		fw.append(IterNo+sp+currentParamNo+sp+CurrentAnalyticalObjective+
 				sp+currentSimObjective+sp+newAnalyticalObjective+sp+newSimObjective+sp+Accepted
 				+sp+currentTrRadius+sp+currentrouK+sp+metaModelType);
