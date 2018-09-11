@@ -235,7 +235,13 @@ public class CalibratorImpl implements Calibrator {
 		
 		//InternalparamCalibration
 		if(this.successiveRejection>this.maxSuccesiveRejection && this.shouldPerformInternalParamCalibration==true) {
-			Map<Integer,Measurements>newAnaMeasurements=this.sueAssignment.calibrateInternalParams(this.simMeasurements, this.params,this.sueAssignment.getAnalyticalModelInternalParams(), this.currentParamNo);
+			
+			Map<Integer,LinkedHashMap<String,Double>> scaledParam=new HashMap<>();
+			for(int i:this.params.keySet()) {
+				scaledParam.put(i, this.pReader.ScaleUp(this.params.get(i)));
+			}
+			
+			Map<Integer,Measurements>newAnaMeasurements=this.sueAssignment.calibrateInternalParams(this.simMeasurements, scaledParam,this.sueAssignment.getAnalyticalModelInternalParams(), this.currentParamNo);
 			this.updateAnalyticalMeasurement(newAnaMeasurements);
 		}
 			
