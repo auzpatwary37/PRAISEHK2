@@ -78,7 +78,7 @@ public class AnaModelControlerListener implements StartupListener,BeforeMobsimLi
 		if(counter==this.maxIter) {
 			Measurements m=storage.getCalibrationMeasurements().clone();
 			m.updateMeasurements(this.pcuVolumeCounter.geenerateLinkCounts());
-			m.writeCSVMeasurements(fileLoc);
+			//m.writeCSVMeasurements(fileLoc);
 			this.storage.storeMeasurements(this.currentParam.getParam(), m);
 		}
 		
