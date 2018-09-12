@@ -23,7 +23,7 @@ import ust.hk.praisehk.metamodelcalibration.calibrator.ParamReader;
 
 
 /**
- * This is a multi-od pair implementation of the AnalyticalModel CNLSUEModel
+ * This is a multi-subPopulation implementation of the AnalyticalModel CNLSUEModel
  * 
  * @author h
  *
@@ -33,13 +33,13 @@ public class CNLSUEModelSubPop extends CNLSUEModel{
 	private ArrayList<String> subPopulationName=new ArrayList<>();
 	private ParamReader pReader=new ParamReader("input/subPopParamAndLimit.csv");
 	
-	public CNLSUEModelSubPop(HashMap<String, Tuple<Double, Double>> timeBean,ArrayList<String> subPopName) {
+	public CNLSUEModelSubPop(Map<String, Tuple<Double, Double>> timeBean,ArrayList<String> subPopName) {
 		super(timeBean);
 		this.subPopulationName=subPopName;
 		super.setDefaultParameters(pReader.getDefaultParam());
 	}
 	
-	public CNLSUEModelSubPop(HashMap<String, Tuple<Double, Double>> timeBean,ParamReader preader) {
+	public CNLSUEModelSubPop(Map<String, Tuple<Double, Double>> timeBean,ParamReader preader) {
 		super(timeBean);
 		this.subPopulationName=pReader.getSubPopulationName();
 		this.pReader=preader;
