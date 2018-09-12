@@ -56,7 +56,7 @@ public class CNLSUEModelSubPop extends CNLSUEModel{
 		Config odConfig=ConfigUtils.createConfig();
 		odConfig.network().setInputFile("data/odNetwork.xml");
 		Network odNetwork=ScenarioUtils.loadScenario(odConfig).getNetwork();
-		this.getOdPairs().generateODpairsetSubPop(null);
+		this.getOdPairs().generateODpairsetSubPop(null);//This network has priority over the constructor network. This allows to use a od pair specific network 
 		this.getOdPairs().generateRouteandLinkIncidence(0.);
 		for(String s:this.getTimeBeans().keySet()) {
 			this.getNetworks().put(s, new CNLNetwork(network));
@@ -143,10 +143,13 @@ public class CNLSUEModelSubPop extends CNLSUEModel{
 	@Override
 	protected void performModalSplit(LinkedHashMap<String,Double>params,LinkedHashMap<String,Double>anaParams,String timeBeanId) {
 		for(AnalyticalModelODpair odPair:this.getOdPairs().getODpairset().values()){
+			
+			//For GV car proportion is always 1
 			if(odPair.getSubPopulation().contains("GV")) {
 				double carDemand=this.getDemand().get(timeBeanId).get(odPair.getODpairId());
 				this.getCarDemand().get(timeBeanId).put(odPair.getODpairId(),carDemand);
 				continue;
+			// if a phantom trip, car and pt proportion is decided from the simulation and will not be changed
 			}else if(odPair.getSubPopulation().contains("trip")) {
 				double carDemand=this.getDemand().get(timeBeanId).get(odPair.getODpairId())*odPair.getCarModalSplit();
 				this.getCarDemand().get(timeBeanId).put(odPair.getODpairId(),carDemand);
