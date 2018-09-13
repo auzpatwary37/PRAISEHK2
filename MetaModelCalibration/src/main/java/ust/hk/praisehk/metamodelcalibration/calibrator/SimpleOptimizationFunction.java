@@ -61,7 +61,7 @@ public class SimpleOptimizationFunction extends OptimizationFunction{
 	private void logOoptimizationDetails(int currentIterNo,int optimIterNo,String fileLoc,LinkedHashMap<String,Double>params,double objective) {
 		try {
 			File file=new File(fileLoc+"OoptimizationDetails"+currentIterNo);
-			FileWriter fw=new FileWriter(file,false);
+			FileWriter fw=new FileWriter(file,true);
 			if(optimIterNo==0) {
 				fw.append("optimIterNo,Objective");
 				for(String s:params.keySet()) {
