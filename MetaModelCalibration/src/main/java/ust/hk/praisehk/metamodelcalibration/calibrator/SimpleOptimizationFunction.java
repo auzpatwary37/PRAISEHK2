@@ -23,6 +23,7 @@ public class SimpleOptimizationFunction extends OptimizationFunction{
 	private final ParamReader pReader;
 	private final int currentIterNo;
 	private final String fileLoc;
+	private int optimIter=0;
 	
 	protected SimpleOptimizationFunction(AnalyticalModel sueAssignment, Measurements realData, Map<Id<Measurement>, Map<String, MetaModel>> metaModels,
 			LinkedHashMap<String, Double> currentParams, double TrRadius,
@@ -37,6 +38,7 @@ public class SimpleOptimizationFunction extends OptimizationFunction{
 
 	@Override
 	public double compute(int n, int m, double[] x, double[] constrains) {
+		
 		LinkedHashMap<String, Double>params=ScaleUp(x);
 		Map<String,Map<Id<Link>,Double>> linkVolume=null;
 		this.getSUE().clearLinkCarandTransitVolume();
@@ -49,28 +51,37 @@ public class SimpleOptimizationFunction extends OptimizationFunction{
 		for(double xi:calcConstrain(x,this.getParamLimit())) {
 			constrains[d]=xi;
 			d++;
-		}		
+		}
+		this.logOoptimizationDetails(this.currentIterNo, this.optimIter, this.fileLoc, this.pReader.ScaleUp(new LinkedHashMap<>(params)), objective);
+		this.optimIter++;
 		return objective;
 	
 	}
 
-	private void logOoptimizationDetails(int currentIterNo,int optimIterNo,String fileLoc,LinkedHashMap<String,Double>params,double objective) throws IOException {
-		File file=new File(fileLoc+"OoptimizationDetails"+currentIterNo);
-		FileWriter fw=new FileWriter(file,false);
-		if(optimIterNo==0) {
-			fw.append("optimIterNo,Objective");
-			for(String s:params.keySet()) {
-				fw.append(","+s);
+	private void logOoptimizationDetails(int currentIterNo,int optimIterNo,String fileLoc,LinkedHashMap<String,Double>params,double objective) {
+		try {
+			File file=new File(fileLoc+"OoptimizationDetails"+currentIterNo);
+			FileWriter fw=new FileWriter(file,false);
+			if(optimIterNo==0) {
+				fw.append("optimIterNo,Objective");
+				for(String s:params.keySet()) {
+					fw.append(","+s);
+				}
+				fw.append("\n");
+			}
+			fw.append(optimIterNo+","+objective);
+			for(double d:params.values()) {
+				fw.append(","+d);
 			}
 			fw.append("\n");
+
+			fw.flush();
+			fw.close();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
 		}
-		fw.append(optimIterNo+","+objective);
-		for(double d:params.values()) {
-			fw.append(","+d);
-		}
-		fw.append("\n");
-		fw.flush();
-		fw.close();
+		
 	}
 	
 	
