@@ -98,8 +98,8 @@ public class AnalyticalModelOptimizerImpl implements AnalyticalModelOptimizer{
 			this.optimFunction.setHessian(hessian);
 	}
 	
-	public AnalyticalModelOptimizerImpl(AnalyticalModel SUE,Measurements realData, Map<Id<Measurement>,Map<String,MetaModel>>metaModels,LinkedHashMap<String,Double>currentParam,double trustRegionRadius,LinkedHashMap<String,Tuple<Double,Double>>paramLimit,String objectiveType,String MetaModelType,ParamReader pReader) {
-		this(new SimpleOptimizationFunction(SUE, realData, metaModels, currentParam, trustRegionRadius,paramLimit,objectiveType,MetaModelType,pReader));
+	public AnalyticalModelOptimizerImpl(AnalyticalModel SUE,Measurements realData, Map<Id<Measurement>,Map<String,MetaModel>>metaModels,LinkedHashMap<String,Double>currentParam,double trustRegionRadius,LinkedHashMap<String,Tuple<Double,Double>>paramLimit,String objectiveType,String MetaModelType,ParamReader pReader, int currentIterNo,String fileLoc) {
+		this(new SimpleOptimizationFunction(SUE, realData, metaModels, currentParam, trustRegionRadius,paramLimit,objectiveType,MetaModelType,pReader,currentIterNo,fileLoc));
 	}
 	
 	
