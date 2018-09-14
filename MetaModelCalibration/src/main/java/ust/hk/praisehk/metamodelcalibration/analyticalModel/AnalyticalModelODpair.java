@@ -217,8 +217,10 @@ public class AnalyticalModelODpair {
 				timeId=t;
 			}	
 		}
+		//TODO: do some thing about this
 		if(timeId==null) {
-			timeId="AfterAfternoonPeak";
+			
+			timeId="AfterEveningPeak";
 		}
 		
 		if(trip.getRoute()!=null){
@@ -235,6 +237,9 @@ public class AnalyticalModelODpair {
 				//this.RoutesWithDescription.get(trip.getRoute().getRouteDescription()).addPerson(trip.getPersonId());
 			}
 		}else if(trip.getTrRoute()!=null) {
+//			if(demand.get(timeId)==null) {
+//				System.out.println();
+//			}
 			demand.put(timeId, demand.get(timeId)+1*trip.getExpansionFactor());
 			this.agentTrCounter++;
 			if(!this.Transitroutes.containsKey(trip.getTrRoute().getTrRouteId())) {
