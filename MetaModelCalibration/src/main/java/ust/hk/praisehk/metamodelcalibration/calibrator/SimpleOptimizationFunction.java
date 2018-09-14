@@ -1,5 +1,8 @@
 package ust.hk.praisehk.metamodelcalibration.calibrator;
 
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -18,17 +21,24 @@ public class SimpleOptimizationFunction extends OptimizationFunction{
 	private final String metaModelType;
 	private final String type;
 	private final ParamReader pReader;
+	private final int currentIterNo;
+	private final String fileLoc;
+	private int optimIter=0;
+	
 	protected SimpleOptimizationFunction(AnalyticalModel sueAssignment, Measurements realData, Map<Id<Measurement>, Map<String, MetaModel>> metaModels,
 			LinkedHashMap<String, Double> currentParams, double TrRadius,
-			LinkedHashMap<String, Tuple<Double, Double>> paramLimit,String objectiveType,String MetaModelType,ParamReader pReader) {
+			LinkedHashMap<String, Tuple<Double, Double>> paramLimit,String objectiveType,String MetaModelType,ParamReader pReader,int currentIterNo,String fileLoc) {
 		super(sueAssignment, realData,metaModels , currentParams, TrRadius, paramLimit);
 		this.type=objectiveType;
 		this.metaModelType=MetaModelType;
 		this.pReader=pReader;
+		this.currentIterNo=currentIterNo;
+		this.fileLoc=fileLoc;
 	}
 
 	@Override
 	public double compute(int n, int m, double[] x, double[] constrains) {
+		
 		LinkedHashMap<String, Double>params=ScaleUp(x);
 		Map<String,Map<Id<Link>,Double>> linkVolume=null;
 		this.getSUE().clearLinkCarandTransitVolume();
@@ -41,10 +51,40 @@ public class SimpleOptimizationFunction extends OptimizationFunction{
 		for(double xi:calcConstrain(x,this.getParamLimit())) {
 			constrains[d]=xi;
 			d++;
-		}		
+		}
+		this.logOoptimizationDetails(this.currentIterNo, this.optimIter, this.fileLoc, this.pReader.ScaleUp(new LinkedHashMap<>(params)), objective);
+		this.optimIter++;
 		return objective;
+	
 	}
 
+	private void logOoptimizationDetails(int currentIterNo,int optimIterNo,String fileLoc,LinkedHashMap<String,Double>params,double objective) {
+		try {
+			File file=new File(fileLoc+"OoptimizationDetails"+currentIterNo);
+			FileWriter fw=new FileWriter(file,true);
+			if(optimIterNo==0) {
+				fw.append("optimIterNo,Objective");
+				for(String s:params.keySet()) {
+					fw.append(","+s);
+				}
+				fw.append("\n");
+			}
+			fw.append(optimIterNo+","+objective);
+			for(double d:params.values()) {
+				fw.append(","+d);
+			}
+			fw.append("\n");
+
+			fw.flush();
+			fw.close();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+	}
+	
+	
 	@Override
 	public double calcMetaModelObjective(Map<String, Map<Id<Link>, Double>> linkVolume,
 			LinkedHashMap<String, Double> params) {
