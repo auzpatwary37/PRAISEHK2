@@ -39,7 +39,7 @@ public abstract class TransitDirectLink extends TransitLink{
 				.get(Id.create(this.routeId,TransitRoute.class)).getRoute().getEndLinkId();
 		ArrayList<Id<Link>> routeLinks=new ArrayList<>();
 		routeLinks.add(strtLink);
-		routeLinks.addAll(ts.getTransitLines().get(Id.create(this.lineId,TransitLine.class)).getRoutes()
+		routeLinks.addAll(this.ts.getTransitLines().get(Id.create(this.lineId,TransitLine.class)).getRoutes()
 				.get(Id.create(this.routeId,TransitRoute.class)).getRoute().getLinkIds());
 		routeLinks.add(endLink);
 		int identifier=0;
