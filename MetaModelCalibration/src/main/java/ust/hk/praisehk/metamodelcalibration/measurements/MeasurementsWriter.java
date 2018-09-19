@@ -97,7 +97,7 @@ public class MeasurementsWriter extends DefaultHandler{
 
 
 		}catch(Exception e) {
-
+			
 		}
 
 	}
