@@ -283,7 +283,11 @@ public class ParamReader {
 			configOut.planCalcScore().getOrCreateModeParams("car").setConstant(params.get(AnalyticalModel.ModeConstantCarName));
 			configOut.planCalcScore().setPerforming_utils_hr(params.get(AnalyticalModel.MarginalUtilityofPerformName));
 		}
-		configOut.qsim().setFlowCapFactor(params.get("All "+AnalyticalModel.CapacityMultiplierName));
+		if(params.containsKey(AnalyticalModel.CapacityMultiplierName)) {
+			configOut.qsim().setFlowCapFactor(params.get(AnalyticalModel.CapacityMultiplierName));
+		}else {
+			configOut.qsim().setFlowCapFactor(params.get("All "+AnalyticalModel.CapacityMultiplierName));
+		}
 		return configOut;
 	}
 	
