@@ -17,6 +17,7 @@
 	</properties>
 
 	<build>
+		
 		<plugins>
 			<plugin>
 				<artifactId>maven-compiler-plugin</artifactId>
@@ -26,7 +27,15 @@
 					<target>1.8</target>
 				</configuration>
 			</plugin>
-
+			<plugin>
+			<artifactId>maven-compiler-plugin</artifactId>
+        	<version>3.5.1</version>
+        	<configuration>
+        	<source>1.8</source>
+        	<target>1.8</target>
+        	</configuration>
+			</plugin>
+			
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-source-plugin</artifactId>
@@ -40,9 +49,8 @@
 				</executions>
 			</plugin>
 		</plugins>
-		
-		
 	</build>
+	
 	<repositories>
 		<!--Note that in general repositories are not transitive, so they need 
 			to be repeated at every level where needed. -->
