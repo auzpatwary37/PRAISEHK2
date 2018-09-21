@@ -743,12 +743,12 @@ public class CNLSUEModel implements AnalyticalModel{
 		logger.info("ERROR amount for "+timeBeanId+" = "+squareSum);
 		//System.out.println("in timeBean Id "+timeBeanId+" No of link not converged = "+sum);
 		
-		try {
-			CNLSUEModel.writeData(timeBeanId+","+counter+","+squareSum+","+sum, this.fileLoc+"ErrorData"+timeBeanId+".csv");
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+//		try {
+//			//CNLSUEModel.writeData(timeBeanId+","+counter+","+squareSum+","+sum, this.fileLoc+"ErrorData"+timeBeanId+".csv");
+//		} catch (IOException e) {
+//			// TODO Auto-generated catch block
+//			e.printStackTrace();
+//		}
 		
 		if (squareSum<=this.getTollerance()||sum==0){
 			return true;
