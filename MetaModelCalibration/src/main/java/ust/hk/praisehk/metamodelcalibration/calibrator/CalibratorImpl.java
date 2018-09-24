@@ -257,7 +257,7 @@ public class CalibratorImpl implements Calibrator {
 		this.createMetaModel(simGradient, anaGradient, metaModelType);
 		
 		//Calculating new Point
-		if(this.iterationNo>0) {
+		if(this.iterationNo>0 && !metaModelType.equals(MetaModel.GradientBased_I_MetaModelName)) {
 			if(this.calcAverageMetaParamsChange()<this.minMetaParamChange) {
 				trialParam=this.drawRandomPoint(this.pReader.getInitialParamLimit());
 			}else {
