@@ -190,90 +190,6 @@ public class CalibratorImpl implements Calibrator {
 		}
 	}
 
-
-	
-	@Override
-	public LinkedHashMap<String,Double> generateNewParam(AnalyticalModel sue,Measurements simMeasurements,Map<Id<Measurement>,Map<String,LinkedHashMap<String,Double>>>simGradient,Map<Id<Measurement>,Map<String,LinkedHashMap<String,Double>>> anaGradient, String metaModelType) {
-		this.updateSimMeasurements(simMeasurements);
-		this.sueAssignment=sue;
-		Measurements anaMeasurements=this.calibrationMeasurements.clone();
-		if(!metaModelType.equals(MetaModel.LinearMetaModelName)&&!metaModelType.equals(MetaModel.QudaraticMetaModelName)) {
-			Map<String,Map<Id<Link>,Double>>linkVolumes= sue.perFormSUE(this.pReader.ScaleUp(this.trialParam));
-			anaMeasurements.updateMeasurements(linkVolumes);
-		}
-		this.anaMeasurements.put(this.iterationNo, anaMeasurements);
-		this.params.put(this.iterationNo, this.trialParam);
-		if(this.iterationNo>0) {
-			//Accept or reject the point
-			//update successive rejected point
-			//Run IterLogger
-			//Fix Tr Radius
-			this.writeMeasurementComparison(fileLoc);
-			double CurrentSimObjective=ObjectiveCalculator.calcObjective(this.calibrationMeasurements, this.simMeasurements.get(this.currentParamNo), this.ObjectiveType);
-			double CurrentMetaModelObjective=ObjectiveCalculator.calcObjective(this.calibrationMeasurements, this.CalcMetaModelPrediction(this.currentParamNo), this.ObjectiveType);
-			double trialSimObjective=ObjectiveCalculator.calcObjective(this.calibrationMeasurements, this.simMeasurements.get(this.iterationNo), this.ObjectiveType);
-			double trialMetaModelObjective=ObjectiveCalculator.calcObjective(this.calibrationMeasurements, this.CalcMetaModelPrediction(this.iterationNo), this.ObjectiveType);
-			double SimObjectiveChange=CurrentSimObjective-trialSimObjective;
-			double MetaObjectiveChange=CurrentMetaModelObjective-trialMetaModelObjective;
-			double rouk=SimObjectiveChange/MetaObjectiveChange;
-			boolean accepted=false;
-			if(SimObjectiveChange>0 && rouk>=this.thresholdErrorRatio) {
-				this.currentParam=this.trialParam;
-				this.currentParamNo=this.iterationNo;
-				this.TrRadius=Math.min(this.maxTrRadius, this.trusRegionIncreamentRatio*this.TrRadius);
-				this.successiveRejection=0;
-				accepted=true;
-			}else if(SimObjectiveChange>0 && rouk<this.thresholdErrorRatio){
-				this.currentParam=this.trialParam;
-				this.currentParamNo=this.iterationNo;
-				this.successiveRejection=0;
-				accepted=true;
-			}else {
-				this.successiveRejection++;
-				this.TrRadius=Math.max(this.minTrRadius, this.trustRegionDecreamentRatio*this.TrRadius);
-				accepted=false;
-				
-			}
-			
-			this.interLogger(fileLoc, this.iterationNo, this.currentParamNo, CurrentMetaModelObjective, CurrentSimObjective, trialMetaModelObjective, trialSimObjective, accepted, this.TrRadius, rouk,this.metaModelType, this.trialParam, sue);
-			}
-		
-		//InternalparamCalibration
-		if(this.successiveRejection>=this.maxSuccesiveRejection && this.shouldPerformInternalParamCalibration==true) {
-			
-			Map<Integer,LinkedHashMap<String,Double>> scaledParam=new HashMap<>();
-			for(int i:this.params.keySet()) {
-				scaledParam.put(i, this.pReader.ScaleUp(this.params.get(i)));
-			}
-			
-			Map<Integer,Measurements>newAnaMeasurements=this.sueAssignment.calibrateInternalParams(this.simMeasurements, scaledParam,this.sueAssignment.getAnalyticalModelInternalParams(), this.currentParamNo);
-			this.updateAnalyticalMeasurement(newAnaMeasurements);
-			this.successiveRejection=0;
-		}
-			
-		
-		//Generating metaModels
-		
-		this.createMetaModel(simGradient, anaGradient, metaModelType);
-		
-		//Calculating new Point
-		if(this.iterationNo>0 && !metaModelType.equals(MetaModel.GradientBased_I_MetaModelName)) {
-			if(this.calcAverageMetaParamsChange()<this.minMetaParamChange) {
-				trialParam=this.drawRandomPoint(this.pReader.getInitialParamLimit());
-			}else {
-				AnalyticalModelOptimizer anaOptimizer=new AnalyticalModelOptimizerImpl(sue, this.calibrationMeasurements, this.metaModels, this.currentParam, this.TrRadius, this.pReader.getInitialParamLimit(),this.ObjectiveType ,metaModelType,this.pReader, this.iterationNo,this.fileLoc);
-				this.trialParam=anaOptimizer.performOptimization();
-			}
-			
-		}else {
-			AnalyticalModelOptimizer anaOptimizer=new AnalyticalModelOptimizerImpl(sue, this.calibrationMeasurements, this.metaModels, this.currentParam, this.TrRadius, this.pReader.getInitialParamLimit(),this.ObjectiveType, metaModelType,this.pReader,this.iterationNo, this.fileLoc);
-			this.trialParam=anaOptimizer.performOptimization();
-		}
-		
-		
-		this.iterationNo++;
-		return this.trialParam;
-	}
 	
 	//TODO: Make this method permanent
 	@Override
@@ -353,7 +269,7 @@ public class CalibratorImpl implements Calibrator {
 		
 		//Calculating new Point
 		if(this.iterationNo>0) {
-			if(this.calcAverageMetaParamsChange()<this.minMetaParamChange) {
+			if(this.calcAverageMetaParamsChange()<this.minMetaParamChange && !metaModelType.equals(MetaModel.GradientBased_I_MetaModelName)) {
 				trialParam=this.drawRandomPoint(this.pReader.getInitialParamLimit());
 			}else {
 				AnalyticalModelOptimizer anaOptimizer=new AnalyticalModelOptimizerImpl(sue, this.calibrationMeasurements, this.metaModels, this.currentParam, this.TrRadius, this.pReader.getInitialParamLimit(),this.ObjectiveType ,metaModelType,this.pReader, this.iterationNo,this.fileLoc);
