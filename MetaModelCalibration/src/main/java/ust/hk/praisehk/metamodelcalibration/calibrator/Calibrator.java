@@ -17,17 +17,6 @@ public interface Calibrator {
 	 */
 	public void writeMeasurementComparison(String fileLoc);
 	
-	
-	/**
-	 * This is the most important method algorithm of this class
-	 * The gradients can be null in case of non-gradient Based metaModel Type
-	 * Will be deprecated shortly
-	 */
-	@Deprecated
-	public LinkedHashMap<String, Double> generateNewParam(AnalyticalModel sue, Measurements simMeasurements,
-			Map<Id<Measurement>, Map<String, LinkedHashMap<String, Double>>> simGradient,
-			Map<Id<Measurement>, Map<String, LinkedHashMap<String, Double>>> anaGradient, String metaModelType);
-
 	/**
 	 * This is the most important method algorithm of this class
 	 * The gradients can be null in case of non-gradient Based metaModel Type
