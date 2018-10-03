@@ -31,8 +31,8 @@ import com.google.inject.Inject;
 
 public class AnalyticalModelODpair {
 		
-	private int agentCARCounter=0;
-	private int agentTrCounter=0;
+	private double agentCARCounter=0;
+	private double agentTrCounter=0;
 	private double ExpectedMaximumCarUtility;
 	private double ExpectedMaximumTransitUtility;
 	private List<Id<Person>> personIdList=new ArrayList<>();
@@ -224,8 +224,8 @@ public class AnalyticalModelODpair {
 		}
 		
 		if(trip.getRoute()!=null){
-			demand.put(timeId, demand.get(timeId)+1*trip.getExpansionFactor());
-			this.agentCARCounter++;
+			demand.put(timeId, demand.get(timeId)+1*trip.getCarPCU());
+			this.agentCARCounter+=trip.getCarPCU();
 			if(!routeset.containsKey(trip.getRoute().getRouteId())){//A new route 
 				routeset.put(trip.getRoute().getRouteId(),1);
 				this.RoutesWithDescription.put(trip.getRoute().getRouteId(),trip.getRoute());
@@ -566,7 +566,7 @@ public class AnalyticalModelODpair {
 	}
 	}
 
-	public int getAgentCounter() {
+	public double getAgentCounter() {
 		return agentCARCounter+this.agentTrCounter;
 	}
 }

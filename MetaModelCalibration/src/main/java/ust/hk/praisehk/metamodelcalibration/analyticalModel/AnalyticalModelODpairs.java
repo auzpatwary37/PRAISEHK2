@@ -20,6 +20,7 @@ import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.core.utils.collections.Tuple;
 import org.matsim.facilities.ActivityFacility;
 import org.matsim.utils.objectattributes.ObjectAttributes;
+import org.matsim.vehicles.Vehicle;
 
 import com.google.common.collect.Lists;
 
@@ -92,6 +93,12 @@ public abstract class AnalyticalModelODpairs {
 		}
 		double tripsWithoutRoute=0;
 		for (Trip trip:trips){
+			double pcu=1;
+			Vehicle v=this.scenario.getVehicles().getVehicles().get(Id.createVehicleId(trip.getPersonId().toString()));
+			if(v!=null) {
+				pcu=v.getType().getPcuEquivalents();
+			}
+			trip.setCarPCU(pcu);
 			if(trip.getRoute()!=null ||trip.getTrRoute()!=null) {
 				Id<AnalyticalModelODpair> ODId=trip.generateODpairId(network);
 				if (ODpairset.containsKey(ODId)){
@@ -226,6 +233,12 @@ public abstract class AnalyticalModelODpairs {
 		}
 		double tripsWithoutRoute=0;
 		for (Trip trip:trips){
+			double pcu=1;
+			Vehicle v=this.scenario.getVehicles().getVehicles().get(Id.createVehicleId(trip.getPersonId().toString()));
+			if(v!=null) {
+				pcu=v.getType().getPcuEquivalents();
+			}
+			trip.setCarPCU(pcu);
 			if(trip.getRoute()!=null ||trip.getTrRoute()!=null) {
 				Id<AnalyticalModelODpair> ODId=trip.generateODpairId(odNetwork);
 				if (ODpairset.containsKey(ODId)){
