@@ -11,8 +11,10 @@ import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.events.LinkEnterEvent;
 import org.matsim.api.core.v01.events.TransitDriverStartsEvent;
+import org.matsim.api.core.v01.events.VehicleEntersTrafficEvent;
 import org.matsim.api.core.v01.events.handler.LinkEnterEventHandler;
 import org.matsim.api.core.v01.events.handler.TransitDriverStartsEventHandler;
+import org.matsim.api.core.v01.events.handler.VehicleEntersTrafficEventHandler;
 import org.matsim.api.core.v01.network.Link;
 import org.matsim.core.utils.collections.Tuple;
 
@@ -22,7 +24,7 @@ import com.google.inject.Inject;
 
 
 
-public class LinkPCUCountEventHandler implements LinkEnterEventHandler, TransitDriverStartsEventHandler{
+public class LinkPCUCountEventHandler implements LinkEnterEventHandler, TransitDriverStartsEventHandler, VehicleEntersTrafficEventHandler{
 	private Map<String,Map<Id<Link>,Double>> linkCounts=new HashMap<>();
 	private Map<String,Map<Id<Link>,List<Id<Vehicle>>>> Vehicles=new ConcurrentHashMap<>();
 	private Map<Id<Vehicle>,Double> transitVehicles=new ConcurrentHashMap<>();
@@ -57,7 +59,7 @@ public class LinkPCUCountEventHandler implements LinkEnterEventHandler, TransitD
 					if(this.transitVehicles.containsKey(vId)) {
 						totalVehicle+=this.transitVehicles.get(vId);
 					}else {
-						totalVehicle+=1;
+						totalVehicle+=this.scenario.getVehicles().getVehicles().get(vId).getType().getPcuEquivalents();
 					}
 				}
 				linkCounts.get(timeBeanId).put(LinkId,totalVehicle);
@@ -105,6 +107,21 @@ public class LinkPCUCountEventHandler implements LinkEnterEventHandler, TransitD
 				linkCounts.get(timeBeanId).put(linkId, 0.0);
 				Vehicles.get(timeBeanId).put(linkId, Collections.synchronizedList(new ArrayList<Id<Vehicle>>()));
 			}
+		}
+	}
+
+	@Override
+	public void handleEvent(VehicleEntersTrafficEvent event) {
+		int time=(int) event.getTime();
+		if(time>=86400) {time=86400;}
+		String timeId=null;
+		for(String s:this.timeBean.keySet()) {
+			if(time>this.timeBean.get(s).getFirst() && time<=timeBean.get(s).getSecond()) {
+				timeId=s;
+			}
+		}
+		if(this.linkCounts.get(timeId).containsKey(event.getLinkId())){
+				this.Vehicles.get(timeId).get(event.getLinkId()).add(event.getVehicleId());			
 		}
 	}
 	
