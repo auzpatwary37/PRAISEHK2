@@ -25,7 +25,7 @@ public class CNLODpairs extends AnalyticalModelODpairs{
 	private final TransitSchedule ts;
 	
 	public CNLODpairs(Network network, Population population,TransitSchedule ts, Scenario scenario,Map<String, Tuple<Double, Double>> timeBeans) {
-		super(network, population,timeBeans);
+		super(network, population,timeBeans,scenario);
 		this.scenario=scenario;
 		this.ts=ts;
 	}

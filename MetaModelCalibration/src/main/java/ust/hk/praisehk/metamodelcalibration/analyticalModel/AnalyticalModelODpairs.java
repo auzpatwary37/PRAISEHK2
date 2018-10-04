@@ -21,6 +21,7 @@ import org.matsim.core.utils.collections.Tuple;
 import org.matsim.facilities.ActivityFacility;
 import org.matsim.utils.objectattributes.ObjectAttributes;
 import org.matsim.vehicles.Vehicle;
+import org.matsim.vehicles.Vehicles;
 
 import com.google.common.collect.Lists;
 
@@ -34,7 +35,7 @@ public abstract class AnalyticalModelODpairs {
 	private Population population;
 	private Map<Id<AnalyticalModelODpair>,AnalyticalModelODpair> ODpairset=new HashMap<>();
 	private Map<Id<AnalyticalModelODpair>,Double> ODdemand=new HashMap<>();
-	private Map<Id<AnalyticalModelODpair>,Double> ODdemandperhour=new HashMap<>();
+	//private Map<Id<AnalyticalModelODpair>,Double> ODdemandperhour=new HashMap<>();
 	private final Map<String,Tuple<Double,Double>> timeBean;
 	
 	
@@ -48,10 +49,11 @@ public abstract class AnalyticalModelODpairs {
 		this.timeBean=timeBean;
 	}
 	//Constructor to create from network and population file
-	public AnalyticalModelODpairs(Network network, Population population,Map<String,Tuple<Double,Double>> timeBean){
+	public AnalyticalModelODpairs(Network network, Population population,Map<String,Tuple<Double,Double>> timeBean,Scenario scenario){
 		this.network=network;
 		this.population=population;
 		this.timeBean=timeBean;
+		this.scenario=scenario;
 	}
 	@SuppressWarnings("unchecked")
 	public void generateODpairset(){
