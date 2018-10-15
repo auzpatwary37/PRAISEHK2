@@ -190,8 +190,6 @@ public class CalibratorImpl implements Calibrator {
 		}
 	}
 
-	
-	//TODO: Make this method permanent
 	@Override
 	public LinkedHashMap<String,Double> generateNewParam(AnalyticalModel sue,Measurements simMeasurements,SimAndAnalyticalGradientCalculator gradFactory, String metaModelType) {
 		this.updateSimMeasurements(simMeasurements);
