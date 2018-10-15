@@ -224,7 +224,7 @@ public class AnalyticalModelODpair {
 		}
 		
 		if(trip.getRoute()!=null){
-			demand.put(timeId, demand.get(timeId)+1*trip.getCarPCU());
+			demand.put(timeId, demand.get(timeId)+1);
 			this.agentCARCounter+=trip.getCarPCU();
 			if(!routeset.containsKey(trip.getRoute().getRouteId())){//A new route 
 				routeset.put(trip.getRoute().getRouteId(),1);
@@ -240,7 +240,7 @@ public class AnalyticalModelODpair {
 //			if(demand.get(timeId)==null) {
 //				System.out.println();
 //			}
-			demand.put(timeId, demand.get(timeId)+1*trip.getExpansionFactor());
+			demand.put(timeId, demand.get(timeId)+1);
 			this.agentTrCounter++;
 			if(!this.Transitroutes.containsKey(trip.getTrRoute().getTrRouteId())) {
 				this.Transitroutes.put(trip.getTrRoute().getTrRouteId(),trip.getTrRoute());

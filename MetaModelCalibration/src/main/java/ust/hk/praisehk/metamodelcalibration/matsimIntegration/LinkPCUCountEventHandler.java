@@ -59,7 +59,8 @@ public class LinkPCUCountEventHandler implements LinkEnterEventHandler, TransitD
 					if(this.transitVehicles.containsKey(vId)) {
 						totalVehicle+=this.transitVehicles.get(vId);
 					}else {
-						totalVehicle+=this.scenario.getVehicles().getVehicles().get(vId).getType().getPcuEquivalents();
+						//totalVehicle+=this.scenario.getVehicles().getVehicles().get(vId).getType().getPcuEquivalents();
+						totalVehicle++;
 					}
 				}
 				linkCounts.get(timeBeanId).put(LinkId,totalVehicle);
