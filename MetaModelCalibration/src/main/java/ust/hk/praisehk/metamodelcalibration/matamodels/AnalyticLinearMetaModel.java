@@ -76,9 +76,9 @@ public class AnalyticLinearMetaModel extends MetaModelImpl {
 		};
 		double[] x=new double[this.noOfMetaModelParams]; 
 		for(int i=0;i<this.noOfMetaModelParams;i++) {
-			x[i]=0;
+			x[i]=1;
 		}
-	    CobylaExitStatus result = Cobyla.findMinimum(optimization, this.noOfMetaModelParams, 0, x,0.5,Math.pow(10, -6) ,0, 1500);
+	    CobylaExitStatus result = Cobyla.findMinimum(optimization, this.noOfMetaModelParams, 0, x,100,Math.pow(10, -6) ,3, 1500);
 	    this.MetaModelParams=x;
 		
 	}

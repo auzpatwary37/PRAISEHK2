@@ -202,6 +202,19 @@ public class CalibratorImpl implements Calibrator {
 		this.anaMeasurements.put(this.iterationNo, anaMeasurements);
 		this.params.put(this.iterationNo, this.trialParam);
 		boolean accepted=true;
+		if(this.iterationNo==0) {
+			String s="0th Objective Value = "+ObjectiveCalculator.calcObjective(calibrationMeasurements, simMeasurements, this.ObjectiveType);
+			System.out.println(s);
+			try {
+				FileWriter fw=new FileWriter(new File("toyScenarioLarge/Calibration/0thSimObjective.txt"));
+				fw.append(s);
+				fw.flush();
+				fw.close();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
 		if(this.iterationNo>0) {
 			//Accept or reject the point
 			//update successive rejected point
