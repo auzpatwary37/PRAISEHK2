@@ -64,6 +64,7 @@ public class AnalyticalModelODpair {
 	private final Map<String, Tuple<Double,Double>>timeBean;
 	private Map<String, ArrayList<AnalyticalModelTransitRoute>> timeBasedTransitRoutes=new HashMap<>();
 	private String subPopulation;
+	private double PCU=1;
 	private int minRoute=5;
 	//TODO:Shift Node Based Coordinates to FacilityBased Coordinates
 	
