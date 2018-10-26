@@ -48,7 +48,7 @@ public class AnaModelControlerListener implements StartupListener,BeforeMobsimLi
 	private int maxIter;
 	private final Map<String, FareCalculator> farecalc;
 	private int AverageCountOverNoOfIteration=5;
-	private boolean shouldAverageOverIteration=false;
+	private boolean shouldAverageOverIteration=true;
 	private Map<String, Map<Id<Link>, Double>> counts=null;
 	
 	@Inject
