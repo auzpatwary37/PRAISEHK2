@@ -205,7 +205,7 @@ public class CalibratorImpl implements Calibrator {
 			anaMeasurements.updateMeasurements(linkVolumes);
 		}
 		new MeasurementsWriter(anaMeasurements).write(this.fileLoc+"anaMeasurement"+this.iterationNo+".xml");
-		new MeasurementsWriter(anaMeasurements).write(this.fileLoc+"simMeasurement"+this.iterationNo+".xml");
+		new MeasurementsWriter(simMeasurements).write(this.fileLoc+"simMeasurement"+this.iterationNo+".xml");
 		if(this.iterationNo==0) {
 			WriteParam(this.fileLoc+"param"+this.iterationNo+".csv",this.trialParam);
 		}
