@@ -153,7 +153,7 @@ public class CalibratorImpl implements Calibrator {
 
 				case MetaModel.AnalyticalLinearMetaModelName: metaModel=new AnalyticLinearMetaModel(m.getId(), this.simMeasurements, this.anaMeasurements, this.params, timeBeanId, this.currentParamNo) ;
 				this.metaModelType=metaModelType;
-				break;
+				//break;
 
 				case MetaModel.AnalyticalQuadraticMetaModelName: metaModel=new AnalyticalQuadraticMetaModel(m.getId(), this.simMeasurements, this.anaMeasurements, this.params, timeBeanId, this.currentParamNo);
 				this.metaModelType=metaModelType;
