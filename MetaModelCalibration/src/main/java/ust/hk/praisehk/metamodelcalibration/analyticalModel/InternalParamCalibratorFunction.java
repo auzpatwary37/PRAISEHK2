@@ -1,5 +1,9 @@
 package ust.hk.praisehk.metamodelcalibration.analyticalModel;
 
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -11,6 +15,7 @@ import org.matsim.core.utils.collections.Tuple;
 
 
 import de.xypron.jcobyla.Calcfc;
+import ust.hk.praisehk.metamodelcalibration.analyticalModelImpl.CNLSUEModel;
 import ust.hk.praisehk.metamodelcalibration.measurements.Measurement;
 import ust.hk.praisehk.metamodelcalibration.measurements.Measurements;
 
@@ -26,6 +31,20 @@ public class InternalParamCalibratorFunction implements Calcfc{
 		private Map<Integer,LinkedHashMap<String,Double>> Parmas;
 		private final LinkedHashMap<String,Double> currentParam;
 		private final Map<String,Tuple<Double,Double>> timeBean;
+		private double optimIter=0;
+		private final String fileLoc;
+		
+		
+		private LinkedHashMap<String,Double> getDefaultBPRAnaParam(){
+			LinkedHashMap<String,Double> AnalyticalModelInternalParams=new LinkedHashMap<>();
+			AnalyticalModelInternalParams.put(CNLSUEModel.LinkMiuName, 0.008);
+			AnalyticalModelInternalParams.put(CNLSUEModel.ModeMiuName, 0.01);
+			AnalyticalModelInternalParams.put(CNLSUEModel.BPRalphaName, 0.15);
+			AnalyticalModelInternalParams.put(CNLSUEModel.BPRbetaName, 4.);
+			AnalyticalModelInternalParams.put(CNLSUEModel.TransferalphaName, 0.5);
+			AnalyticalModelInternalParams.put(CNLSUEModel.TransferbetaName, 1.);
+			return AnalyticalModelInternalParams;
+		}
 			
 		/**
 		 * 
@@ -38,6 +57,7 @@ public class InternalParamCalibratorFunction implements Calcfc{
 		public InternalParamCalibratorFunction(Map<Integer,Measurements> simData,Map<Integer,LinkedHashMap<String,Double>>params,AnalyticalModel sue, LinkedHashMap<String, Double> initialParam,Integer currentParamNo) {
 
 				this.sue=sue;
+				this.fileLoc=sue.getFileLoc()+"Calibration/InternalParamCalibrationDetails.csv";
 				this.initialParam=initialParam;
 				this.currentParam=params.get(currentParamNo);
 				this.simMeasurements=simData;
@@ -67,23 +87,39 @@ public class InternalParamCalibratorFunction implements Calcfc{
 					j++;
 				}
 				LinkedHashMap<String,Double> anaParam=scaleUp(y);
-				double objective=0;
+				double objective=0;	
+				Measurements anaBPRMeasurement=this.simMeasurements.get(0).clone();
 				for(int i=0;i<this.simMeasurements.size();i++) {
 					LinkedHashMap<String,Double> param=new LinkedHashMap<>(this.Parmas.get(i));
+					double weight=1/(1+this.calcEucleadeanDistance(this.currentParam, param));
 					Map<String,Map<Id<Link>,Double>> anaCount=this.sue.perFormSUE(param, anaParam);
 					Measurements anaMeasurement=this.simMeasurements.get(0).clone();
 					anaMeasurement.updateMeasurements(anaCount);
+					if(weight==1) {
+						Map<String,Map<Id<Link>,Double>> anaBPRCount=this.sue.perFormSUE(param, this.getDefaultBPRAnaParam());
+						anaBPRMeasurement.updateMeasurements(anaBPRCount);
+					}
+					Double BPRObj=0.;
+					Double currentObj=0.;
 					Measurements simMeasurement=this.simMeasurements.get(i);
 					for(Id<Measurement> mId:simMeasurement.getMeasurements().keySet()) {
 						for(String s:simMeasurement.getMeasurements().get(mId).getVolumes().keySet()) {
 							double simValue=simMeasurement.getMeasurements().get(mId).getVolumes().get(s);
 							double anaValue=anaMeasurement.getMeasurements().get(mId).getVolumes().get(s);
 							double a=simValue-anaValue;
-							double weight=1/(1+this.calcEucleadeanDistance(this.currentParam, param));
 							objective+=weight*Math.pow(a, 2);
+							if(weight==1) {
+								BPRObj+=Math.pow((simMeasurement.getMeasurements().get(mId).getVolumes().get(s)-anaBPRMeasurement.getMeasurements().get(mId).getVolumes().get(s)), 2);
+								currentObj+=Math.pow(a, 2);
+							}
 						}
 					}
+
+					if(weight==1) {
+						this.writeOptimizationDetails(BPRObj, currentObj);
+					}
 				}
+
 				for(double d:x) {
 					objective+=d*d;
 				}
@@ -94,6 +130,22 @@ public class InternalParamCalibratorFunction implements Calcfc{
 				}
 				
 				return objective;
+			}
+			
+			public void writeOptimizationDetails(double BPRObj,double currentObj) {
+				try {
+					FileWriter fw=new FileWriter(new File(fileLoc),true);
+					String header="timeStamp,CurrentCalibrationIteration,GapBetweenBPRandSim,GapBetweenCurrentParamAndSim\n";
+					if(optimIter==0) {
+						fw.append(header);
+					}
+					fw.append(LocalDateTime.now().toString()+","+this.simMeasurements.size()+","+BPRObj+","+currentObj+"\n");
+					fw.flush();
+					fw.close();
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
 			}
 
 			private double calcEucleadeanDistance(LinkedHashMap<String,Double> param1,LinkedHashMap<String,Double>param2) {
