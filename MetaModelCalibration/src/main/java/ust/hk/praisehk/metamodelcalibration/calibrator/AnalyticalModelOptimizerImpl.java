@@ -32,7 +32,7 @@ public class AnalyticalModelOptimizerImpl implements AnalyticalModelOptimizer{
 	private int maxIter=1500;
 	private final int noOfVariables;
 	private double startingRadius=10;
-	private double endingRadius=0.01;
+	private double endingRadius=0.00001;
 	private OptimizationFunction optimFunction;	
 	private CentralDifferenceHessian HassinCalculator;
 	private boolean useUnitDiag=true;
