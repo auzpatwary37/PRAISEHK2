@@ -29,9 +29,9 @@ import ust.hk.praisehk.metamodelcalibration.measurements.Measurements;
 
 public class LinkCountEventHandler implements LinkEnterEventHandler, TransitDriverStartsEventHandler,VehicleEntersTrafficEventHandler{
 	
-	private Map<String,Map<Id<Link>,Double>> linkCounts=new ConcurrentHashMap<>();
-	private Map<String,Map<Id<Link>,List<Id<Vehicle>>>> Vehicles=new ConcurrentHashMap<>();
-	private Map<Id<Vehicle>,Double> transitVehicles=new ConcurrentHashMap<>();
+	private Map<String,Map<Id<Link>,Double>> linkCounts=new HashMap<>();
+	private Map<String,Map<Id<Link>,List<Id<Vehicle>>>> Vehicles=new HashMap<>();
+	private Map<Id<Vehicle>,Double> transitVehicles=new HashMap<>();
 	private final Map<String, Tuple<Double,Double>> timeBean;
 	private Measurements calibrationMeasurements;
 	
@@ -121,16 +121,11 @@ public class LinkCountEventHandler implements LinkEnterEventHandler, TransitDriv
 	public void handleEvent(VehicleEntersTrafficEvent event) {
 		int time=(int) event.getTime();
 		if(time>=86400) {time=86400;}
-		if(time==0) {
-			time=1;
-		}
 		String timeId=null;
 		for(String s:this.timeBean.keySet()) {
-			
 			if(time>this.timeBean.get(s).getFirst() && time<=timeBean.get(s).getSecond()) {
 				timeId=s;
 			}
-			
 		}
 		if(this.linkCounts.get(timeId).containsKey(event.getLinkId())){
 				this.Vehicles.get(timeId).get(event.getLinkId()).add(event.getVehicleId());			
