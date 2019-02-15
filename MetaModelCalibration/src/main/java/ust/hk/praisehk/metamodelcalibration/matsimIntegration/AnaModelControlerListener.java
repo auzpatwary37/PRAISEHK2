@@ -1,7 +1,6 @@
 package ust.hk.praisehk.metamodelcalibration.matsimIntegration;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.Map;
 
 import org.matsim.api.core.v01.Id;
@@ -85,7 +84,7 @@ public class AnaModelControlerListener implements StartupListener,BeforeMobsimLi
 			int counter=event.getIteration();
 			if(counter>this.maxIter-5) {
 				if(this.counts==null) {
-					counts=new HashMap<>(this.pcuVolumeCounter.geenerateLinkCounts());
+					counts=this.pcuVolumeCounter.geenerateLinkCounts();
 				}else {
 					Map<String,Map<Id<Link>,Double>> newcounts=this.pcuVolumeCounter.geenerateLinkCounts();
 					for(String s:this.counts.keySet()) {
