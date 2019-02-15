@@ -40,7 +40,6 @@ public class Trip {
 	private AnalyticalModelTransitRoute trRoute;
 	private String subPopulationName=null;
 	private static final Logger logger=Logger.getLogger(Trip.class);
-	private double CarPCU=1;
 	/**
 	 * 
 	 * @param line - containing all the data probably from a file (.csv)
@@ -56,14 +55,6 @@ public class Trip {
 	 */
 	
 	
-	public double getCarPCU() {
-		return CarPCU;
-	}
-
-	public void setCarPCU(double carPCU) {
-		CarPCU = carPCU;
-	}
-
 	/**
 	 * Convert the TCSTime to MATSim time
 	 * @param TCSTime
