@@ -45,10 +45,9 @@ public class SimAndAnalyticalGradientCalculator {
 	private final String GradeintCalulationMethod;
 	private final boolean runParallel;
 	public SimAndAnalyticalGradientCalculator(Config config,MeasurementsStorage storage,SimRun simRun,
-			LinkedHashMap<String,Double>atParam, double c,String gradientCalculationMethod,int currentIterCounter,boolean runParallel,ParamReader pReader) {
+			double c,String gradientCalculationMethod,int currentIterCounter,boolean runParallel,ParamReader pReader) {
 		this.pReader=pReader;
 		this.storage=storage;
-		this.currentParam=atParam;
 		this.simRun=simRun;
 		if(c!=0) {
 			this.c=c;
@@ -63,7 +62,8 @@ public class SimAndAnalyticalGradientCalculator {
 	 * This method will invoke run method on the already created gradient calculator
 	 * This will give the calibrator option to choose to start the gradient calculation as necessary
 	 */
-	public void calcGradient() {
+	public void calcGradient(LinkedHashMap<String,Double> param) {
+		this.currentParam=param;
 		if(this.GradeintCalulationMethod.equals(this.SPSAMethodName)) {
 			this.calcSPSAGradient(runParallel);
 		}else if(this.GradeintCalulationMethod.equals(this.FDMethodName)){
