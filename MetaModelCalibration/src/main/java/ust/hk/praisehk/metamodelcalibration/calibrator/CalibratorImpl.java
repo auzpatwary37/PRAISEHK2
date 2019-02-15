@@ -1,9 +1,6 @@
 package ust.hk.praisehk.metamodelcalibration.calibrator;
 
-import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.time.LocalDateTime;
@@ -30,8 +27,6 @@ import ust.hk.praisehk.metamodelcalibration.matamodels.QuadraticMetaModel;
 import ust.hk.praisehk.metamodelcalibration.matamodels.SimAndAnalyticalGradientCalculator;
 import ust.hk.praisehk.metamodelcalibration.measurements.Measurement;
 import ust.hk.praisehk.metamodelcalibration.measurements.Measurements;
-import ust.hk.praisehk.metamodelcalibration.measurements.MeasurementsReader;
-import ust.hk.praisehk.metamodelcalibration.measurements.MeasurementsWriter;
 
 
 
@@ -204,12 +199,6 @@ public class CalibratorImpl implements Calibrator {
 			Map<String,Map<Id<Link>,Double>>linkVolumes= sue.perFormSUE(this.pReader.ScaleUp(this.trialParam));
 			anaMeasurements.updateMeasurements(linkVolumes);
 		}
-		new MeasurementsWriter(anaMeasurements).write(this.fileLoc+"anaMeasurement"+this.iterationNo+".xml");
-		new MeasurementsWriter(anaMeasurements).write(this.fileLoc+"simMeasurement"+this.iterationNo+".xml");
-		if(this.iterationNo==0) {
-			WriteParam(this.fileLoc+"param"+this.iterationNo+".csv",this.trialParam);
-		}
-		
 		this.anaMeasurements.put(this.iterationNo, anaMeasurements);
 		this.params.put(this.iterationNo, this.trialParam);
 		boolean accepted=true;
@@ -305,7 +294,6 @@ public class CalibratorImpl implements Calibrator {
 		
 		
 		this.iterationNo++;
-		WriteParam(this.fileLoc+"param"+this.iterationNo+".csv",this.trialParam);
 		return this.trialParam;
 	}
 
@@ -565,69 +553,5 @@ public class CalibratorImpl implements Calibrator {
 		}
 	}
 	
-	
-	public static void WriteParam(String fileLoc, LinkedHashMap<String,Double>param) {
-		FileWriter fw;
-		try {
-			fw = new FileWriter(new File(fileLoc),true);
-		
-		for(String s:param.keySet()) {
-			fw.append(s+","+param.get(s)+"\n");
-		}
-		fw.flush();
-		fw.close();
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-	}
-	public static LinkedHashMap<String,Double> ReadParam(String fileLoc) {
-		LinkedHashMap<String,Double>param=new LinkedHashMap<>();
-		try {
-			BufferedReader bf=new BufferedReader(new FileReader(new File(fileLoc)));
-			String line;
-			while((line=bf.readLine())!=null) {
-				String[] part=line.split(",");
-				param.put(part[0],Double.parseDouble(part[1]));
-			}
-		} catch (FileNotFoundException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		
-		return param;
-	}
-	public CalibratorImpl(int iterPerformed,int lastSelectedParam,String filelocOldFiles,Measurements calibrationMeasurements,String fileLoc,boolean internalParameterCalibration,ParamReader pReader,double initialTRRadius,int maxSuccessiveRejection) {
-		this.fileLoc=fileLoc;
-		this.shouldPerformInternalParamCalibration=internalParameterCalibration;
-		this.pReader=pReader;
-		this.TrRadius=initialTRRadius;
-		this.currentParam=new LinkedHashMap<>(pReader.getInitialParam());
-		this.trialParam=new LinkedHashMap<>(this.currentParam);
-		this.currentParamNo=0;
-		this.iterationNo=0;
-		this.maxSuccesiveRejection=maxSuccessiveRejection;
-		this.calibrationMeasurements=calibrationMeasurements;
-		if(filelocOldFiles==null) {
-			filelocOldFiles=fileLoc;
-		}
-		for(int i=0;i<=iterPerformed;i++) {
-			
-			this.anaMeasurements.put(i,new MeasurementsReader().readMeasurements(filelocOldFiles+"anaMeasurements"+i+".xml"));
-			this.simMeasurements.put(i,new MeasurementsReader().readMeasurements(filelocOldFiles+"simMeasurements"+i+".xml"));
-			this.params.put(i, ReadParam(filelocOldFiles+"param"+i+".csv"));
-			if(i==lastSelectedParam) {
-				this.currentParamNo=lastSelectedParam;
-				this.trialParam=ReadParam(filelocOldFiles+"param"+i+".csv");
-				this.currentParam=this.params.get(i);
-			}else {
-				this.trialParam=ReadParam(filelocOldFiles+"param"+i+".csv");
-			}
-			this.createMetaModel(null, null, MetaModel.AnalyticalLinearMetaModelName);
-			this.iterationNo++;
-		}
-	}
+
 }
