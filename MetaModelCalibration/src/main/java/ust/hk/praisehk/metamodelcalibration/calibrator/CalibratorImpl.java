@@ -266,7 +266,7 @@ public class CalibratorImpl implements Calibrator {
 		//Generating Gradient if necessary
 		if(metaModelType.equals(MetaModel.GradientBased_I_MetaModelName)||metaModelType.equals(MetaModel.GradientBased_II_MetaModelName)||metaModelType.equals(MetaModel.GradientBased_III_MetaModelName)) {
 		    if(accepted==true) {
-		    	gradFactory.calcGradient(this.currentParam);
+		    	gradFactory.calcGradient();
 		    	this.currentSimGradient=gradFactory.getSimGradient();
 		    	this.currentAnaGradient=gradFactory.getAnaGradient();
 		    }
