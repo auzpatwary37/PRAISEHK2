@@ -87,7 +87,9 @@ public class InternalParamCalibratorFunction implements Calcfc{
 					j++;
 				}
 				LinkedHashMap<String,Double> anaParam=scaleUp(y);
-				double objective=0;	
+				double objective=0;
+				Double BPRObj=0.;
+				Double currentObj=0.;
 				Measurements anaBPRMeasurement=this.simMeasurements.get(0).clone();
 				for(int i=0;i<this.simMeasurements.size();i++) {
 					LinkedHashMap<String,Double> param=new LinkedHashMap<>(this.Parmas.get(i));
@@ -97,10 +99,10 @@ public class InternalParamCalibratorFunction implements Calcfc{
 					anaMeasurement.updateMeasurements(anaCount);
 					if(weight==1) {
 						Map<String,Map<Id<Link>,Double>> anaBPRCount=this.sue.perFormSUE(param, this.getDefaultBPRAnaParam());
+						
 						anaBPRMeasurement.updateMeasurements(anaBPRCount);
 					}
-					Double BPRObj=0.;
-					Double currentObj=0.;
+					
 					Measurements simMeasurement=this.simMeasurements.get(i);
 					for(Id<Measurement> mId:simMeasurement.getMeasurements().keySet()) {
 						for(String s:simMeasurement.getMeasurements().get(mId).getVolumes().keySet()) {
@@ -114,12 +116,8 @@ public class InternalParamCalibratorFunction implements Calcfc{
 							}
 						}
 					}
-
-					if(weight==1) {
-						this.writeOptimizationDetails(BPRObj, currentObj);
-					}
+					
 				}
-
 				for(double d:x) {
 					objective+=d*d;
 				}
@@ -128,18 +126,20 @@ public class InternalParamCalibratorFunction implements Calcfc{
 					c[d]=xi;
 					d++;
 				}
+				this.writeOptimizationDetails(BPRObj, currentObj,objective);
 				
+				this.optimIter++;
 				return objective;
 			}
 			
-			public void writeOptimizationDetails(double BPRObj,double currentObj) {
+			public void writeOptimizationDetails(double BPRObj,double currentObj, double objective) {
 				try {
 					FileWriter fw=new FileWriter(new File(fileLoc),true);
-					String header="timeStamp,CurrentCalibrationIteration,GapBetweenBPRandSim,GapBetweenCurrentParamAndSim\n";
+					String header="timeStamp,CurrentCalibrationIteration,GapBetweenBPRandSim,GapBetweenCurrentParamAndSim,Objective\n";
 					if(optimIter==0) {
 						fw.append(header);
 					}
-					fw.append(LocalDateTime.now().toString()+","+this.simMeasurements.size()+","+BPRObj+","+currentObj+"\n");
+					fw.append(LocalDateTime.now().toString()+","+this.simMeasurements.size()+","+BPRObj+","+currentObj+","+objective+"\n");
 					fw.flush();
 					fw.close();
 				} catch (IOException e) {
