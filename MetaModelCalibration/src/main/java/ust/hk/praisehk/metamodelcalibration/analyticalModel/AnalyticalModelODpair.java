@@ -201,7 +201,6 @@ public class AnalyticalModelODpair {
 		this.TrRouteUtility.clear();
 	}
 	
-	
 
 	/**
 	 * 
