@@ -13,6 +13,10 @@ import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.pt.transitSchedule.api.TransitSchedule;
 import org.matsim.utils.objectattributes.attributable.Attributes;
 
+import ust.hk.praisehk.metamodelcalibration.matsimIntegration.SignalFlowReductionGenerator;
+
+
+
 
 
 public abstract class AnalyticalModelNetwork implements Network{
@@ -67,6 +71,7 @@ public abstract class AnalyticalModelNetwork implements Network{
 	 */
 	public abstract void clearLinkTransitPassangerVolume();
 	
+	public abstract void updateGCRatio(SignalFlowReductionGenerator signalGC);
 	
 	public abstract void overlayTransitVehicles(TransitSchedule ts, Scenario scenario);
 	
