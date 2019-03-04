@@ -39,7 +39,9 @@ import ust.hk.praisehk.metamodelcalibration.analyticalModel.AnalyticalModelRoute
 import ust.hk.praisehk.metamodelcalibration.analyticalModel.AnalyticalModelTransitRoute;
 import ust.hk.praisehk.metamodelcalibration.analyticalModel.InternalParamCalibratorFunction;
 import ust.hk.praisehk.metamodelcalibration.analyticalModel.TransitLink;
+import ust.hk.praisehk.metamodelcalibration.matsimIntegration.SignalFlowReductionGenerator;
 import ust.hk.praisehk.metamodelcalibration.measurements.Measurements;
+
 
 
 public class CNLSUEModel implements AnalyticalModel{
@@ -228,8 +230,10 @@ public class CNLSUEModel implements AnalyticalModel{
 		this.setOdPairs(new CNLODpairs(network,population,transitSchedule,scenario,this.timeBeans));
 		this.getOdPairs().generateODpairset();
 		this.getOdPairs().generateRouteandLinkIncidence(0.);
+		SignalFlowReductionGenerator sg=new SignalFlowReductionGenerator(scenario);
 		for(String s:this.timeBeans.keySet()) {
 			this.getNetworks().put(s, new CNLNetwork(network));
+			this.getNetworks().get(s).updateGCRatio(sg);
 			this.performTransitVehicleOverlay(this.getNetworks().get(s),
 					transitSchedule,scenario.getTransitVehicles(),this.timeBeans.get(s).getFirst(),
 					this.timeBeans.get(s).getSecond());
