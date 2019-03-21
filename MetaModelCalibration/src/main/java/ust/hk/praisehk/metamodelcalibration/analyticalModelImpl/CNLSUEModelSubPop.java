@@ -12,6 +12,7 @@ import org.matsim.api.core.v01.network.Network;
 import org.matsim.api.core.v01.population.Population;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
+import org.matsim.core.network.NetworkUtils;
 import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.core.utils.collections.Tuple;
 import org.matsim.pt.transitSchedule.api.TransitSchedule;
@@ -53,9 +54,10 @@ public class CNLSUEModelSubPop extends CNLSUEModel{
 		this.setLastPopulation(population);
 		//System.out.println("");
 		this.setOdPairs(new CNLODpairs(network,population,transitSchedule,scenario,this.getTimeBeans()));
-		Config odConfig=ConfigUtils.createConfig();
-		odConfig.network().setInputFile("data/odNetwork.xml");
-		Network odNetwork=ScenarioUtils.loadScenario(odConfig).getNetwork();
+//		Config odConfig=ConfigUtils.createConfig();
+//		odConfig.network().setInputFile("data/odNetwork.xml");
+		
+		Network odNetwork=NetworkUtils.readNetwork("data/odNetwork.xml");
 		this.getOdPairs().generateODpairsetSubPop(null);//This network has priority over the constructor network. This allows to use a od pair specific network 
 		this.getOdPairs().generateRouteandLinkIncidence(0.);
 		for(String s:this.getTimeBeans().keySet()) {

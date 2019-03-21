@@ -83,7 +83,7 @@ public class LinkCountEventHandler implements LinkEnterEventHandler, TransitDriv
 				timeId=s;
 			}
 		}
-		if(this.linkCounts.get(timeId).containsKey(event.getLinkId())){
+		if(timeId!=null && this.linkCounts.get(timeId).containsKey(event.getLinkId())){
 				this.Vehicles.get(timeId).get(event.getLinkId()).add(event.getVehicleId());			
 		}
 	}
@@ -133,7 +133,7 @@ public class LinkCountEventHandler implements LinkEnterEventHandler, TransitDriv
 			}
 			
 		}
-		if(this.linkCounts.get(timeId).containsKey(event.getLinkId())){
+		if(timeId!=null && this.linkCounts.get(timeId).containsKey(event.getLinkId())){
 				this.Vehicles.get(timeId).get(event.getLinkId()).add(event.getVehicleId());			
 		}
 		

@@ -14,6 +14,7 @@ import org.matsim.api.core.v01.population.PlanElement;
 import org.matsim.api.core.v01.population.PopulationFactory;
 import org.matsim.api.core.v01.population.Route;
 import org.matsim.core.config.ConfigUtils;
+import org.matsim.core.population.PopulationUtils;
 import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.pt.transitSchedule.api.TransitSchedule;
 
@@ -23,7 +24,7 @@ public abstract class TripChain{
 	
 	int no_of_trips=0;
 	private List<Trip> chain=new ArrayList<>();
-	private PopulationFactory popfac=ScenarioUtils.createScenario(ConfigUtils.createConfig()).getPopulation().getFactory();
+	private PopulationFactory popfac=PopulationUtils.getFactory();
 	private static final Logger logger=Logger.getLogger(TripChain.class);
 	
 	/**

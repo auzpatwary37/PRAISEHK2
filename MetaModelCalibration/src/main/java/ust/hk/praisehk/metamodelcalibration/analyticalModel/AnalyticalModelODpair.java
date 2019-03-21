@@ -213,18 +213,17 @@ public class AnalyticalModelODpair {
 	public void addtrip(Trip trip){
 		String timeId=null;
 		Integer i=0;
+		if(trip.getStartTime()>24*3600) {
+			trip.setStartTime(trip.getStartTime()-24*3600);
+		}
 		for(String t:this.timeBean.keySet()) {
 			if(trip.getStartTime()>=this.timeBean.get(t).getFirst() && trip.getStartTime()<this.timeBean.get(t).getSecond()) {
 				timeId=t;
-			}	
-		}
-		//TODO: do some thing about this
-		if(timeId==null) {
+			}
 			
-			timeId="AfterEveningPeak";
 		}
 		
-		if(trip.getRoute()!=null){
+		if(trip.getRoute()!=null && timeId!=null){
 			demand.put(timeId, demand.get(timeId)+1);
 			this.agentCARCounter+=trip.getCarPCU();
 			if(!routeset.containsKey(trip.getRoute().getRouteId())){//A new route 
@@ -237,7 +236,7 @@ public class AnalyticalModelODpair {
 				this.routeset.put(trip.getRoute().getRouteId(), routeset.get(trip.getRoute().getRouteId())+1);
 				//this.RoutesWithDescription.get(trip.getRoute().getRouteDescription()).addPerson(trip.getPersonId());
 			}
-		}else if(trip.getTrRoute()!=null) {
+		}else if(trip.getTrRoute()!=null && timeId!=null) {
 //			if(demand.get(timeId)==null) {
 //				System.out.println();
 //			}

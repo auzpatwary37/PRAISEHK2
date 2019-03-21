@@ -150,12 +150,7 @@
 			<version>1.1.0</version>
 		</dependency>
 
-		<!-- https://mvnrepository.com/artifact/org.matsim/matsim -->
-		<dependency>
-			<groupId>org.matsim</groupId>
-			<artifactId>matsim</artifactId>
-			<version>0.10.0</version>
-		</dependency>
+		
 
 
 		<!-- https://mvnrepository.com/artifact/org.matsim/contrib -->
@@ -166,20 +161,9 @@
 			<type>pom</type>
 		</dependency>
 
-		<!-- https://mvnrepository.com/artifact/org.matsim.contrib/signals -->
-		<dependency>
-			<groupId>org.matsim.contrib</groupId>
-			<artifactId>signals</artifactId>
-			<version>0.10.0</version>
-		</dependency>
+		
 
-		<dependency>
-			<groupId>MATSim-HK</groupId>
-			<artifactId>MATSim-HK</artifactId>
-			<version>0.10.0-SNAPSHOT</version>
-			<scope>system</scope>
-			<systemPath>${project.basedir}/src/main/resources/MATSim-HK-0.10.0-SNAPSHOT.jar</systemPath>
-		</dependency>
+		
 
 		<dependency>
 			<groupId>null</groupId>
