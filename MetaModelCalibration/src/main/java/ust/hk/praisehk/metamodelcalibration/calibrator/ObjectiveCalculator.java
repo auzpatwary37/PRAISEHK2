@@ -50,7 +50,10 @@ public class ObjectiveCalculator {
 					stationCountReal+=m.getVolumes().get(timeBeanId);
 					stationCountAnaOrSim+=simOrAnaMeasurements.getMeasurements().get(m.getId()).getVolumes().get(timeBeanId);
 				}
-				objective+=Math.pow((stationCountReal-stationCountAnaOrSim),2);
+				//objective+=Math.pow((stationCountReal-stationCountAnaOrSim),2);
+				//objective+=Math.pow((stationCountReal-stationCountAnaOrSim),2)/stationCountReal*100;//Change to percent error objective
+				
+				objective+=Math.sqrt(2*Math.pow((stationCountReal-stationCountAnaOrSim),2)/(stationCountReal+stationCountAnaOrSim));//Change to GEH objective
 			}
 			
 		}else {

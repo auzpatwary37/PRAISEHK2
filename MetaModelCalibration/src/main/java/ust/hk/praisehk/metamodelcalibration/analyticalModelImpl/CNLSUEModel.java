@@ -76,7 +76,7 @@ public class CNLSUEModel implements AnalyticalModel{
 		private double gammaMSA=.1;//parameter for decreasing MSA step size
 		
 		//other Parameters for the Calibration Process
-		private double tollerance=0.01;
+		private double tollerance=0.1;
 		private double tolleranceLink=0.1;
 		//user input
 	
@@ -91,8 +91,8 @@ public class CNLSUEModel implements AnalyticalModel{
 		
 		//Used Containers
 		private Map<String,ArrayList<Double>> beta=new ConcurrentHashMap<>(); //This is related to weighted MSA of the SUE
-		private Map<String,ArrayList<Double>> error=new ConcurrentHashMap<>();
-		private Map<String,ArrayList<Double>> error1=new ConcurrentHashMap<>();//This is related to weighted MSA of the SUE
+		private Map<String,ArrayList<Double>> errorAuto=new ConcurrentHashMap<>();
+		private Map<String,ArrayList<Double>> errorTransit=new ConcurrentHashMap<>();//This is related to weighted MSA of the SUE
 		
 		//TimebeanId vs demands map
 		private Map<String,HashMap<Id<AnalyticalModelODpair>,Double>> Demand=new ConcurrentHashMap<>();//Holds ODpair based demand
@@ -124,8 +124,8 @@ public class CNLSUEModel implements AnalyticalModel{
 			this.getCarDemand().put(timeBeanId, new HashMap<Id<AnalyticalModelODpair>, Double>());
 			this.getTransitLinks().put(timeBeanId, new HashMap<Id<TransitLink>, TransitLink>());
 			this.beta.put(timeBeanId, new ArrayList<Double>());
-			this.error.put(timeBeanId, new ArrayList<Double>());
-			this.error1.put(timeBeanId, new ArrayList<Double>());
+			this.errorAuto.put(timeBeanId, new ArrayList<Double>());
+			this.errorTransit.put(timeBeanId, new ArrayList<Double>());
 			
 		}
 		logger.info("Analytical model created successfully.");
@@ -420,17 +420,7 @@ public class CNLSUEModel implements AnalyticalModel{
 			}
 			totalUtility+=Math.exp(u);
 		}
-//		if(routes.size()>1 && counter>2 ) {
-//			//&& (error.get(timeBeanId).get((int)(counter-2))>error.get(timeBeanId).get((int)(counter-3)))
-//			System.out.println("Testing!!!");
-//			for(CNLRoute r:routes) {
-//				double diff=(newUtility.get(r.getRouteId())-oldUtility.get(r.getRouteId()));
-//				if(Math.pow(diff,2)>0.00002){
-//					
-//					System.out.println(diff);
-//				}
-//			}
-//		}
+
 		//If total utility is zero, then there should not be any route. For testing purpose, can be removed later 
 		if(totalUtility==0) {
 			logger.error("utility is zero. Please check.");
@@ -607,7 +597,7 @@ public class CNLSUEModel implements AnalyticalModel{
 		return linkVolume;
 	}
 	
-	
+
 	/**
 	 * This method updates the linkCarVolume and linkTransitVolume obtained using MSA 
 	 * @param linkVolume - Calculated link volume
@@ -617,7 +607,7 @@ public class CNLSUEModel implements AnalyticalModel{
 	 */
 
 	@SuppressWarnings("unchecked")
-	protected boolean UpdateLinkVolume(HashMap<Id<Link>,Double> linkVolume,HashMap<Id<TransitLink>,Double> transitlinkVolume,int counter,String timeBeanId){
+	protected boolean UpdateAutoLinkVolume(HashMap<Id<Link>,Double> linkVolume, int counter,String timeBeanId){
 		double squareSum=0;
 		double flowSum=0;
 		double linkSum=0;
@@ -626,7 +616,7 @@ public class CNLSUEModel implements AnalyticalModel{
 			//this.error.clear();
 			this.beta.get(timeBeanId).add(1.);
 		}else {
-			if(error.get(timeBeanId).get(counter-1)<error.get(timeBeanId).get(counter-2)) {
+			if(errorAuto.get(timeBeanId).get(counter-1)<errorAuto.get(timeBeanId).get(counter-2)) {
 				beta.get(timeBeanId).add(beta.get(timeBeanId).get(counter-2)+this.gammaMSA);
 			}else {
 				this.getConsecutiveSUEErrorIncrease().put(timeBeanId, this.getConsecutiveSUEErrorIncrease().get(timeBeanId)+1);
@@ -647,10 +637,58 @@ public class CNLSUEModel implements AnalyticalModel{
 				if(Math.abs(update)/oldVolume*100>this.tolleranceLink) {
 					linkSum+=1;
 				}
+				
+				if(Math.abs(update)<1) {
+					flowSum+=1;
+				}
 			}
 			squareSum+=update*update;
 			((AnalyticalModelLink) this.getNetworks().get(timeBeanId).getLinks().get(linkId)).addLinkCarVolume(update);
 		}
+		
+		squareSum=Math.sqrt(squareSum);
+		if(counter==1) {
+			this.errorAuto.get(timeBeanId).clear();
+		}
+		errorAuto.get(timeBeanId).add(squareSum);
+		
+		if(squareSum<this.tollerance||linkSum<this.tolleranceLink||flowSum<=0) {
+			return true;
+			
+		}else {
+			return false;
+		}
+	}
+	
+	/**
+	 * This method updates the linkCarVolume and linkTransitVolume obtained using MSA 
+	 * @param linkVolume - Calculated link volume
+	 * @param transitlinkVolume - Calculated transit volume
+	 * @param counter - current counter in MSA loop
+	 * @param timeBeanId - the specific time Bean Id for which the SUE is performed
+	 * returns if should stop as return
+	 */
+
+	@SuppressWarnings("unchecked")
+	protected boolean UpdateTransitLinkVolume(HashMap<Id<TransitLink>,Double> transitlinkVolume,int counter,String timeBeanId){
+		double squareSum=0;
+		double flowSum=0;
+		double linkSum=0;
+		if(counter==1) {
+			this.beta.get(timeBeanId).clear();
+			//this.error.clear();
+			this.beta.get(timeBeanId).add(1.);
+		}else {
+			if(errorTransit.get(timeBeanId).get(counter-1)<errorTransit.get(timeBeanId).get(counter-2)) {
+				beta.get(timeBeanId).add(beta.get(timeBeanId).get(counter-2)+this.gammaMSA);
+			}else {
+				this.getConsecutiveSUEErrorIncrease().put(timeBeanId, this.getConsecutiveSUEErrorIncrease().get(timeBeanId)+1);
+				beta.get(timeBeanId).add(beta.get(timeBeanId).get(counter-2)+this.alphaMSA);
+				
+			}
+		}
+		
+		
 		for(Id<TransitLink> trlinkId:transitlinkVolume.keySet()){
 			//System.out.println("testing");
 			double newVolume=transitlinkVolume.get(trlinkId);
@@ -664,6 +702,9 @@ public class CNLSUEModel implements AnalyticalModel{
 				if(Math.abs(update)/oldVolume*100>this.tolleranceLink) {
 					linkSum+=1;
 				}
+				if(Math.abs(update)<1) {
+					flowSum+=1;
+				}
 				
 			}
 			squareSum+=update*update;
@@ -672,91 +713,18 @@ public class CNLSUEModel implements AnalyticalModel{
 		}
 		squareSum=Math.sqrt(squareSum);
 		if(counter==1) {
-			this.error1.get(timeBeanId).clear();
+			this.errorTransit.get(timeBeanId).clear();
 		}
-		error1.get(timeBeanId).add(squareSum);
+		errorTransit.get(timeBeanId).add(squareSum);
 		
-		if(squareSum<this.getTollerance()) {
+		if(squareSum<this.tollerance || linkSum<this.tolleranceLink||flowSum<=0) {
 			return true;
 			
 		}else {
 			return false;
 		}
 	}
-	
-	/**
-	 * This method will check for the convergence and also create the error term required for MSA
-	 * @param linkVolume
-	 * @param tollerance
-	 * @return
-	 */
-	protected boolean CheckConvergence(HashMap<Id<Link>,Double> linkVolume,HashMap<Id<TransitLink>,Double> transitlinkVolume, double tollerance,String timeBeanId,int counter){
-		
-		double squareSum=0;
-		double sum=0;
-		double error=0;
-		for(Id<Link> linkid:linkVolume.keySet()){
-			if(linkVolume.get(linkid)==0) {
-				error=0;
-			}else {
-				double currentVolume=((AnalyticalModelLink) this.getNetworks().get(timeBeanId).getLinks().get(linkid)).getLinkCarVolume();
-				double newVolume=linkVolume.get(linkid);
-				error=Math.pow((currentVolume-newVolume),2);
-				if(error==Double.POSITIVE_INFINITY||error==Double.NEGATIVE_INFINITY) {
-					throw new IllegalArgumentException("Error is infinity!!!");
-				}
-				if(error/newVolume*100>tollerance) {					
-					sum+=1;
-				}
-			}
-			
-			squareSum+=error;
-			if(squareSum==Double.POSITIVE_INFINITY||squareSum==Double.NEGATIVE_INFINITY) {
-				throw new IllegalArgumentException("error is infinity!!!");
-			}
-		}
-		for(Id<TransitLink> transitlinkid:transitlinkVolume.keySet()){
-			if(transitlinkVolume.get(transitlinkid)==0) {
-				error=0;
-			}else {
-				double currentVolume=this.getTransitLinks().get(timeBeanId).get(transitlinkid).getPassangerCount();
-				double newVolume=transitlinkVolume.get(transitlinkid);
-				error=Math.pow((currentVolume-newVolume),2);
-				if(error/newVolume*100>tollerance) {
 
-					sum+=1;
-				}
-			}
-			if(error==Double.NaN||error==Double.NEGATIVE_INFINITY) {
-				throw new IllegalArgumentException("Stop!!! There is something wrong!!!");
-			}
-			squareSum+=error;
-		}
-		if(squareSum==Double.NaN) {
-			System.out.println("WAIT!!!!Problem!!!!!");
-		}
-		squareSum=Math.sqrt(squareSum);
-		if(counter==1) {
-			this.error.get(timeBeanId).clear();
-		}
-		this.error.get(timeBeanId).add(squareSum);
-		logger.info("ERROR amount for "+timeBeanId+" = "+squareSum);
-		//System.out.println("in timeBean Id "+timeBeanId+" No of link not converged = "+sum);
-		
-//		try {
-//			//CNLSUEModel.writeData(timeBeanId+","+counter+","+squareSum+","+sum, this.fileLoc+"ErrorData"+timeBeanId+".csv");
-//		} catch (IOException e) {
-//			// TODO Auto-generated catch block
-//			e.printStackTrace();
-//		}
-		
-		if (squareSum<=this.getTollerance()||sum==0){
-			return true;
-		}else{
-			return false;
-		}
-		
-	}
 	/**
 	 * This method perform modal Split
 	 * @param params
@@ -835,9 +803,11 @@ public class CNLSUEModel implements AnalyticalModel{
 			//for(this.car)
 			//ConcurrentHashMap<String,HashMap<Id<CNLODpair>,Double>>demand=this.Demand;
 			linkCarVolume=this.performCarNetworkLoading(timeBeanId,i,params,anaParams);
+			boolean shouldStopAuto=this.UpdateAutoLinkVolume(linkCarVolume, i, timeBeanId);
 			linkTransitVolume=this.performTransitNetworkLoading(timeBeanId,i,params,anaParams);
-			shouldStop=this.CheckConvergence(linkCarVolume, linkTransitVolume, this.getTollerance(), timeBeanId,i);
-			this.UpdateLinkVolume(linkCarVolume, linkTransitVolume, i, timeBeanId);
+			boolean shouldStopTransit=this.UpdateTransitLinkVolume(linkTransitVolume, i, timeBeanId);
+			shouldStop=shouldStopAuto && shouldStopTransit;
+			//this.UpdateLinkVolume(linkCarVolume, linkTransitVolume, i, timeBeanId);
 			if(i==1 && shouldStop==true) {
 				boolean demandEmpty=true;
 				for(AnalyticalModelODpair od:this.getOdPairs().getODpairset().values()) {
@@ -858,63 +828,7 @@ public class CNLSUEModel implements AnalyticalModel{
 		
 	}
 	
-	@Deprecated
-	public void singleTimeBeanTAModeOut(LinkedHashMap<String, Double> params,LinkedHashMap<String,Double> anaParams,String timeBeanId) {
-		HashMap<Integer,HashMap<Id<TransitLink>, Double>> linkTransitVolumeIteration;
-		HashMap<Integer,HashMap<Id<Link>,Double>> linkCarVolumeIteration;
-		
-		
-		HashMap<Id<TransitLink>, Double> linkTransitVolume;
-		HashMap<Id<Link>,Double> linkCarVolume;
-		
-		boolean shouldStop=false;
-		for(int j=0;j<1;j++) {
-			for(int i=1;i<500;i++) {
-				//for(this.car)
-				//ConcurrentHashMap<String,HashMap<Id<CNLODpair>,Double>>demand=this.Demand;
-				linkCarVolume=this.performCarNetworkLoading(timeBeanId,i,params,anaParams);
-				linkTransitVolume=this.performTransitNetworkLoading(timeBeanId,i,params,anaParams);
-				shouldStop=this.CheckConvergence(linkCarVolume, linkTransitVolume, this.tolleranceLink, timeBeanId,i);
-				this.UpdateLinkVolume(linkCarVolume, linkTransitVolume, i, timeBeanId);
-				if(shouldStop) {break;}
-				//this.performModalSplit(params, anaParams, timeBeanId);
 
-			}
-			this.performModalSplit(params, anaParams, timeBeanId);
-		}
-		
-	}
-	@Deprecated
-	public void singleTimeBeanTAOut(LinkedHashMap<String, Double> params,LinkedHashMap<String,Double> anaParams,String timeBeanId) {
-		HashMap<Id<TransitLink>, Double> linkTransitVolume=new HashMap<>();
-		HashMap<Id<Link>,Double> linkCarVolume=new HashMap<>();
-		boolean shouldStop=false;
-		for(int j=0;j<1;j++) {
-			
-			for(int i=1;i<5000;i++) {
-				//for(this.car)
-				//ConcurrentHashMap<String,HashMap<Id<CNLODpair>,Double>>demand=this.Demand;
-				linkCarVolume=this.performCarNetworkLoading(timeBeanId,i,params,anaParams);
-				this.CheckConvergence(linkCarVolume, linkTransitVolume, this.getTollerance(), timeBeanId,i);
-				shouldStop=this.UpdateLinkVolume(linkCarVolume, linkTransitVolume, i, timeBeanId);
-				
-				if(shouldStop) {
-					break;
-					}
-				//this.performModalSplit(params, anaParams, timeBeanId);
-
-			}
-			for(int i=1;i<1;i++) {
-				linkTransitVolume=this.performTransitNetworkLoading(timeBeanId,i,params,anaParams);
-				shouldStop=this.CheckConvergence(linkCarVolume, linkTransitVolume, this.getTollerance(), timeBeanId,i);
-				this.UpdateLinkVolume(linkCarVolume, linkTransitVolume, i, timeBeanId);
-				if(shouldStop) {break;}
-			}
-			this.performModalSplit(params, anaParams, timeBeanId);
-		}
-		
-	}
-	
 	
 	
 
