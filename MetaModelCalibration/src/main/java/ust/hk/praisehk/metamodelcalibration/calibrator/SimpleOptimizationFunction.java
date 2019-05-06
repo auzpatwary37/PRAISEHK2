@@ -52,9 +52,11 @@ public class SimpleOptimizationFunction extends OptimizationFunction{
 			constrains[d]=xi;
 			d++;
 		}
-		//Add the ridge penalty term 
-		for(Double e:params.values()) {
-			objective+=e*e;
+		//Add the ridge penalty term
+		int j=0;
+		for(double s:super.getCurrentParams().values()) {
+			objective+=Math.pow(x[j]/100*s,2);
+			j++;
 		}
 		
 		this.logOoptimizationDetails(this.currentIterNo, this.optimIter, this.fileLoc, this.pReader.ScaleUp(new LinkedHashMap<>(params)), objective);
