@@ -59,7 +59,11 @@ public class ObjectiveCalculator {
 		}else {
 			for(Measurement m:realMeasurements.getMeasurements().values()) {
 				for(String timeBeanId:m.getVolumes().keySet()) {
+					double stationCountReal=0;
+					double stationCountAnaOrSim=0;
 					if(simOrAnaMeasurements.getMeasurements().get(m.getId())==null) {
+						stationCountReal=m.getVolumes().get(timeBeanId);
+						stationCountAnaOrSim=simOrAnaMeasurements.getMeasurements().get(m.getId()).getVolumes().get(timeBeanId);
 						logger.error("The Measurements entered are not comparable (measuremtn do not match)!!! This should not happen. Please check");
 						
 					}else if(simOrAnaMeasurements.getMeasurements().get(m.getId()).getVolumes().get(timeBeanId)==null) {
@@ -67,7 +71,9 @@ public class ObjectiveCalculator {
 						
 					}
 					
-					objective+=Math.pow((m.getVolumes().get(timeBeanId)-simOrAnaMeasurements.getMeasurements().get(m.getId()).getVolumes().get(timeBeanId)),2);
+					//objective+=Math.pow((m.getVolumes().get(timeBeanId)-simOrAnaMeasurements.getMeasurements().get(m.getId()).getVolumes().get(timeBeanId)),2);
+					objective+=Math.sqrt(2*Math.pow((stationCountReal-stationCountAnaOrSim),2)/(stationCountReal+stationCountAnaOrSim));
+					//objective+=Math.pow((stationCountReal-stationCountAnaOrSim),2)/stationCountReal*100;
 				}
 			}
 			
