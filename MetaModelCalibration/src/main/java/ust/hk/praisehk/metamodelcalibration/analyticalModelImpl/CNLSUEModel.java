@@ -611,6 +611,34 @@ public class CNLSUEModel implements AnalyticalModel{
 		double squareSum=0;
 		double flowSum=0;
 		double linkSum=0;
+		
+		HashMap<Id<Link>,Double> updates=new HashMap<>(); 
+		for(Id<Link> linkId:linkVolume.keySet()){
+			double newVolume=linkVolume.get(linkId);
+			double oldVolume=((AnalyticalModelLink) this.getNetworks().get(timeBeanId).getLinks().get(linkId)).getLinkCarVolume();
+			flowSum+=oldVolume;
+			double update;
+			update=newVolume-oldVolume;
+			if(oldVolume!=0) {
+				if(Math.abs(update)/oldVolume*100>this.tolleranceLink) {
+					linkSum+=1;
+				}
+				
+				if(Math.abs(update)<1) {
+					flowSum+=1;
+				}
+			}
+			squareSum+=update*update;
+			updates.put(linkId, update);
+			
+		}
+		
+		double rse=Math.sqrt(squareSum);//root squared error
+		if(counter==1) {
+			this.errorAuto.get(timeBeanId).clear();
+		}
+		errorAuto.get(timeBeanId).add(rse);
+		
 		if(counter==1) {
 			this.beta.get(timeBeanId).clear();
 			//this.error.clear();
@@ -625,34 +653,16 @@ public class CNLSUEModel implements AnalyticalModel{
 			}
 		}
 		
-		for(Id<Link> linkId:linkVolume.keySet()){
-			double newVolume=linkVolume.get(linkId);
-			double oldVolume=((AnalyticalModelLink) this.getNetworks().get(timeBeanId).getLinks().get(linkId)).getLinkCarVolume();
-			flowSum+=oldVolume;
+		for(Entry<Id<Link>,Double>updateMap:updates.entrySet()) {
 			double update;
 			double counterPart=1/beta.get(timeBeanId).get(counter-1);
-			//counterPart=1./counter;
-			update=counterPart*(newVolume-oldVolume);
-			if(oldVolume!=0) {
-				if(Math.abs(update)/oldVolume*100>this.tolleranceLink) {
-					linkSum+=1;
-				}
-				
-				if(Math.abs(update)<1) {
-					flowSum+=1;
-				}
-			}
-			squareSum+=update*update;
-			((AnalyticalModelLink) this.getNetworks().get(timeBeanId).getLinks().get(linkId)).addLinkCarVolume(update);
+			counterPart=1./counter;
+			update=counterPart*updateMap.getValue();
+			((AnalyticalModelLink) this.getNetworks().get(timeBeanId).getLinks().get(updateMap.getKey())).addLinkCarVolume(update);
 		}
 		
-		squareSum=Math.sqrt(squareSum);
-		if(counter==1) {
-			this.errorAuto.get(timeBeanId).clear();
-		}
-		errorAuto.get(timeBeanId).add(squareSum);
 		
-		if(squareSum<this.tollerance||linkSum<this.tolleranceLink||flowSum<=0) {
+		if(counter>1 && (squareSum<this.tollerance||linkSum<this.tolleranceLink||flowSum<=0)) {
 			return true;
 			
 		}else {
@@ -674,6 +684,39 @@ public class CNLSUEModel implements AnalyticalModel{
 		double squareSum=0;
 		double flowSum=0;
 		double linkSum=0;
+		
+
+		HashMap<Id<TransitLink>,Double> updates=new HashMap<>(); 
+		
+		for(Id<TransitLink> trlinkId:transitlinkVolume.keySet()){
+			//System.out.println("testing");
+			double newVolume=transitlinkVolume.get(trlinkId);
+			TransitLink trl=this.getTransitLinks().get(timeBeanId).get(trlinkId);
+			double oldVolume=trl.getPassangerCount();
+			double update;
+//			
+			update=(newVolume-oldVolume);
+			
+			if(oldVolume!=0) {
+				if(Math.abs(update)/oldVolume*100>this.tolleranceLink) {
+					linkSum+=1;
+				}
+				if(Math.abs(update)<1) {
+					flowSum+=1;
+				}
+				
+			}
+			squareSum+=update*update;
+			updates.put(trlinkId, update);
+//			
+		
+		}
+		double rse=Math.sqrt(squareSum);//root squared error
+		if(counter==1) {
+			this.errorTransit.get(timeBeanId).clear();
+		}
+		errorTransit.get(timeBeanId).add(rse);
+		
 		if(counter==1) {
 			this.beta.get(timeBeanId).clear();
 			//this.error.clear();
@@ -688,36 +731,13 @@ public class CNLSUEModel implements AnalyticalModel{
 			}
 		}
 		
-		
-		for(Id<TransitLink> trlinkId:transitlinkVolume.keySet()){
-			//System.out.println("testing");
-			double newVolume=transitlinkVolume.get(trlinkId);
-			TransitLink trl=this.getTransitLinks().get(timeBeanId).get(trlinkId);
-			double oldVolume=trl.getPassangerCount();
+		for(Entry<Id<TransitLink>,Double>trUpdateMap:updates.entrySet()) {
 			double update;
 			double counterPart=1/beta.get(timeBeanId).get(counter-1);
-			
-			update=counterPart*(newVolume-oldVolume);
-			if(oldVolume!=0) {
-				if(Math.abs(update)/oldVolume*100>this.tolleranceLink) {
-					linkSum+=1;
-				}
-				if(Math.abs(update)<1) {
-					flowSum+=1;
-				}
-				
-			}
-			squareSum+=update*update;
-			this.getTransitLinks().get(timeBeanId).get(trlinkId).addPassanger(update,this.getNetworks().get(timeBeanId));
-		
+			update=counterPart*trUpdateMap.getValue();
+			this.getTransitLinks().get(timeBeanId).get(trUpdateMap.getKey()).addPassanger(update,this.getNetworks().get(timeBeanId));
 		}
-		squareSum=Math.sqrt(squareSum);
-		if(counter==1) {
-			this.errorTransit.get(timeBeanId).clear();
-		}
-		errorTransit.get(timeBeanId).add(squareSum);
-		
-		if(squareSum<this.tollerance || linkSum<this.tolleranceLink||flowSum<=0) {
+		if(counter>1 &&(squareSum<this.tollerance || linkSum<this.tolleranceLink||flowSum<=0)) {
 			return true;
 			
 		}else {

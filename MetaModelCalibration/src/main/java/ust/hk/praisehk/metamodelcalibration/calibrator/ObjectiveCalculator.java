@@ -72,8 +72,11 @@ public class ObjectiveCalculator {
 					}
 					
 					//objective+=Math.pow((m.getVolumes().get(timeBeanId)-simOrAnaMeasurements.getMeasurements().get(m.getId()).getVolumes().get(timeBeanId)),2);
-					objective+=Math.sqrt(2*Math.pow((stationCountReal-stationCountAnaOrSim),2)/(stationCountReal+stationCountAnaOrSim));
-					//objective+=Math.pow((stationCountReal-stationCountAnaOrSim),2)/stationCountReal*100;
+					if(stationCountReal!=0) {
+						objective+=Math.sqrt(2*Math.pow((stationCountReal-stationCountAnaOrSim),2)/(stationCountReal+stationCountAnaOrSim));
+						//objective+=Math.pow((stationCountReal-stationCountAnaOrSim),2)/stationCountReal*100;
+					}
+					
 				}
 			}
 			
