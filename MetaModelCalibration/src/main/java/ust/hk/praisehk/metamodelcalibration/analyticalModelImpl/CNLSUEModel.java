@@ -27,6 +27,7 @@ import org.matsim.pt.transitSchedule.api.TransitRoute;
 import org.matsim.pt.transitSchedule.api.TransitSchedule;
 import org.matsim.vehicles.Vehicles;
 
+import ch.qos.logback.classic.net.SyslogAppender;
 import de.xypron.jcobyla.Cobyla;
 import de.xypron.jcobyla.CobylaExitStatus;
 import dynamicTransitRouter.fareCalculators.FareCalculator;
@@ -619,15 +620,7 @@ public class CNLSUEModel implements AnalyticalModel{
 			flowSum+=oldVolume;
 			double update;
 			update=newVolume-oldVolume;
-			if(oldVolume!=0) {
-				if(Math.abs(update)/oldVolume*100>this.tolleranceLink) {
-					linkSum+=1;
-				}
-				
-				if(Math.abs(update)<1) {
-					flowSum+=1;
-				}
-			}
+			
 			squareSum+=update*update;
 			updates.put(linkId, update);
 			
@@ -652,17 +645,26 @@ public class CNLSUEModel implements AnalyticalModel{
 				
 			}
 		}
-		
+		double counterPart=1/beta.get(timeBeanId).get(counter-1);
 		for(Entry<Id<Link>,Double>updateMap:updates.entrySet()) {
 			double update;
-			double counterPart=1/beta.get(timeBeanId).get(counter-1);
-			counterPart=1./counter;
 			update=counterPart*updateMap.getValue();
+			double oldVolume=((AnalyticalModelLink) this.getNetworks().get(timeBeanId).getLinks().get(updateMap.getKey())).getLinkCarVolume();
+			if(oldVolume!=0) {
+				if(Math.abs(update)/oldVolume*100>this.tolleranceLink) {
+					linkSum+=1;
+				}
+				
+				if(Math.abs(update)<1) {
+					flowSum+=1;
+				}
+			}
+			
 			((AnalyticalModelLink) this.getNetworks().get(timeBeanId).getLinks().get(updateMap.getKey())).addLinkCarVolume(update);
 		}
+		rse=rse*counterPart;
 		
-		
-		if(counter>1 && (squareSum<this.tollerance||linkSum<this.tolleranceLink||flowSum<=0)) {
+		if(counter>1 && (rse<this.tollerance||linkSum<this.tolleranceLink||flowSum<=0)) {
 			return true;
 			
 		}else {
@@ -697,15 +699,6 @@ public class CNLSUEModel implements AnalyticalModel{
 //			
 			update=(newVolume-oldVolume);
 			
-			if(oldVolume!=0) {
-				if(Math.abs(update)/oldVolume*100>this.tolleranceLink) {
-					linkSum+=1;
-				}
-				if(Math.abs(update)<1) {
-					flowSum+=1;
-				}
-				
-			}
 			squareSum+=update*update;
 			updates.put(trlinkId, update);
 //			
@@ -731,13 +724,27 @@ public class CNLSUEModel implements AnalyticalModel{
 			}
 		}
 		
+		double counterPart=1/beta.get(timeBeanId).get(counter-1);
 		for(Entry<Id<TransitLink>,Double>trUpdateMap:updates.entrySet()) {
 			double update;
-			double counterPart=1/beta.get(timeBeanId).get(counter-1);
 			update=counterPart*trUpdateMap.getValue();
+			double oldVolume=this.getTransitLinks().get(timeBeanId).get(trUpdateMap.getKey()).getPassangerCount();
+			
+			if(oldVolume!=0) {
+				if(Math.abs(update)/oldVolume*100>this.tolleranceLink) {
+					linkSum+=1;
+				}
+				if(Math.abs(update)<1) {
+					flowSum+=1;
+				}
+				
+			}
+			
 			this.getTransitLinks().get(timeBeanId).get(trUpdateMap.getKey()).addPassanger(update,this.getNetworks().get(timeBeanId));
 		}
-		if(counter>1 &&(squareSum<this.tollerance || linkSum<this.tolleranceLink||flowSum<=0)) {
+		rse=rse*counterPart;
+		
+		if(counter>1 &&(rse<this.tollerance || linkSum<this.tolleranceLink||flowSum<=0)) {
 			return true;
 			
 		}else {
@@ -820,6 +827,7 @@ public class CNLSUEModel implements AnalyticalModel{
 		boolean shouldStop=false;
 		
 		for(int i=1;i<500;i++) {
+			
 			//for(this.car)
 			//ConcurrentHashMap<String,HashMap<Id<CNLODpair>,Double>>demand=this.Demand;
 			linkCarVolume=this.performCarNetworkLoading(timeBeanId,i,params,anaParams);
@@ -842,7 +850,7 @@ public class CNLSUEModel implements AnalyticalModel{
 			}
 			if(shouldStop) {break;}
 			this.performModalSplit(params, anaParams, timeBeanId);
-			
+			System.out.println("Iteration: "+i+", errorAuto: "+errorAuto.get(timeBeanId).get(i-1)+", errorTransit: "+errorTransit.get(timeBeanId).get(i-1)+", for timeBeanId: "+timeBeanId);
 		}
 		
 		
