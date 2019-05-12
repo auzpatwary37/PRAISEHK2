@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.Scenario;
@@ -33,7 +34,7 @@ public abstract class AnalyticalModelODpairs {
 	private Scenario scenario;
 	protected final Network network;
 	private Population population;
-	private Map<Id<AnalyticalModelODpair>,AnalyticalModelODpair> ODpairset=new HashMap<>();
+	private Map<Id<AnalyticalModelODpair>,AnalyticalModelODpair> ODpairset=new ConcurrentHashMap<>();
 	private Map<Id<AnalyticalModelODpair>,Double> ODdemand=new HashMap<>();
 	//private Map<Id<AnalyticalModelODpair>,Double> ODdemandperhour=new HashMap<>();
 	private final Map<String,Tuple<Double,Double>> timeBean;
