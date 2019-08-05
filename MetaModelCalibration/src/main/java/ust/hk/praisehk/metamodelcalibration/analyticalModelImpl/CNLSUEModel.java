@@ -394,19 +394,20 @@ public class CNLSUEModel implements AnalyticalModel{
 		
 		
 		
-		double totalUtility=0;
+		//double totalUtility=0;
 		
 		//Calculating route utility for all car routes inside one OD pair.
 		
-		HashMap<Id<AnalyticalModelRoute>,Double> oldUtility=new HashMap<>();
-		HashMap<Id<AnalyticalModelRoute>,Double> newUtility=new HashMap<>();
+		//HashMap<Id<AnalyticalModelRoute>,Double> oldUtility=new HashMap<>();
+		HashMap<Id<AnalyticalModelRoute>,Double> utility=new HashMap<>();
 		for(AnalyticalModelRoute r:routes){
 			double u=0;
 			
 			if(counter>1) {
 				u=r.calcRouteUtility(params, anaParams,this.getNetworks().get(timeBeanId),this.timeBeans.get(timeBeanId));
-				newUtility.put(r.getRouteId(), u);
-				oldUtility.put(r.getRouteId(),this.getOdPairs().getODpairset().get(ODpairId).getRouteUtility(timeBeanId).get(r.getRouteId()));
+				u=u+Math.log(odpair.getAutoPathSize().get(r.getRouteId()));//adding the path size term
+				utility.put(r.getRouteId(), u);
+				//oldUtility.put(r.getRouteId(),this.getOdPairs().getODpairset().get(ODpairId).getRouteUtility(timeBeanId).get(r.getRouteId()));
 			}else {
 				u=0;
 			}
@@ -416,9 +417,9 @@ public class CNLSUEModel implements AnalyticalModel{
 			//This Check is to make sure the exp(utility) do not go to infinity.
 			if(u>300||u<-300) {
 				logger.error("utility is either too small or too large. Increase or decrease the link miu accordingly. The utility is "+u+" for route "+r.getRouteId());
-				throw new IllegalArgumentException("stop!!!");
+				//throw new IllegalArgumentException("stop!!!");
 			}
-			totalUtility+=Math.exp(u);
+			//totalUtility+=Math.exp(u);
 		}
 //		if(routes.size()>1 && counter>2 ) {
 //			//&& (error.get(timeBeanId).get((int)(counter-2))>error.get(timeBeanId).get((int)(counter-3)))
@@ -432,18 +433,21 @@ public class CNLSUEModel implements AnalyticalModel{
 //			}
 //		}
 		//If total utility is zero, then there should not be any route. For testing purpose, can be removed later 
-		if(totalUtility==0) {
-			logger.error("utility is zero. Please check.");
-			throw new IllegalArgumentException("Stop!!!!");
-		}
+//		if(totalUtility==0) {
+//			logger.error("utility is zero. Please check.");
+//			throw new IllegalArgumentException("Stop!!!!");
+//		}
 		
 		
 		//This is the route flow split
 		for(AnalyticalModelRoute r:routes){
-			double u=Math.exp(this.getOdPairs().getODpairset().get(ODpairId).getRouteUtility(timeBeanId).
-					get(r.getRouteId()));
+			double u=utility.get(r.getRouteId());
 			double demand=this.getCarDemand().get(timeBeanId).get(ODpairId);
-			double flow=u/totalUtility*demand;
+			double totalUtility=0;
+			for(double d:utility.values()) {
+				totalUtility+=Math.exp(d-u);
+			}
+			double flow=1/totalUtility*demand;
 			//For testing purpose, can be removed later
 			if(flow==Double.NaN||flow==Double.POSITIVE_INFINITY) {
 				logger.error("The flow is NAN. This can happen for a number of reasons. Mostly is total utility of all the routes in a OD pair is zero");
@@ -474,20 +478,22 @@ public class CNLSUEModel implements AnalyticalModel{
 	 * @return
 	 */
 	protected HashMap<Id<TransitLink>,Double> NetworkLoadingTransitSingleOD(Id<AnalyticalModelODpair> ODpairId,String timeBeanId,int counter,LinkedHashMap<String,Double> params, LinkedHashMap<String, Double> anaParams){
-		List<AnalyticalModelTransitRoute> routes=this.getOdPairs().getODpairset().get(ODpairId).getTrRoutes(timeBeanId);
+		
+		AnalyticalModelODpair odpair=this.getOdPairs().getODpairset().get(ODpairId);
+		List<AnalyticalModelTransitRoute> routes=odpair.getTrRoutes(timeBeanId);
 		
 		HashMap<Id<AnalyticalModelTransitRoute>,Double> routeFlows=new HashMap<>();
 		HashMap<Id<TransitLink>,Double> linkFlows=new HashMap<>();
 		
+		HashMap<Id<AnalyticalModelTransitRoute>,Double> utility=new HashMap<>();
 		
-		
-		double totalUtility=0;
 		if(routes!=null && routes.size()!=0) {
 		for(AnalyticalModelTransitRoute r:routes){
 			double u=0;
 			if(counter>1) {
 				u=r.calcRouteUtility(params, anaParams,
 					this.getNetworks().get(timeBeanId),this.fareCalculator,this.timeBeans.get(timeBeanId));
+				u+=Math.log(odpair.getTrPathSize().get(timeBeanId).get(r.getTrRouteId()));//adding the path size term
 				
 				if(u==Double.NaN) {
 					logger.error("The flow is NAN. This can happen for a number of reasons. Mostly is total utility of all the routes in a OD pair is zero");
@@ -500,11 +506,12 @@ public class CNLSUEModel implements AnalyticalModel{
 				logger.warn("STOP!!!Utility is too large >300");
 			}
 			this.getOdPairs().getODpairset().get(ODpairId).updateTrRouteUtility(r.getTrRouteId(), u,timeBeanId);
-			totalUtility+=Math.exp(u);
+			utility.put(r.getTrRouteId(), u);
+			//totalUtility+=Math.exp(u);
 		}
-		if(totalUtility==0) {
-			logger.warn("STopp!!!! Total utility in the OD pair is zero. This can happen if there is no transit route in that OD pair.");
-		}
+//		if(totalUtility==0) {
+//			logger.warn("STopp!!!! Total utility in the OD pair is zero. This can happen if there is no transit route in that OD pair.");
+//		}
 		for(AnalyticalModelTransitRoute r:routes){
 			double totalDemand=this.getDemand().get(timeBeanId).get(ODpairId);
 			double carDemand=this.getCarDemand().get(timeBeanId).get(ODpairId);
@@ -512,9 +519,13 @@ public class CNLSUEModel implements AnalyticalModel{
 			if(q<0) {
 				throw new IllegalArgumentException("Stop!!! transit demand is negative!!!");
 			}
-			double utility=this.getOdPairs().getODpairset().get(ODpairId).getTrRouteUtility(timeBeanId).
-					get(r.getTrRouteId());
-			double flow=q*Math.exp(utility)/totalUtility;
+			double u=utility.get(r.getTrRouteId());
+			double totalUtility=0;
+			for(double d:utility.values()) {
+				totalUtility+=Math.exp(d-u);
+			}
+			
+			double flow=q/totalUtility;
 			if(Double.isNaN(flow)||flow==Double.POSITIVE_INFINITY||flow==Double.NEGATIVE_INFINITY) {
 				logger.error("The flow is NAN. This can happen for a number of reasons. Mostly is total utility of all the routes in a OD pair is zero");
 				throw new IllegalArgumentException("Error!!!!");
