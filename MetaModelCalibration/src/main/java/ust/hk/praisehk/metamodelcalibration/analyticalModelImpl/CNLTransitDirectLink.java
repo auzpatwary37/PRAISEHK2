@@ -6,6 +6,7 @@ import java.util.Map;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.network.Link;
+import org.matsim.api.core.v01.network.Network;
 import org.matsim.core.utils.collections.Tuple;
 import org.matsim.pt.transitSchedule.api.Departure;
 import org.matsim.pt.transitSchedule.api.TransitLine;
@@ -114,6 +115,14 @@ public class CNLTransitDirectLink extends TransitDirectLink{
 	}
 	protected double getFrequency() {
 		return frequency;
+	}
+	@Override
+	public double getPhysicalDistance(Network network) {
+		double distance=0;
+		for(Id<Link> linkId:this.linkList) {
+			distance+=network.getLinks().get(linkId).getLength();
+		}
+		return distance;
 	}
 
 }

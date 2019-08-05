@@ -5,6 +5,7 @@ import java.util.LinkedHashMap;
 
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.network.Link;
+import org.matsim.api.core.v01.network.Network;
 import org.matsim.core.utils.collections.Tuple;
 import org.matsim.pt.transitSchedule.api.TransitLine;
 import org.matsim.pt.transitSchedule.api.TransitRoute;
@@ -67,7 +68,7 @@ public abstract class TransitDirectLink extends TransitLink{
 	protected String lineId;
 	protected String routeId;
 	protected TransitSchedule ts;
-	protected double distance=0;
+	//protected double distance=0;
 	
 	public ArrayList<Id<Link>> getLinkList() {
 		return linkList;
@@ -82,6 +83,5 @@ public abstract class TransitDirectLink extends TransitLink{
 	public TransitSchedule getTs() {
 		return ts;
 	}
-	
-
+	public abstract double getPhysicalDistance(Network network);
 }

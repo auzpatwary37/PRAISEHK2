@@ -30,7 +30,9 @@ import com.google.inject.Inject;
  */
 
 public class AnalyticalModelODpair {
-		
+	
+	
+	private final Network network;
 	private double agentCARCounter=0;
 	private double agentTrCounter=0;
 	private double ExpectedMaximumCarUtility;
@@ -66,6 +68,9 @@ public class AnalyticalModelODpair {
 	private String subPopulation;
 	private double PCU=1;
 	private int minRoute=5;
+	private Map<Id<AnalyticalModelRoute>,Double> autoPathSize;
+	private Map<String,Map<Id<AnalyticalModelTransitRoute>,Double>>trPathSize;
+	
 	//TODO:Shift Node Based Coordinates to FacilityBased Coordinates
 	
 	/**
@@ -110,6 +115,7 @@ public class AnalyticalModelODpair {
 	 * @param network
 	 */
 	public AnalyticalModelODpair(Node onode,Node dnode, Network network,Map<String, Tuple<Double, Double>> timeBean2){
+		this.network=network;
 		this.ocoord=onode.getCoord();
 		this.dcoord=dnode.getCoord();
 		this.onode=onode;
@@ -126,6 +132,7 @@ public class AnalyticalModelODpair {
 	}
 	
 	public AnalyticalModelODpair(Node onode,Node dnode, Network network,Map<String, Tuple<Double, Double>> timeBean2,String subPopulation){
+		this.network=network;
 		this.ocoord=onode.getCoord();
 		this.dcoord=dnode.getCoord();
 		this.onode=onode;
@@ -495,9 +502,9 @@ public class AnalyticalModelODpair {
 	 * clones the routes
 	 * @return
 	 */
-	public ArrayList<AnalyticalModelTransitRoute> getTrRoutes(Map<String, Tuple<Double, Double>> timeBean2,String timeBeanId) {
+	public ArrayList<AnalyticalModelTransitRoute> getTrRoutes(String timeBeanId) {
 		if(this.timeBasedTransitRoutes.size()==0) {
-			this.generateTimeBasedTransitRoutes(timeBean2);
+			this.generateTimeBasedTransitRoutes();
 		}
 		return this.timeBasedTransitRoutes.get(timeBeanId);
 	}
@@ -549,13 +556,13 @@ public class AnalyticalModelODpair {
 		return timeBean;
 	}
 
-	public void generateTimeBasedTransitRoutes(Map<String, Tuple<Double, Double>> timeBean2) {
+	public void generateTimeBasedTransitRoutes() {
 		if(this.finalTrRoutes!=null) {
-			for(String timeBeanId:timeBean2.keySet()) {
+			for(String timeBeanId:timeBean.keySet()) {
 			ArrayList<AnalyticalModelTransitRoute> timeBasedTrRoutes=new ArrayList<>();
 			for(AnalyticalModelTransitRoute tr:this.finalTrRoutes) {
 				AnalyticalModelTransitRoute trnew=tr.cloneRoute();
-				trnew.calcCapacityHeadway(timeBean2, timeBeanId);
+				trnew.calcCapacityHeadway(timeBean, timeBeanId);
 				if((Double)tr.getRouteCapacity().get(timeBeanId)!=0) {
 					timeBasedTrRoutes.add(trnew);
 				}
@@ -569,4 +576,43 @@ public class AnalyticalModelODpair {
 	public double getAgentCounter() {
 		return agentCARCounter+this.agentTrCounter;
 	}
+	
+	public void calcAutoRoutePathSize() {
+		Map<Id<AnalyticalModelRoute>,Double> autoPathSize=new HashMap<>();
+		for(AnalyticalModelRoute r:this.finalRoutes) {
+			double ps=0;
+			for(Id<Link> lId:r.getLinkIds()) {
+				double length=this.network.getLinks().get(lId).getLength();
+				ps+=length/(r.getRouteDistance()*this.linkIncidence.get(lId).size());
+			}
+			autoPathSize.put(r.getRouteId(),ps);
+		}
+		this.autoPathSize=autoPathSize;
+	}
+	
+	public void calcTransitRoutePathSize() {
+		Map<String,Map<Id<AnalyticalModelTransitRoute>,Double>>trPathSize=new HashMap<>();
+		for(String timeBeanId:this.timeBean.keySet()) {
+			trPathSize.put(timeBeanId, new HashMap<>());
+			for(AnalyticalModelTransitRoute anaTr:this.getTrRoutes(timeBeanId)) {
+				double ps=0;
+				double routeDistance=anaTr.getRouteDistance(network);
+				for(TransitDirectLink trLink:anaTr.getTransitDirectLinks()) {
+					ps+=trLink.getPhysicalDistance(this.network)/(routeDistance*this.trLinkIncidence.get(trLink.getTrLinkId()).size());
+				}
+				trPathSize.get(timeBeanId).put(anaTr.getTrRouteId(),ps);
+			}
+		}
+		this.trPathSize=trPathSize;
+	}
+
+	public Map<Id<AnalyticalModelRoute>, Double> getAutoPathSize() {
+		return autoPathSize;
+	}
+
+	public Map<String, Map<Id<AnalyticalModelTransitRoute>, Double>> getTrPathSize() {
+		return trPathSize;
+	}
+	
+	
 }

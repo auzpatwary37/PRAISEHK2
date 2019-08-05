@@ -4,12 +4,14 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.apache.log4j.Logger;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.network.Link;
+import org.matsim.api.core.v01.network.Network;
 import org.matsim.api.core.v01.population.Activity;
 import org.matsim.api.core.v01.population.Leg;
 import org.matsim.core.utils.collections.Tuple;
@@ -22,6 +24,7 @@ import dynamicTransitRouter.fareCalculators.FareCalculator;
 import dynamicTransitRouter.fareCalculators.MTRFareCalculator;
 import ust.hk.praisehk.metamodelcalibration.analyticalModel.AnalyticalModelNetwork;
 import ust.hk.praisehk.metamodelcalibration.analyticalModel.AnalyticalModelTransitRoute;
+import ust.hk.praisehk.metamodelcalibration.analyticalModel.TransitDirectLink;
 import ust.hk.praisehk.metamodelcalibration.analyticalModel.TransitLink;
 
 
@@ -313,7 +316,8 @@ public class CNLTransitRoute implements AnalyticalModelTransitRoute{
 		return new ArrayList<Id<TransitLink>>(this.trLinks.keySet());
 	}
 	
-	public Map<Id<TransitLink>,TransitLink> getTransitLinks(Map<String, Tuple<Double, Double>> timeBean,String timeBeanId){
+	@Override
+	public Map<Id<TransitLink>,TransitLink> getTransitLinks(){
 		for(CNLTransitDirectLink dl:this.directLinks) {
 			this.trLinks.put(dl.getTrLinkId(), dl);
 		}
@@ -356,4 +360,24 @@ public class CNLTransitRoute implements AnalyticalModelTransitRoute{
 		
 		return trRoute ; 
 	}
+
+	@Override
+	public double getRouteDistance(Network network) {
+		double distance=0;
+		for(TransitDirectLink trl: this.directLinks) {
+			distance+=trl.getPhysicalDistance(network);
+		}
+		return distance;
+	}
+
+	@Override
+	public List<TransitDirectLink> getTransitDirectLinks() {
+		List<TransitDirectLink> trdls=new ArrayList<>();
+		for(TransitDirectLink trdl:this.directLinks) {
+			trdls.add(trdl);
+		}
+		return trdls;
+	}
+	
+	
 }	

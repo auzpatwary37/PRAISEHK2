@@ -65,7 +65,7 @@ public class CNLSUEModelSubPop extends CNLSUEModel{
 			this.performTransitVehicleOverlay(this.getNetworks().get(s),
 					transitSchedule,scenario.getTransitVehicles(),this.getTimeBeans().get(s).getFirst(),
 					this.getTimeBeans().get(s).getSecond());
-			this.getTransitLinks().put(s,this.getOdPairs().getTransitLinks(this.getTimeBeans(),s));
+			this.getTransitLinks().put(s,this.getOdPairs().getTransitLinks(s));
 		}
 		this.setFareCalculator(fareCalculator);
 		

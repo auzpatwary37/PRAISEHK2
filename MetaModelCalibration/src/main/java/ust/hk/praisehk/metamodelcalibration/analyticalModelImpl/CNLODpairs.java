@@ -45,12 +45,12 @@ public class CNLODpairs extends AnalyticalModelODpairs{
 
 	
 	@Override
-	public Map<Id<TransitLink>, TransitLink> getTransitLinks(Map<String,Tuple<Double,Double>> timeBean,String timeBeanId){
+	public Map<Id<TransitLink>, TransitLink> getTransitLinks(String timeBeanId){
 		Map<Id<TransitLink>,TransitLink> transitLinks=new HashMap<>();
 		for(AnalyticalModelODpair odPair:this.getODpairset().values()) {
-			if(odPair.getTrRoutes(timeBean,timeBeanId)!=null && odPair.getTrRoutes(timeBean,timeBeanId).size()!=0) {
-				for(AnalyticalModelTransitRoute tr:odPair.getTrRoutes(timeBean,timeBeanId)) {
-					transitLinks.putAll(((CNLTransitRoute)tr).getTransitLinks(timeBean,timeBeanId));
+			if(odPair.getTrRoutes(timeBeanId)!=null && odPair.getTrRoutes(timeBeanId).size()!=0) {
+				for(AnalyticalModelTransitRoute tr:odPair.getTrRoutes(timeBeanId)) {
+					transitLinks.putAll(((AnalyticalModelTransitRoute)tr).getTransitLinks());
 				}
 			}
 		}

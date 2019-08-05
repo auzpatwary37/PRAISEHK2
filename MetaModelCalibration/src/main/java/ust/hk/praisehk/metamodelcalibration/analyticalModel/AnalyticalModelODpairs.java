@@ -165,6 +165,9 @@ public abstract class AnalyticalModelODpairs {
 			ODpairset.get(odpairId).generateRoutes(routePercentage);
 			ODpairset.get(odpairId).generateTRRoutes(routePercentage);
 			ODpairset.get(odpairId).generateLinkIncidence();
+			ODpairset.get(odpairId).generateTimeBasedTransitRoutes();
+			ODpairset.get(odpairId).calcAutoRoutePathSize();
+			ODpairset.get(odpairId).calcTransitRoutePathSize();
 		}
 	}
 	
@@ -186,7 +189,7 @@ public abstract class AnalyticalModelODpairs {
 		return timeBean;
 	}
 	
-	public abstract Map<Id<TransitLink>, TransitLink> getTransitLinks(Map<String,Tuple<Double,Double>> timeBean,String timeBeanId);
+	public abstract Map<Id<TransitLink>, TransitLink> getTransitLinks(String timeBeanId);
 
 
 	public void generateODpairsetSubPop(Network odNetwork){

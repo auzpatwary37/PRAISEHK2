@@ -226,7 +226,7 @@ public class CNLSUEModel implements AnalyticalModel{
 			this.performTransitVehicleOverlay(this.getNetworks().get(s),
 					transitSchedule,scenario.getTransitVehicles(),this.timeBeans.get(s).getFirst(),
 					this.timeBeans.get(s).getSecond());
-			this.getTransitLinks().put(s,this.getOdPairs().getTransitLinks(this.timeBeans,s));
+			this.getTransitLinks().put(s,this.getOdPairs().getTransitLinks(s));
 		}
 		this.fareCalculator=fareCalculator;
 		
@@ -474,7 +474,7 @@ public class CNLSUEModel implements AnalyticalModel{
 	 * @return
 	 */
 	protected HashMap<Id<TransitLink>,Double> NetworkLoadingTransitSingleOD(Id<AnalyticalModelODpair> ODpairId,String timeBeanId,int counter,LinkedHashMap<String,Double> params, LinkedHashMap<String, Double> anaParams){
-		List<AnalyticalModelTransitRoute> routes=this.getOdPairs().getODpairset().get(ODpairId).getTrRoutes(this.timeBeans,timeBeanId);
+		List<AnalyticalModelTransitRoute> routes=this.getOdPairs().getODpairset().get(ODpairId).getTrRoutes(timeBeanId);
 		
 		HashMap<Id<AnalyticalModelTransitRoute>,Double> routeFlows=new HashMap<>();
 		HashMap<Id<TransitLink>,Double> linkFlows=new HashMap<>();
@@ -531,7 +531,7 @@ public class CNLSUEModel implements AnalyticalModel{
 			double linkflow=0;
 			ArrayList<AnalyticalModelTransitRoute>incidence=getOdPairs().getODpairset().get(ODpairId).getTrLinkIncidence().get(linkId);
 			for(AnalyticalModelTransitRoute r:incidence){
-				ArrayList<AnalyticalModelTransitRoute> routesFromOd=this.getOdPairs().getODpairset().get(ODpairId).getTrRoutes(this.timeBeans,timeBeanId);
+				List<AnalyticalModelTransitRoute> routesFromOd=routes;
 				
 				if(CNLSUEModel.routeContain(routesFromOd, r)) {
 				linkflow+=routeFlows.get(r.getTrRouteId());
@@ -548,9 +548,9 @@ public class CNLSUEModel implements AnalyticalModel{
 	}
 	
 	
-	private static boolean routeContain(ArrayList<AnalyticalModelTransitRoute> routeList,AnalyticalModelTransitRoute route) {
+	private static boolean routeContain(List<AnalyticalModelTransitRoute> routesFromOd,AnalyticalModelTransitRoute route) {
 		
-		for(AnalyticalModelTransitRoute r:routeList) {
+		for(AnalyticalModelTransitRoute r:routesFromOd) {
 			if(r.getTrRouteId().equals(route.getTrRouteId())) {
 				return true;
 			}

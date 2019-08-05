@@ -63,7 +63,7 @@ public abstract class TransitLink{
 		return endingLinkId;
 	}
 	
-
+	
 
 	public abstract Id<TransitLink> getTrLinkId();
 	
