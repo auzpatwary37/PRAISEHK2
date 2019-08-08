@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.matsim.api.core.v01.Id;
+import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.network.Network;
 import org.matsim.core.utils.collections.Tuple;
 import org.matsim.pt.transitSchedule.api.TransitSchedule;
@@ -71,4 +72,6 @@ public interface AnalyticalModelTransitRoute{
 	public Map<Id<TransitLink>, TransitLink> getTransitLinks();
 	
 	public List<TransitDirectLink> getTransitDirectLinks();
+	
+	public List<Id<Link>> getPhysicalLinks();
 }

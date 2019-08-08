@@ -53,6 +53,7 @@ public class AnalyticalModelODpair {
 	private ArrayList<AnalyticalModelRoute> finalRoutes;
 	private Map<Id<Link>,ArrayList<AnalyticalModelRoute>> linkIncidence=null;
 	private Map<Id<TransitLink>,ArrayList<AnalyticalModelTransitRoute>> trLinkIncidence=null;
+	private Map<Id<Link>,ArrayList<AnalyticalModelTransitRoute>> trPhysiscalLinkIncidence=null;
 	private double routePercentage=5.0;
 	private double originParkingCharge=0;
 	private double destinationParkingCharge=0;
@@ -436,6 +437,7 @@ public class AnalyticalModelODpair {
 
 		this.linkIncidence=new HashMap<>();
 		this.trLinkIncidence=new HashMap<>();
+		this.trPhysiscalLinkIncidence=new HashMap<>();
 		if(this.finalRoutes!=null) {
 			for(AnalyticalModelRoute route:finalRoutes){
 				ArrayList<Id<Link>>linkIds=route.getLinkIds();
@@ -466,6 +468,18 @@ public class AnalyticalModelODpair {
 						this.trLinkIncidence.put(trlinkId, routeList);
 					}
 				}
+				List<Id<Link>>linkIDs=route.getPhysicalLinks();
+				
+				for(Id<Link> linkId: linkIDs){
+					if(this.trPhysiscalLinkIncidence.containsKey(linkId)){
+						this.trPhysiscalLinkIncidence.get(linkId).add(route);
+					}else{
+						ArrayList<AnalyticalModelTransitRoute> routeList=new ArrayList<> ();
+						routeList.add(route);
+						this.trPhysiscalLinkIncidence.put(linkId, routeList);
+					}
+				}
+				
 			}	
 		}
 		//System.out.println();
@@ -597,8 +611,9 @@ public class AnalyticalModelODpair {
 			for(AnalyticalModelTransitRoute anaTr:this.getTrRoutes(timeBeanId)) {
 				double ps=0;
 				double routeDistance=anaTr.getRouteDistance(network);
-				for(TransitDirectLink trLink:anaTr.getTransitDirectLinks()) {
-					ps+=trLink.getPhysicalDistance(this.network)/(routeDistance*this.trLinkIncidence.get(trLink.getTrLinkId()).size());
+				for(Id<Link> linkId:anaTr.getPhysicalLinks()) {
+					Link link=this.network.getLinks().get(linkId);
+					ps+=link.getLength()/(routeDistance*this.trPhysiscalLinkIncidence.get(linkId).size());
 				}
 				trPathSize.get(timeBeanId).put(anaTr.getTrRouteId(),ps);
 			}

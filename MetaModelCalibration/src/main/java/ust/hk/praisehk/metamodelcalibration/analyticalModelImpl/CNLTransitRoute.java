@@ -3,9 +3,11 @@ package ust.hk.praisehk.metamodelcalibration.analyticalModelImpl;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.log4j.Logger;
 import org.matsim.api.core.v01.Id;
@@ -377,6 +379,15 @@ public class CNLTransitRoute implements AnalyticalModelTransitRoute{
 			trdls.add(trdl);
 		}
 		return trdls;
+	}
+
+	@Override
+	public List<Id<Link>> getPhysicalLinks() {
+		Set<Id<Link>> physicalLinks=new HashSet<>();
+		for(TransitDirectLink tdl:this.directLinks) {
+			physicalLinks.addAll(tdl.getLinkList());
+		}
+		return new ArrayList<Id<Link>>(physicalLinks);
 	}
 	
 	
