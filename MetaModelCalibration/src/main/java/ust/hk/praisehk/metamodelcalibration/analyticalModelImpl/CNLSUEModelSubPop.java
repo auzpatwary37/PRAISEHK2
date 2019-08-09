@@ -19,6 +19,7 @@ import org.matsim.pt.transitSchedule.api.TransitSchedule;
 
 import dynamicTransitRouter.fareCalculators.FareCalculator;
 import ust.hk.praisehk.metamodelcalibration.analyticalModel.AnalyticalModelODpair;
+import ust.hk.praisehk.metamodelcalibration.analyticalModel.SUEModelOutput;
 import ust.hk.praisehk.metamodelcalibration.analyticalModel.TransitLink;
 import ust.hk.praisehk.metamodelcalibration.calibrator.ParamReader;
 
@@ -63,8 +64,7 @@ public class CNLSUEModelSubPop extends CNLSUEModel{
 		for(String s:this.getTimeBeans().keySet()) {
 			this.getNetworks().put(s, new CNLNetwork(network));
 			this.performTransitVehicleOverlay(this.getNetworks().get(s),
-					transitSchedule,scenario.getTransitVehicles(),this.getTimeBeans().get(s).getFirst(),
-					this.getTimeBeans().get(s).getSecond());
+					transitSchedule,scenario.getTransitVehicles(),s);
 			this.getTransitLinks().put(s,this.getOdPairs().getTransitLinks(s));
 		}
 		this.setFareCalculator(fareCalculator);
@@ -187,7 +187,7 @@ public class CNLSUEModelSubPop extends CNLSUEModel{
 	
 	
 	@Override
-	public Map<String,Map<Id<Link>, Double>> perFormSUE(LinkedHashMap<String, Double> noparams,LinkedHashMap<String,Double> anaParams) {
+	public SUEModelOutput perFormSUE(LinkedHashMap<String, Double> noparams,LinkedHashMap<String,Double> anaParams) {
 		LinkedHashMap<String,Double>params=this.pReader.ScaleUp(noparams);
 		return super.perFormSUE(params, anaParams);
 	}

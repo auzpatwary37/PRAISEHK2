@@ -25,6 +25,7 @@ import org.matsim.pt.transitSchedule.api.Departure;
 import org.matsim.pt.transitSchedule.api.TransitLine;
 import org.matsim.pt.transitSchedule.api.TransitRoute;
 import org.matsim.pt.transitSchedule.api.TransitSchedule;
+import org.matsim.vehicles.VehicleCapacity;
 import org.matsim.vehicles.Vehicles;
 
 import de.xypron.jcobyla.Cobyla;
@@ -39,7 +40,9 @@ import ust.hk.praisehk.metamodelcalibration.analyticalModel.AnalyticalModelRoute
 import ust.hk.praisehk.metamodelcalibration.analyticalModel.AnalyticalModelTransitRoute;
 import ust.hk.praisehk.metamodelcalibration.analyticalModel.InternalParamCalibratorFunction;
 import ust.hk.praisehk.metamodelcalibration.analyticalModel.SUEModelOutput;
+import ust.hk.praisehk.metamodelcalibration.analyticalModel.TransitDirectLink;
 import ust.hk.praisehk.metamodelcalibration.analyticalModel.TransitLink;
+import ust.hk.praisehk.metamodelcalibration.analyticalModel.TransitTransferLink;
 import ust.hk.praisehk.metamodelcalibration.measurements.Measurements;
 
 
@@ -103,7 +106,12 @@ public class CNLSUEModel implements AnalyticalModel{
 			
 		private Population lastPopulation;
 	
-	
+		//This are needed for output generation 
+		
+		protected Map<String,Map<Id<Link>,Double>> outputLinkTT=new ConcurrentHashMap<>();
+		protected Map<String,Map<Id<TransitLink>,Double>> outputTrLinkTT=new ConcurrentHashMap<>();
+		private Map<String,Map<Id<Link>,Double>> totalPtCapacityOnLink=new HashMap<>();
+		protected Map<String,Map<String,Double>>MTRCount=new ConcurrentHashMap<>();
 		//All the parameters name
 		//They are kept public to make it easily accessible as they are final they can not be modified
 		
@@ -128,6 +136,11 @@ public class CNLSUEModel implements AnalyticalModel{
 			this.error.put(timeBeanId, new ArrayList<Double>());
 			this.error1.put(timeBeanId, new ArrayList<Double>());
 			
+			//For result recording
+			outputLinkTT.put(timeBeanId, new HashMap<>());
+			outputTrLinkTT.put(timeBeanId, new HashMap<>());
+			this.totalPtCapacityOnLink.put(timeBeanId, new HashMap<>());
+			this.MTRCount.put(timeBeanId, new ConcurrentHashMap<>());
 		}
 		logger.info("Analytical model created successfully.");
 		
@@ -193,15 +206,21 @@ public class CNLSUEModel implements AnalyticalModel{
 	 * @param network
 	 * @param Schedule
 	 */
-	public void performTransitVehicleOverlay(AnalyticalModelNetwork network, TransitSchedule schedule,Vehicles vehicles,double fromTime, double toTime) {
+	public void performTransitVehicleOverlay(AnalyticalModelNetwork network, TransitSchedule schedule,Vehicles vehicles,String timeBeanId) {
 		for(TransitLine tl:schedule.getTransitLines().values()) {
 			for(TransitRoute tr:tl.getRoutes().values()) {
 				ArrayList<Id<Link>> links=new ArrayList<>(tr.getRoute().getLinkIds());
 				for(Departure d:tr.getDepartures().values()) {
-					if(d.getDepartureTime()>fromTime && d.getDepartureTime()<=toTime) {
+					if(d.getDepartureTime()>this.timeBeans.get(timeBeanId).getFirst() && d.getDepartureTime()<=this.timeBeans.get(timeBeanId).getSecond()) {
 						for(Id<Link> linkId:links) {
 							((CNLLink)network.getLinks().get(linkId)).addLinkTransitVolume(vehicles.getVehicles().get(d.getVehicleId()).getType().getPcuEquivalents());
-							
+							Double oldCap=this.totalPtCapacityOnLink.get(timeBeanId).get(linkId);
+							VehicleCapacity cap=vehicles.getVehicles().get(d.getVehicleId()).getType().getCapacity();
+							if(oldCap!=null) {
+								this.totalPtCapacityOnLink.get(timeBeanId).put(linkId, oldCap+(cap.getSeats()+cap.getStandingRoom()));
+							}else {
+								this.totalPtCapacityOnLink.get(timeBeanId).put(linkId, (double) cap.getSeats()+cap.getStandingRoom());
+							}
 							}
 					}
 				}
@@ -225,8 +244,7 @@ public class CNLSUEModel implements AnalyticalModel{
 		for(String s:this.timeBeans.keySet()) {
 			this.getNetworks().put(s, new CNLNetwork(network));
 			this.performTransitVehicleOverlay(this.getNetworks().get(s),
-					transitSchedule,scenario.getTransitVehicles(),this.timeBeans.get(s).getFirst(),
-					this.timeBeans.get(s).getSecond());
+					transitSchedule,scenario.getTransitVehicles(),s);
 			this.getTransitLinks().put(s,this.getOdPairs().getTransitLinks(s));
 		}
 		this.fareCalculator=fareCalculator;
@@ -298,6 +316,9 @@ public class CNLSUEModel implements AnalyticalModel{
 		//Loading missing parameters from the default values		
 		Map<String,Map<Id<Link>,Double>> outputLinkFlow=new HashMap<>();
 		
+		Map<String,Map<Id<TransitLink>,Double>> outputTrLinkFlow=new HashMap<>();
+		
+		
 		
 		//Checking and updating for the parameters 
 		for(Entry<String,Double> e:this.Params.entrySet()) {
@@ -320,6 +341,9 @@ public class CNLSUEModel implements AnalyticalModel{
 			threads[i]=new Thread(new SUERunnable(this,timeBeanId,params,anaParams),timeBeanId);
 			i++;
 			outputLinkFlow.put(timeBeanId, new HashMap<Id<Link>, Double>());
+			outputLinkTT.put(timeBeanId, new HashMap<Id<Link>, Double>());
+			outputTrLinkFlow.put(timeBeanId, new HashMap<Id<TransitLink>, Double>());
+			outputTrLinkTT.put(timeBeanId, new HashMap<Id<TransitLink>, Double>());
 		}
 		//Starting the Threads
 		for(i=0;i<this.timeBeans.size();i++) {
@@ -342,8 +366,17 @@ public class CNLSUEModel implements AnalyticalModel{
 						((AnalyticalModelLink) this.getNetworks().get(timeBeanId).getLinks().get(linkId)).getLinkAADTVolume());
 			}
 		}
+		
+		//Collecting the Link Transit 
+		for(String timeBeanId:this.timeBeans.keySet()) {
+			for(Id<TransitLink> linkId:this.transitLinks.get(timeBeanId).keySet()) {
+				outputTrLinkFlow.get(timeBeanId).put(linkId, 
+						(this.transitLinks.get(timeBeanId).get(linkId).getPassangerCount()));
+			}
+		}
+		
 		//new OdInfoWriter("toyScenario/ODInfo/odInfo",this.timeBeans).writeOdInfo(this.getOdPairs(), getDemand(), getCarDemand(), inputParams, inputAnaParams);
-		return outputLinkFlow;
+		return new SUEModelOutput(outputLinkFlow, outputTrLinkFlow, this.outputLinkTT, this.outputTrLinkTT);
 	}
 	
 	
@@ -863,7 +896,27 @@ public class CNLSUEModel implements AnalyticalModel{
 					System.out.println("The model cannot converge on first iteration!!!");
 				}
 			}
-			if(shouldStop) {break;}
+			if(shouldStop) {
+				//collect travel time
+				for(Link link:this.networks.get(timeBeanId).getLinks().values()) {
+					this.outputLinkTT.get(timeBeanId).put(link.getId(), ((CNLLink)link).getLinkTravelTime(this.timeBeans.get(timeBeanId),
+							params, anaParams));
+				}
+				//collect travel time for transit
+				for(TransitLink link:this.transitLinks.get(timeBeanId).values()) {
+					if(link instanceof TransitDirectLink) {
+						this.outputTrLinkTT.get(timeBeanId).put(link.getTrLinkId(), 
+								((TransitDirectLink)link).getLinkTravelTime(this.networks.get(timeBeanId),this.timeBeans.get(timeBeanId),
+										params, anaParams));
+					}else {
+						this.outputTrLinkTT.get(timeBeanId).put(link.getTrLinkId(), 
+								((TransitTransferLink)link).getWaitingTime(anaParams,this.networks.get(timeBeanId)));
+					}
+					
+				}
+				
+				break;
+				}
 			this.performModalSplit(params, anaParams, timeBeanId);
 			
 		}
