@@ -16,6 +16,10 @@ public class Measurement {
 	 * Some attributes name are kept as public and final string
 	 */
 	public static final String linkListAttributeName="LINK_LIST";
+	public static final String transitLineAttributeName="TRANSIT_LINE";
+	public static final String transitRouteAttributeName="Transit_Route";
+	public static final String transitBoardingStopAtrributeName="transit_boarding_stop";
+	public static final String transitAlightingStopAttributeName="transit_alihting_stop";
 	
 	private final Id<Measurement> id;
 	private Map<String,Object> attributes=new HashMap<>();

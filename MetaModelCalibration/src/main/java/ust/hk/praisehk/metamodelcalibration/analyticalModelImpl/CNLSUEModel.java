@@ -38,6 +38,7 @@ import ust.hk.praisehk.metamodelcalibration.analyticalModel.AnalyticalModelODpai
 import ust.hk.praisehk.metamodelcalibration.analyticalModel.AnalyticalModelRoute;
 import ust.hk.praisehk.metamodelcalibration.analyticalModel.AnalyticalModelTransitRoute;
 import ust.hk.praisehk.metamodelcalibration.analyticalModel.InternalParamCalibratorFunction;
+import ust.hk.praisehk.metamodelcalibration.analyticalModel.SUEModelOutput;
 import ust.hk.praisehk.metamodelcalibration.analyticalModel.TransitLink;
 import ust.hk.praisehk.metamodelcalibration.measurements.Measurements;
 
@@ -274,7 +275,7 @@ public class CNLSUEModel implements AnalyticalModel{
 	 */
 	
 	@Override
-	public Map<String,Map<Id<Link>, Double>> perFormSUE(LinkedHashMap<String, Double> params) {
+	public SUEModelOutput perFormSUE(LinkedHashMap<String, Double> params) {
 		if(!(this.Params.keySet()).containsAll(params.keySet())) {
 			logger.error("The parameters key do not match with the default parameter keys. Invalid Parameter!! Did you send the wrong parameter format?");
 			throw new IllegalArgumentException("The parameters key do not match with the default parameter keys. Invalid Parameter!! Did you send the wrong parameter format?");
@@ -289,13 +290,14 @@ public class CNLSUEModel implements AnalyticalModel{
 	 * @return
 	 */
 	@Override
-	public Map<String,Map<Id<Link>, Double>> perFormSUE(LinkedHashMap<String, Double> params,LinkedHashMap<String,Double> anaParams) {
+	public SUEModelOutput perFormSUE(LinkedHashMap<String, Double> params,LinkedHashMap<String,Double> anaParams) {
 		this.resetCarDemand();
 		
 		LinkedHashMap<String,Double> inputParams=new LinkedHashMap<>(params);
 		LinkedHashMap<String,Double> inputAnaParams=new LinkedHashMap<>(anaParams);
 		//Loading missing parameters from the default values		
 		Map<String,Map<Id<Link>,Double>> outputLinkFlow=new HashMap<>();
+		
 		
 		//Checking and updating for the parameters 
 		for(Entry<String,Double> e:this.Params.entrySet()) {
@@ -983,6 +985,7 @@ public class CNLSUEModel implements AnalyticalModel{
 		this.odPairs = (CNLODpairs) odPairs;
 	}
 
+	@Override
 	public Map <String,AnalyticalModelNetwork> getNetworks() {
 		return networks;
 	}
