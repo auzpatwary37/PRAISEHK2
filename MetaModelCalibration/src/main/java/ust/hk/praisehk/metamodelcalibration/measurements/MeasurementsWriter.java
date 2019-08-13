@@ -48,6 +48,7 @@ public class MeasurementsWriter extends DefaultHandler{
 			for(Measurement mm:m.getMeasurements().values()) {
 				Element measurement=document.createElement("Measurement");
 				measurement.setAttribute("MeasurementId", mm.getId().toString());
+				measurement.setAttribute("MeasurementType", mm.getMeasurementType().toString());
 				if(mm.getCoord()!=null) {
 					Element Coord=document.createElement("Coord");
 					Coord.setAttribute("X", Double.toString(mm.getCoord().getX()));
@@ -65,7 +66,7 @@ public class MeasurementsWriter extends DefaultHandler{
 
 				Element linkIds=document.createElement("LinkIds");
 
-				if(mm.getAttribute(mm.linkListAttributeName)==null) {
+				if(mm.getAttribute(Measurement.linkListAttributeName)==null && (mm.getMeasurementType().equals(MeasurementType.linkVolume)||mm.getMeasurementType().equals(MeasurementType.linkTravelTime)||mm.getMeasurementType().equals(MeasurementType.averagePTOccumpancy))) {
 					Element lId=document.createElement("LinkId");
 					lId.setAttribute("Id", mm.getId().toString());
 					linkIds.appendChild(lId);

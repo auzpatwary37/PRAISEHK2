@@ -2,6 +2,7 @@ package ust.hk.praisehk.metamodelcalibration.matsimIntegration;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.matsim.api.core.v01.Id;
@@ -24,6 +25,8 @@ import com.google.inject.name.Named;
 
 import dynamicTransitRouter.fareCalculators.FareCalculator;
 import ust.hk.praisehk.metamodelcalibration.analyticalModel.AnalyticalModel;
+import ust.hk.praisehk.metamodelcalibration.measurements.Measurement;
+import ust.hk.praisehk.metamodelcalibration.measurements.MeasurementType;
 import ust.hk.praisehk.metamodelcalibration.measurements.Measurements;
 import ust.hk.praisehk.metamodelcalibration.measurements.MeasurementsWriter;
 
@@ -102,7 +105,19 @@ public class AnaModelControlerListener implements StartupListener,BeforeMobsimLi
 					}
 				}
 				Measurements m=storage.getCalibrationMeasurements().clone();
-				m.updateMeasurements(counts);
+				//m.updateMeasurements(counts);
+				//Update the measurements here for different types of measurement
+				//this one is for link volumes
+				List<Measurement> linkVolumeMeasurements=m.getMeasurementsByType().get(MeasurementType.linkVolume);
+				for(Measurement mm:linkVolumeMeasurements) {
+					for(String timeId:mm.getVolumes().keySet()) {
+						double volume=0;
+						for(Id<Link>linkId:(ArrayList<Id<Link>>)mm.getAttribute(Measurement.linkListAttributeName)) {
+							volume+=counts.get(timeId).get(linkId);
+						}
+						mm.addVolume(timeId, volume);
+					}
+				}
 				//new MeasurementsWriter(m).write();
 				this.storage.storeMeasurements(this.currentParam.getParam(), m);
 			}
@@ -110,7 +125,20 @@ public class AnaModelControlerListener implements StartupListener,BeforeMobsimLi
 		int counter=event.getIteration();
 			if(counter==this.maxIter) {
 				Measurements m=storage.getCalibrationMeasurements().clone();
-				m.updateMeasurements(this.pcuVolumeCounter.geenerateLinkCounts());
+				Map<String,Map<Id<Link>,Double>>counts= this.pcuVolumeCounter.geenerateLinkCounts();
+				//m.updateMeasurements(counts);
+				//Update the measurements here for different types of measurement
+				//this one is for link volumes
+				List<Measurement> linkVolumeMeasurements=m.getMeasurementsByType().get(MeasurementType.linkVolume);
+				for(Measurement mm:linkVolumeMeasurements) {
+					for(String timeId:mm.getVolumes().keySet()) {
+						double volume=0;
+						for(Id<Link>linkId:(ArrayList<Id<Link>>)mm.getAttribute(Measurement.linkListAttributeName)) {
+							volume+=counts.get(timeId).get(linkId);
+						}
+						mm.addVolume(timeId, volume);
+					}
+				}
 				//m.writeCSVMeasurements(fileLoc);
 				this.storage.storeMeasurements(this.currentParam.getParam(), m);
 			}
@@ -154,6 +182,7 @@ public class AnaModelControlerListener implements StartupListener,BeforeMobsimLi
 		this.shouldAverageOverIteration = shouldAverageOverIteration;
 	}
 	
+
 	
 	
 }

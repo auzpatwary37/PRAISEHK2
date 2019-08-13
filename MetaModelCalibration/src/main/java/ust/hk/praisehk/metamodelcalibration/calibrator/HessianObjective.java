@@ -11,6 +11,7 @@ import cz.cvut.fit.jcool.core.Hessian;
 import cz.cvut.fit.jcool.core.ObjectiveFunction;
 import cz.cvut.fit.jcool.core.Point;
 import ust.hk.praisehk.metamodelcalibration.analyticalModel.AnalyticalModel;
+import ust.hk.praisehk.metamodelcalibration.analyticalModel.SUEModelOutput;
 import ust.hk.praisehk.metamodelcalibration.measurements.Measurements;
 
 
@@ -32,9 +33,9 @@ public class HessianObjective implements ObjectiveFunction {
 			double[] x= point.toArray();
 			LinkedHashMap<String,Double> params=optimizer.getOptimizationFunction().ScaleUp(x);
 			Measurements anaData=this.realData.clone();
-			Map<String,Map<Id<Link>,Double>>linkVolume=sueAssignment.perFormSUE(params);
-			anaData.updateMeasurements(linkVolume);
-			double value=this.optimizer.getOptimizationFunction().calcMetaModelObjective(linkVolume, params);
+			SUEModelOutput linkVolume=sueAssignment.perFormSUE(params);
+			anaData.updateMeasurements(linkVolume, this.sueAssignment,null);
+			double value=this.optimizer.getOptimizationFunction().calcMetaModelObjective(anaData, params);
 			return value;
 		}
 

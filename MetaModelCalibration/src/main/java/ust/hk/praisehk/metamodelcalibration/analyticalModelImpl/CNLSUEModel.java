@@ -375,8 +375,20 @@ public class CNLSUEModel implements AnalyticalModel{
 			}
 		}
 		
+		//collect pt occupancy
+		Map<String, Map<Id<Link>, Double>> averagePtOccupancyOnLink=new HashMap<>();
+		for(String timeBeanId:this.timeBeans.keySet()) {
+			averagePtOccupancyOnLink.put(timeBeanId, new HashMap<>());
+			for(Id<Link>linkId:this.totalPtCapacityOnLink.get(timeBeanId).keySet()) {
+				double occupancy=((CNLLink)this.networks.get(timeBeanId).getLinks().get(linkId)).getLinkTransitPassenger()/this.totalPtCapacityOnLink.get(timeBeanId).get(linkId);
+				averagePtOccupancyOnLink.get(timeBeanId).put(linkId, occupancy);
+			}
+		}
+		
+		SUEModelOutput out=new SUEModelOutput(outputLinkFlow, outputTrLinkFlow, this.outputLinkTT, this.outputTrLinkTT);
+		out.setAveragePtOccupancyOnLink(averagePtOccupancyOnLink);
 		//new OdInfoWriter("toyScenario/ODInfo/odInfo",this.timeBeans).writeOdInfo(this.getOdPairs(), getDemand(), getCarDemand(), inputParams, inputAnaParams);
-		return new SUEModelOutput(outputLinkFlow, outputTrLinkFlow, this.outputLinkTT, this.outputTrLinkTT);
+		return out;
 	}
 	
 	
@@ -447,7 +459,7 @@ public class CNLSUEModel implements AnalyticalModel{
 				u=0;
 			}
 			//oldUtility.put(r.getRouteId(),this.odPairs.getODpairset().get(ODpairId).getRouteUtility(timeBeanId).get(r.getRouteId()));
-			this.getOdPairs().getODpairset().get(ODpairId).updateRouteUtility(r.getRouteId(), u,timeBeanId);
+			odpair.updateRouteUtility(r.getRouteId(), u,timeBeanId);
 			
 			//This Check is to make sure the exp(utility) do not go to infinity.
 			if(u>300||u<-300) {
@@ -489,7 +501,7 @@ public class CNLSUEModel implements AnalyticalModel{
 				throw new IllegalArgumentException("Wait!!!!Error!!!!");
 			}
 			routeFlows.put(r.getRouteId(),flow);
-					
+			odpair.getRouteFlow().get(timeBeanId).put(r.getRouteId(), flow);	
 		}
 		for(Id<Link> linkId:getOdPairs().getODpairset().get(ODpairId).getLinkIncidence().keySet()){
 			double linkflow=0;
@@ -540,7 +552,7 @@ public class CNLSUEModel implements AnalyticalModel{
 			if(u>300) {
 				logger.warn("STOP!!!Utility is too large >300");
 			}
-			this.getOdPairs().getODpairset().get(ODpairId).updateTrRouteUtility(r.getTrRouteId(), u,timeBeanId);
+			odpair.updateTrRouteUtility(r.getTrRouteId(), u,timeBeanId);
 			utility.put(r.getTrRouteId(), u);
 			//totalUtility+=Math.exp(u);
 		}
@@ -566,7 +578,7 @@ public class CNLSUEModel implements AnalyticalModel{
 				throw new IllegalArgumentException("Error!!!!");
 			}
 			routeFlows.put(r.getTrRouteId(),flow);
-					
+			odpair.getTrRouteFlow().get(timeBeanId).put(r.getTrRouteId(), flow);		
 		}
 
 		}

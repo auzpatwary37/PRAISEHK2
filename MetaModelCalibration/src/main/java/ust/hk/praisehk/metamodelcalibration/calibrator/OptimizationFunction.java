@@ -43,7 +43,6 @@ public abstract class OptimizationFunction implements Calcfc  {
 		this.hessian = hessian;
 	}
 
-	public abstract double calcMetaModelObjective(Map<String,Map<Id<Link>,Double>> linkVolume, LinkedHashMap<String,Double> params);
 	
 	public abstract double calcMetaModelObjective(Measurements anaMeasurements, LinkedHashMap<String,Double> params);
 	

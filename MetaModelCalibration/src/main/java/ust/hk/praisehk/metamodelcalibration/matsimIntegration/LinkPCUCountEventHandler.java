@@ -3,8 +3,10 @@ package ust.hk.praisehk.metamodelcalibration.matsimIntegration;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.matsim.api.core.v01.Id;
@@ -22,6 +24,9 @@ import org.matsim.vehicles.Vehicle;
 
 import com.google.inject.Inject;
 
+import ust.hk.praisehk.metamodelcalibration.measurements.Measurement;
+import ust.hk.praisehk.metamodelcalibration.measurements.MeasurementType;
+
 
 
 public class LinkPCUCountEventHandler implements LinkEnterEventHandler, TransitDriverStartsEventHandler, VehicleEntersTrafficEventHandler{
@@ -29,6 +34,7 @@ public class LinkPCUCountEventHandler implements LinkEnterEventHandler, TransitD
 	private Map<String,Map<Id<Link>,List<Id<Vehicle>>>> Vehicles=new ConcurrentHashMap<>();
 	private Map<Id<Vehicle>,Double> transitVehicles=new ConcurrentHashMap<>();
 	private final Map<String, Tuple<Double,Double>> timeBean;
+	private Set<Id<Link>> linkidsToCount=new HashSet<>();
 	//private CountData countdata;
 	
 	private MeasurementsStorage simStorage; 
@@ -42,7 +48,11 @@ public class LinkPCUCountEventHandler implements LinkEnterEventHandler, TransitD
 		for(String timeBeanId:this.timeBean.keySet()) {
 			linkCounts.put(timeBeanId,new ConcurrentHashMap<Id<Link>, Double>());
 			Vehicles.put(timeBeanId, new ConcurrentHashMap<Id<Link>, List<Id<Vehicle>>>());
-			for(Id<Link> linkId:simStorage.getLinksToCount()) {
+			
+			for(Measurement m:simStorage.getCalibrationMeasurements().getMeasurementsByType().get(MeasurementType.linkVolume)) {
+				linkidsToCount.addAll((ArrayList<Id<Link>>)m.getAttribute(Measurement.linkListAttributeName));
+			}
+			for(Id<Link> linkId:linkidsToCount) {
 				linkCounts.get(timeBeanId).put(linkId, 0.0);
 				Vehicles.get(timeBeanId).put(linkId, Collections.synchronizedList(new ArrayList<Id<Vehicle>>()));
 			}
@@ -104,7 +114,7 @@ public class LinkPCUCountEventHandler implements LinkEnterEventHandler, TransitD
 		for(String timeBeanId:this.timeBean.keySet()) {
 			linkCounts.put(timeBeanId,new ConcurrentHashMap<Id<Link>, Double>());
 			Vehicles.put(timeBeanId, new ConcurrentHashMap<Id<Link>, List<Id<Vehicle>>>());
-			for(Id<Link> linkId:simStorage.getLinksToCount()) {
+			for(Id<Link> linkId:this.linkidsToCount) {
 				linkCounts.get(timeBeanId).put(linkId, 0.0);
 				Vehicles.get(timeBeanId).put(linkId, Collections.synchronizedList(new ArrayList<Id<Vehicle>>()));
 			}

@@ -39,7 +39,8 @@ public class MeasurementsReader extends DefaultHandler {
 				this.m=Measurements.createMeasurements(this.timeBeans);
 			}
 			this.mId=Id.create(attributes.getValue("MeasurementId"), Measurement.class);
-			this.m.createAnadAddMeasurement(mId.toString());
+			MeasurementType mType=MeasurementType.valueOf(attributes.getValue("MeasurementType"));
+			this.m.createAnadAddMeasurement(mId.toString(),mType);
 		}
 		
 		if(qName.equalsIgnoreCase("Coord")) {

@@ -70,9 +70,9 @@ public class InternalParamCalibratorFunction implements Calcfc{
 				double objective=0;
 				for(int i=0;i<this.simMeasurements.size();i++) {
 					LinkedHashMap<String,Double> param=new LinkedHashMap<>(this.Parmas.get(i));
-					Map<String,Map<Id<Link>,Double>> anaCount=this.sue.perFormSUE(param, anaParam);
+					SUEModelOutput anaCount=this.sue.perFormSUE(param, anaParam);
 					Measurements anaMeasurement=this.simMeasurements.get(0).clone();
-					anaMeasurement.updateMeasurements(anaCount);
+					anaMeasurement.updateMeasurements(anaCount, sue, null);
 					Measurements simMeasurement=this.simMeasurements.get(i);
 					for(Id<Measurement> mId:simMeasurement.getMeasurements().keySet()) {
 						for(String s:simMeasurement.getMeasurements().get(mId).getVolumes().keySet()) {
@@ -164,8 +164,8 @@ public class InternalParamCalibratorFunction implements Calcfc{
 				Map<Integer,Measurements> anaMeasurements=new HashMap<>();
 				for(int i=0;i<this.simMeasurements.size();i++) {
 					anaMeasurements.put(i,this.simMeasurements.get(i).clone());
-					Map<String,Map<Id<Link>,Double>> linkFlows=this.sue.perFormSUE(new LinkedHashMap<>(this.Parmas.get(i)));
-					anaMeasurements.get(i).updateMeasurements(linkFlows);
+					SUEModelOutput linkFlows=this.sue.perFormSUE(new LinkedHashMap<>(this.Parmas.get(i)));
+					anaMeasurements.get(i).updateMeasurements(linkFlows,this.sue,null);
 				}
 				return anaMeasurements;
 			}

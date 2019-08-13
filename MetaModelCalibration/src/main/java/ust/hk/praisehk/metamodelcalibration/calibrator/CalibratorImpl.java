@@ -19,6 +19,7 @@ import org.matsim.api.core.v01.network.Link;
 import org.matsim.core.utils.collections.Tuple;
 
 import ust.hk.praisehk.metamodelcalibration.analyticalModel.AnalyticalModel;
+import ust.hk.praisehk.metamodelcalibration.analyticalModel.SUEModelOutput;
 import ust.hk.praisehk.metamodelcalibration.matamodels.AnalyticLinearMetaModel;
 import ust.hk.praisehk.metamodelcalibration.matamodels.AnalyticalQuadraticMetaModel;
 import ust.hk.praisehk.metamodelcalibration.matamodels.GradientBaseOptimizedMetaModel;
@@ -201,8 +202,8 @@ public class CalibratorImpl implements Calibrator {
 		this.sueAssignment=sue;
 		Measurements anaMeasurements=this.calibrationMeasurements.clone();
 		if(!metaModelType.equals(MetaModel.LinearMetaModelName)&&!metaModelType.equals(MetaModel.QudaraticMetaModelName)) {
-			Map<String,Map<Id<Link>,Double>>linkVolumes= sue.perFormSUE(this.pReader.ScaleUp(this.trialParam));
-			anaMeasurements.updateMeasurements(linkVolumes);
+			SUEModelOutput linkVolumes= sue.perFormSUE(this.pReader.ScaleUp(this.trialParam));
+			anaMeasurements.updateMeasurements(linkVolumes,sue,null);
 		}
 		new MeasurementsWriter(anaMeasurements).write(this.fileLoc+"anaMeasurement"+this.iterationNo+".xml");
 		new MeasurementsWriter(simMeasurements).write(this.fileLoc+"simMeasurement"+this.iterationNo+".xml");

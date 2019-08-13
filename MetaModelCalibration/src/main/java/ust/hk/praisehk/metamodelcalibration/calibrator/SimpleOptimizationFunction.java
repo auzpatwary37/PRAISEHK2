@@ -11,6 +11,7 @@ import org.matsim.api.core.v01.network.Link;
 import org.matsim.core.utils.collections.Tuple;
 
 import ust.hk.praisehk.metamodelcalibration.analyticalModel.AnalyticalModel;
+import ust.hk.praisehk.metamodelcalibration.analyticalModel.SUEModelOutput;
 import ust.hk.praisehk.metamodelcalibration.matamodels.MetaModel;
 import ust.hk.praisehk.metamodelcalibration.measurements.Measurement;
 import ust.hk.praisehk.metamodelcalibration.measurements.Measurements;
@@ -40,13 +41,19 @@ public class SimpleOptimizationFunction extends OptimizationFunction{
 	public double compute(int n, int m, double[] x, double[] constrains) {
 		
 		LinkedHashMap<String, Double>params=ScaleUp(x);
-		Map<String,Map<Id<Link>,Double>> linkVolume=null;
+		SUEModelOutput linkVolume=null;
 		this.getSUE().clearLinkCarandTransitVolume();
 		
 		if(!this.metaModelType.equals(MetaModel.LinearMetaModelName) && !this.metaModelType.equals(MetaModel.QudaraticMetaModelName)) {
 			linkVolume=this.getSUE().perFormSUE(this.pReader.ScaleUp(new LinkedHashMap<>(params)));
 		}
-		double objective=calcMetaModelObjective(linkVolume, params);
+		
+		Measurements anaMeasurements=this.getRealData().clone();
+		if(linkVolume!=null) {
+			anaMeasurements.updateMeasurements(linkVolume,this.getSUE(),null);
+		}
+		
+		double objective=calcMetaModelObjective(anaMeasurements, params);
 		int d=0;
 		for(double xi:calcConstrain(x,this.getParamLimit())) {
 			constrains[d]=xi;
@@ -90,16 +97,7 @@ public class SimpleOptimizationFunction extends OptimizationFunction{
 	}
 	
 	
-	@Override
-	public double calcMetaModelObjective(Map<String, Map<Id<Link>, Double>> linkVolume,
-			LinkedHashMap<String, Double> params) {
-		
-		Measurements anaMeasurements=this.getRealData().clone();
-		if(linkVolume!=null) {
-			anaMeasurements.updateMeasurements(linkVolume);
-		}
-		return this.calcMetaModelObjective(anaMeasurements, params);
-	}
+	
 
 	@Override
 	public double[] calcConstrain(double[] x, LinkedHashMap<String, Tuple<Double, Double>> paramLimit) {

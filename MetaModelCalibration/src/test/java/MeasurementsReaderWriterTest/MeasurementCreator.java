@@ -11,6 +11,7 @@ import org.matsim.api.core.v01.network.Link;
 import org.matsim.core.utils.collections.Tuple;
 
 import ust.hk.praisehk.metamodelcalibration.measurements.Measurement;
+import ust.hk.praisehk.metamodelcalibration.measurements.MeasurementType;
 import ust.hk.praisehk.metamodelcalibration.measurements.Measurements;
 import ust.hk.praisehk.metamodelcalibration.measurements.MeasurementsReader;
 import ust.hk.praisehk.metamodelcalibration.measurements.MeasurementsWriter;
@@ -29,7 +30,7 @@ public class MeasurementCreator {
 		Measurements m=Measurements.createMeasurements(timeBeans);
 		
 		Id<Measurement> m1Id=Id.create("1", Measurement.class);
-		m.createAnadAddMeasurement("1");
+		m.createAnadAddMeasurement("1",MeasurementType.linkVolume);
 		ArrayList<Id<Link>> linkIds=new ArrayList<>();
 		linkIds.add(Id.createLinkId("1_1"));
 		linkIds.add(Id.createLinkId("1_2"));
@@ -42,7 +43,7 @@ public class MeasurementCreator {
 		m.getMeasurements().get(m1Id).addVolume("AfterMorningPeak",140);
 		
 		Id<Measurement> m2Id=Id.create("2", Measurement.class);
-		m.createAnadAddMeasurement("2");
+		m.createAnadAddMeasurement("2",MeasurementType.linkVolume);
 		linkIds=new ArrayList<>();
 		linkIds.add(Id.createLinkId("2_1"));
 		linkIds.add(Id.createLinkId("2_2"));

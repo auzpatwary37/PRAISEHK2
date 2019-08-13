@@ -9,12 +9,16 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.network.Link;
 import org.matsim.core.utils.collections.Tuple;
+
+import ust.hk.praisehk.metamodelcalibration.analyticalModel.AnalyticalModel;
+import ust.hk.praisehk.metamodelcalibration.analyticalModel.SUEModelOutput;
 
 /**
  * A simplified class for holding measurements 
@@ -30,6 +34,8 @@ public class Measurements {
 	
 	private final Map<String,Tuple<Double,Double>> timeBean;
 	private Map<Id<Measurement>,Measurement> measurements=new HashMap<>();
+	private Map<MeasurementType,List<Measurement>> measurementsByType=new HashMap<>();
+	
 	
 	private Measurements(Map<String,Tuple<Double,Double>> timeBean) {
 		this.timeBean=timeBean;
@@ -39,9 +45,15 @@ public class Measurements {
 		return new Measurements(timeBean);
 	}
 	
-	public void createAnadAddMeasurement(String measurementId) {
-		Measurement m=new Measurement(measurementId,this.timeBean);
+	public void createAnadAddMeasurement(String measurementId,MeasurementType mType) {
+		Measurement m=new Measurement(measurementId,this.timeBean,mType);
 		this.measurements.put(m.getId(), m);
+		List<Measurement> mlist=this.measurementsByType.get(m.getMeasurementType());
+		if(mlist==null) {
+			mlist=new ArrayList<>();
+			this.measurementsByType.put(mType, mlist);
+		}
+		mlist.add(m);
 	}
 	
 	protected void addMeasurement(Measurement m) {
@@ -68,9 +80,9 @@ public class Measurements {
 		return m;
 	}
 	
-	public void updateMeasurements(Map<String,Map<Id<Link>,Double>> linkVolumes) {
+	public void updateMeasurements(SUEModelOutput modelOut,AnalyticalModel sue,Object otherDataContainer) {
 		for(Measurement m:this.measurements.values()) {
-			m.updateMeasurement(linkVolumes);
+			m.updateMeasurement(modelOut, sue,otherDataContainer);
 		}
 	}
 	
@@ -94,10 +106,10 @@ public class Measurements {
 	public void writeCSVMeasurements(String fileLoc) {
 		try {
 			FileWriter fw=new FileWriter(new File(fileLoc),false);
-			fw.append("MeasurementId,timeId,PCUCount\n");
+			fw.append("MeasurementId,timeId,Count,Type\n");
 			for(Measurement m:this.measurements.values()) {
 				for(String timeId:m.getVolumes().keySet())
-				fw.append(m.getId().toString()+","+timeId+","+m.getVolumes().get(timeId)+"\n");
+				fw.append(m.getId().toString()+","+timeId+","+m.getVolumes().get(timeId)+","+m.getMeasurementType().toString()+"\n");
 			}
 			fw.flush();
 			fw.close();
@@ -116,7 +128,7 @@ public class Measurements {
 				String[] part=line.split(",");
 				Id<Measurement> measurementId=Id.create(part[0].trim(), Measurement.class);
 				if(!this.measurements.containsKey(measurementId)) {
-					this.createAnadAddMeasurement(measurementId.toString());
+					this.createAnadAddMeasurement(measurementId.toString(),MeasurementType.valueOf(part[3]));
 				}
 				String timeBeanId=part[1].trim();
 				this.measurements.get(measurementId).addVolume(timeBeanId, Double.parseDouble(part[2].trim()));
@@ -130,4 +142,10 @@ public class Measurements {
 			e.printStackTrace();
 		}
 	}
+
+	public Map<MeasurementType, List<Measurement>> getMeasurementsByType() {
+		return measurementsByType;
+	}
+	
+	
 }

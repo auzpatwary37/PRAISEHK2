@@ -12,6 +12,7 @@ import org.matsim.api.core.v01.Id;
 import org.matsim.core.config.Config;
 
 import ust.hk.praisehk.metamodelcalibration.analyticalModel.AnalyticalModel;
+import ust.hk.praisehk.metamodelcalibration.analyticalModel.SUEModelOutput;
 import ust.hk.praisehk.metamodelcalibration.analyticalModelImpl.CNLSUEModel;
 import ust.hk.praisehk.metamodelcalibration.calibrator.ParamReader;
 import ust.hk.praisehk.metamodelcalibration.matsimIntegration.MeasurementsStorage;
@@ -120,14 +121,16 @@ public class SimAndAnalyticalGradientCalculator {
 			simRun.run(sue, config, thetaPlus, true,currentIterCounter+"_thread0",this.storage);
 			simLinkCountPlus=this.storage.getSimMeasurement(thetaPlus);
 			anaLinkCountPlus=simLinkCountPlus.clone();
-			anaLinkCountPlus.updateMeasurements(sue.perFormSUE(pReader.ScaleUp(thetaPlus)));
+			SUEModelOutput anaOut=sue.perFormSUE(pReader.ScaleUp(thetaPlus));
+			anaLinkCountPlus.updateMeasurements(anaOut,sue,null);
 			sue=new CNLSUEModel(this.storage.getTimeBean());
 			sue.setDefaultParameters(pReader.ScaleUp(pReader.getDefaultParam()));
 			config=pReader.SetParamToConfig(this.config, thetaMinus);
 			simRun.run(sue, config, thetaMinus, true,currentIterCounter+"_thread1",this.storage);
 			simLinkCountMinus=this.storage.getSimMeasurement(thetaMinus);
 			anaLinkCountMinus=simLinkCountMinus.clone();
-			anaLinkCountMinus.updateMeasurements(sue.perFormSUE(pReader.ScaleUp(thetaMinus)));
+			SUEModelOutput anaOutMinus=sue.perFormSUE(pReader.ScaleUp(thetaMinus));
+			anaLinkCountMinus.updateMeasurements(anaOutMinus,sue,null);
 		}
 		//time
 		for(Measurement m:this.storage.getCalibrationMeasurements().getMeasurements().values()) {
@@ -198,7 +201,8 @@ public class SimAndAnalyticalGradientCalculator {
 	    			
 	    			simLinkCountPlus=this.storage.getSimMeasurement(pPlus);
 	    			anaLinkCountPlus=simLinkCountPlus.clone();
-	    			anaLinkCountPlus.updateMeasurements(sue.perFormSUE(pReader.ScaleUp(pPlus)));
+	    			SUEModelOutput anaPlus=sue.perFormSUE(pReader.ScaleUp(pPlus));
+	    			anaLinkCountPlus.updateMeasurements(anaPlus,sue,null);
 	    			sue=new CNLSUEModel(this.storage.getTimeBean());
 	    			sue.setDefaultParameters(pReader.ScaleUp(pReader.getDefaultParam()));
 	    			
@@ -207,7 +211,8 @@ public class SimAndAnalyticalGradientCalculator {
 	    			simRun.run(sue, configPMinus, pMinus, true,currentIterCounter+s+"_thread0",storage);
 	    			simLinkCountMinus=storage.getSimMeasurement(pMinus);
 	    			anaLinkCountMinus=simLinkCountMinus.clone();
-	    			anaLinkCountMinus.updateMeasurements(sue.perFormSUE(pReader.ScaleUp(pMinus)));
+	    			SUEModelOutput anaMinus=sue.perFormSUE(pReader.ScaleUp(pMinus));
+	    			anaLinkCountMinus.updateMeasurements(anaMinus,sue,null);
 	            }else {
 	            	Thread[] threads=new Thread[2];
 	    			simandAnaRunRunnable[] functionEvals=new simandAnaRunRunnable[2];
@@ -339,7 +344,8 @@ class simandAnaRunRunnable implements Runnable{
 		simRun.run(sue, this.config, this.atParam, true,threadNo,storage);
 		this.simCount=this.storage.getSimMeasurement(atParam);
 		this.anaCount=this.simCount.clone();
-		this.anaCount.updateMeasurements(sue.perFormSUE(pReader.ScaleUp(atParam)));
+		SUEModelOutput out=sue.perFormSUE(pReader.ScaleUp(atParam));
+		this.anaCount.updateMeasurements(out,sue,null);
 		}
 	public Measurements getAnaCount() {
 		return anaCount;

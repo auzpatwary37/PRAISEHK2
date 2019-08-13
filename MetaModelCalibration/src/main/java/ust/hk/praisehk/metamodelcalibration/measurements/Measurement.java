@@ -10,6 +10,9 @@ import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.network.Link;
 import org.matsim.core.utils.collections.Tuple;
 
+import ust.hk.praisehk.metamodelcalibration.analyticalModel.AnalyticalModel;
+import ust.hk.praisehk.metamodelcalibration.analyticalModel.SUEModelOutput;
+
 public class Measurement {
 	
 	/**
@@ -19,7 +22,7 @@ public class Measurement {
 	public static final String transitLineAttributeName="TRANSIT_LINE";
 	public static final String transitRouteAttributeName="Transit_Route";
 	public static final String transitBoardingStopAtrributeName="transit_boarding_stop";
-	public static final String transitAlightingStopAttributeName="transit_alihting_stop";
+	public static final String transitAlightingStopAttributeName="transit_alighting_stop";
 	
 	private final Id<Measurement> id;
 	private Map<String,Object> attributes=new HashMap<>();
@@ -27,6 +30,7 @@ public class Measurement {
 	private Map<String,Double> volumes=new HashMap<>();
 	private static final Logger logger=Logger.getLogger(Measurement.class);
 	private Coord coord=null;
+	private final MeasurementType measurementType;
 	
 	public Coord getCoord() {
 		return coord;
@@ -36,10 +40,11 @@ public class Measurement {
 		this.coord = coord;
 	}
 
-	protected Measurement(String id, Map<String,Tuple<Double,Double>> timeBean) {
+	protected Measurement(String id, Map<String,Tuple<Double,Double>> timeBean,MeasurementType mType) {
 		this.id=Id.create(id, Measurement.class);
 		this.timeBean=timeBean;
 		this.attributes.put(linkListAttributeName, new ArrayList<Id<Link>>());
+		this.measurementType=mType;
 	}
 	
 	public void addVolume(String timeBeanId,double volume) {
@@ -78,7 +83,7 @@ public class Measurement {
 	}
 	
 	public Measurement clone() {
-		Measurement m=new Measurement(this.id.toString(),new HashMap<>(timeBean));
+		Measurement m=new Measurement(this.id.toString(),new HashMap<>(timeBean),this.measurementType);
 		for(String s:this.volumes.keySet()) {
 			m.addVolume(s, this.getVolumes().get(s));
 		}
@@ -101,37 +106,12 @@ public class Measurement {
 	 * is a Map<timeBeanId,Map<Id<Link>,Double>> containing link traffic volumes of all the time beans
 	 */
 	@SuppressWarnings("unchecked")
-	public void updateMeasurement(Map<String,Map<Id<Link>,Double>>linkVolumes) {
-		if(((ArrayList<Id<Link>>)this.attributes.get(linkListAttributeName)).isEmpty()) {
-			logger.warn("MeasurementId: "+this.getId().toString()+" LinkList is empty!!! creating linkId from measurement ID");
-			((ArrayList<Id<Link>>)this.attributes.get(linkListAttributeName)).add(Id.createLinkId(this.getId().toString()));
-		}
-		if(this.volumes.size()==0) {
-			logger.warn("MeasurementId: "+this.getId().toString()+" Volume is empty!!! Updating volume for all time beans");
-			for(String s: this.timeBean.keySet()) {
-				if(linkVolumes.containsKey(s)) {
-					this.volumes.put(s, 0.);
-				}
-			}
-		}
-		for(String s:volumes.keySet()) {
-			double volume=0;
-			for(Id<Link>linkId:((ArrayList<Id<Link>>)this.attributes.get(linkListAttributeName))) {
-				try {
-					if(linkVolumes.get(s)==null) {
-						throw new IllegalArgumentException("linkVolumes does not contain volume information");
-					}
-					if(linkVolumes.get(s).get(linkId)==null) {
-						throw new IllegalArgumentException("linkVolumes does not contain volume information");
-					}
-					volume+=linkVolumes.get(s).get(linkId);
-				}catch(Exception e) {
-					logger.error("Illegal Argument Excepton. Could not update measurements. Volumes are missing for measurement Id: "+this.getId()+" timeBeanId: "
-							+s+" linkId: "+linkId);
-				}
-				
-			}
-			this.volumes.put(s, volume);
-		}
+	public void updateMeasurement(SUEModelOutput modelOut,AnalyticalModel sue,Object otherDataContainer) {
+		this.measurementType.updateMeasurement(modelOut, sue, otherDataContainer,this);
 	}
+
+	public MeasurementType getMeasurementType() {
+		return measurementType;
+	}
+	
 }

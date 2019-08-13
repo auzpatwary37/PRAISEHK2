@@ -54,6 +54,7 @@ public class CNLTransitRoute implements AnalyticalModelTransitRoute{
 	private double routeWaitingTime=0;
 	private double routeFare=0;
 	private ArrayList<CNLTransitDirectLink> directLinks=new ArrayList<>();
+	private List<String>FareEntryAndExit=new ArrayList<>(); 
 	private ArrayList<CNLTransitTransferLink> transferLinks=new ArrayList<>();
 	private Map<Id<TransitLink>, TransitLink> trLinks=new HashMap<>();
 	private Map<String,Double> routeCapacity=new HashMap<>();
@@ -142,6 +143,7 @@ public class CNLTransitRoute implements AnalyticalModelTransitRoute{
 			this.trLinks.put(this.directLinks.get(i).getTrLinkId(), this.directLinks.get(i));
 			this.trLinks.put(this.transferLinks.get(i+1).getTrLinkId(),this.transferLinks.get(i+1));
 		}
+		this.calcFareEntryAndExitLinks();
 	}
 	
 	public CNLTransitRoute(ArrayList<CNLTransitTransferLink> transferLinks,ArrayList<CNLTransitDirectLink>dlink,Scenario scenario,TransitSchedule ts,
@@ -157,7 +159,7 @@ public class CNLTransitRoute implements AnalyticalModelTransitRoute{
 			this.trLinks.put(this.directLinks.get(i).getTrLinkId(), this.directLinks.get(i));
 			this.trLinks.put(this.transferLinks.get(i+1).getTrLinkId(),this.transferLinks.get(i+1));
 		}
-		
+		this.calcFareEntryAndExitLinks();
 	}
 	
 	@Override
@@ -197,59 +199,72 @@ public class CNLTransitRoute implements AnalyticalModelTransitRoute{
 
 	@Override
 	public double getFare(TransitSchedule ts, Map<String, FareCalculator> farecalc) {
-		if(ts==null) {
-			ts=this.transitSchedule;
-		}
-		if(this.routeFare!=0) {
-			return this.routeFare;
-		}
+//		if(ts==null) {
+//			ts=this.transitSchedule;
+//		}
+//		if(this.routeFare!=0) {
+//			return this.routeFare;
+//		}
 		this.routeFare=0;
-		String StartStopIdTrain=null;
-		String EndStopIdTrain=null;
-		int k=0;
-		for(CNLTransitDirectLink dlink :this.directLinks) {
-			k++;
-			Id<TransitLine> tlineId=Id.create(dlink.getLineId(), TransitLine.class);
-			Id<TransitRoute> trouteId=Id.create(dlink.getRouteId(), TransitRoute.class);
-			
-			
-			//Handling the train fare
-			if(ts.getTransitLines().get(tlineId).getRoutes().get(trouteId).getTransportMode().equals("train")) {
-				
-				if(StartStopIdTrain!=null) {//Train trip already started
-					EndStopIdTrain=dlink.getEndStopId();
-					if(k==this.directLinks.size()) {
-						MTRFareCalculator mtrFare=(MTRFareCalculator) farecalc.get("train");
-						this.routeFare=mtrFare.getMinFare(null, null, Id.create(StartStopIdTrain, TransitStopFacility.class),
-								Id.create(EndStopIdTrain, TransitStopFacility.class));
-					}
-				}else {//Train trip started in this link
-					StartStopIdTrain=dlink.getStartStopId();
-					EndStopIdTrain=dlink.getEndStopId();
-					if(k==this.directLinks.size()) {
-						MTRFareCalculator mtrFare=(MTRFareCalculator) farecalc.get("train");
-						this.routeFare=mtrFare.getMinFare(null, null, Id.create(StartStopIdTrain, TransitStopFacility.class),
-								Id.create(EndStopIdTrain, TransitStopFacility.class));
-					}
-				}
-			}else{//not a train trip leg, so two possibilities, train trip just ended in the previous trip or completely new trip
-				if(StartStopIdTrain!=null) {//train trip just ended, the fare will be added.
-					MTRFareCalculator mtrFare=(MTRFareCalculator) farecalc.get("train");
-					this.routeFare+=mtrFare.getMinFare(null, null, Id.create(StartStopIdTrain, TransitStopFacility.class),
-							Id.create(EndStopIdTrain, TransitStopFacility.class));
-					StartStopIdTrain=null;
-					EndStopIdTrain=null;
-					//now bus fare of the current trip is added	
-					TransitRoute tr=ts.getTransitLines().get(Id.create(dlink.getLineId(),TransitLine.class)).getRoutes().get(Id.create(dlink.getRouteId(),TransitRoute.class));
-					this.routeFare+=farecalc.get(tr.getTransportMode()).getFares(tr.getId(), Id.create(dlink.getLineId(),TransitLine.class), 
-							Id.create(dlink.getStartStopId(), TransitStopFacility.class), Id.create(dlink.getEndStopId(), TransitStopFacility.class)).get(0);
-				}else {//only bus fare is added
-					TransitRoute tr=ts.getTransitLines().get(Id.create(dlink.getLineId(),TransitLine.class)).getRoutes().get(Id.create(dlink.getRouteId(),TransitRoute.class));
-					this.routeFare+=farecalc.get(tr.getTransportMode()).getFares(tr.getId(), Id.create(dlink.getLineId(),TransitLine.class), 
-							Id.create(dlink.getStartStopId(), TransitStopFacility.class), Id.create(dlink.getEndStopId(), TransitStopFacility.class)).get(0);
-				}
+//		String StartStopIdTrain=null;
+//		String EndStopIdTrain=null;
+//		int k=0;
+//		for(CNLTransitDirectLink dlink :this.directLinks) {
+//			k++;
+//			Id<TransitLine> tlineId=Id.create(dlink.getLineId(), TransitLine.class);
+//			Id<TransitRoute> trouteId=Id.create(dlink.getRouteId(), TransitRoute.class);
+//			
+//			
+//			//Handling the train fare
+//			if(ts.getTransitLines().get(tlineId).getRoutes().get(trouteId).getTransportMode().equals("train")) {
+//				
+//				if(StartStopIdTrain!=null) {//Train trip already started
+//					EndStopIdTrain=dlink.getEndStopId();
+//					if(k==this.directLinks.size()) {
+//						MTRFareCalculator mtrFare=(MTRFareCalculator) farecalc.get("train");
+//						this.routeFare=mtrFare.getMinFare(null, null, Id.create(StartStopIdTrain, TransitStopFacility.class),
+//								Id.create(EndStopIdTrain, TransitStopFacility.class));
+//					}
+//				}else {//Train trip started in this link
+//					StartStopIdTrain=dlink.getStartStopId();
+//					EndStopIdTrain=dlink.getEndStopId();
+//					if(k==this.directLinks.size()) {
+//						MTRFareCalculator mtrFare=(MTRFareCalculator) farecalc.get("train");
+//						this.routeFare=mtrFare.getMinFare(null, null, Id.create(StartStopIdTrain, TransitStopFacility.class),
+//								Id.create(EndStopIdTrain, TransitStopFacility.class));
+//					}
+//				}
+//			}else{//not a train trip leg, so two possibilities, train trip just ended in the previous trip or completely new trip
+//				if(StartStopIdTrain!=null) {//train trip just ended, the fare will be added.
+//					MTRFareCalculator mtrFare=(MTRFareCalculator) farecalc.get("train");
+//					this.routeFare+=mtrFare.getMinFare(null, null, Id.create(StartStopIdTrain, TransitStopFacility.class),
+//							Id.create(EndStopIdTrain, TransitStopFacility.class));
+//					StartStopIdTrain=null;
+//					EndStopIdTrain=null;
+//					//now bus fare of the current trip is added	
+//					TransitRoute tr=ts.getTransitLines().get(Id.create(dlink.getLineId(),TransitLine.class)).getRoutes().get(Id.create(dlink.getRouteId(),TransitRoute.class));
+//					this.routeFare+=farecalc.get(tr.getTransportMode()).getFares(tr.getId(), Id.create(dlink.getLineId(),TransitLine.class), 
+//							Id.create(dlink.getStartStopId(), TransitStopFacility.class), Id.create(dlink.getEndStopId(), TransitStopFacility.class)).get(0);
+//				}else {//only bus fare is added
+//					TransitRoute tr=ts.getTransitLines().get(Id.create(dlink.getLineId(),TransitLine.class)).getRoutes().get(Id.create(dlink.getRouteId(),TransitRoute.class));
+//					this.routeFare+=farecalc.get(tr.getTransportMode()).getFares(tr.getId(), Id.create(dlink.getLineId(),TransitLine.class), 
+//							Id.create(dlink.getStartStopId(), TransitStopFacility.class), Id.create(dlink.getEndStopId(), TransitStopFacility.class)).get(0);
+//				}
+//			}
+//		}
+//		
+		
+		for(String s:this.FareEntryAndExit) {
+			String[] part=s.split("___");
+			String mode=part[2];
+			if(mode.equals("train")) {
+				this.routeFare+=farecalc.get(mode).getFares(null, null, Id.create(part[0], TransitStopFacility.class), Id.create(part[1], TransitStopFacility.class)).get(0);
+			}else {
+				this.routeFare+=farecalc.get(mode).getFares(Id.create(part[4], TransitRoute.class), Id.create(part[3], TransitLine.class), Id.create(part[0], TransitStopFacility.class), Id.create(part[1], TransitStopFacility.class)).get(0);
 			}
 		}
+		
+		
 		return this.routeFare;
 	}
 
@@ -276,6 +291,44 @@ public class CNLTransitRoute implements AnalyticalModelTransitRoute{
 		return routeWaitingTime;
 	}
 	
+	private void calcFareEntryAndExitLinks() {
+		TransitSchedule ts=this.transitSchedule;
+		String StartStopIdTrain=null;
+		String EndStopIdTrain=null;
+		int k=0;
+		for(CNLTransitDirectLink dlink :this.directLinks) {
+			k++;
+			Id<TransitLine> tlineId=Id.create(dlink.getLineId(), TransitLine.class);
+			Id<TransitRoute> trouteId=Id.create(dlink.getRouteId(), TransitRoute.class);
+			
+			
+			//Handling the train fare
+			if(ts.getTransitLines().get(tlineId).getRoutes().get(trouteId).getTransportMode().equals("train")) {
+				
+				if(StartStopIdTrain!=null) {//Train trip already started
+					EndStopIdTrain=dlink.getEndStopId();
+					if(k==this.directLinks.size()) {
+						this.FareEntryAndExit.add(StartStopIdTrain+"___"+EndStopIdTrain);
+					}
+				}else {//Train trip started in this link
+					StartStopIdTrain=dlink.getStartStopId();
+					EndStopIdTrain=dlink.getEndStopId();
+				}
+			}else{//not a train trip leg, so two possibilities, train trip just ended in the previous trip or completely new trip
+				if(StartStopIdTrain!=null) {//train trip just ended, the fare will be added.
+					this.FareEntryAndExit.add(StartStopIdTrain+"___"+EndStopIdTrain+"___"+"train");
+					StartStopIdTrain=null;
+					EndStopIdTrain=null;
+					//now bus fare of the current trip is added	
+					TransitRoute tr=ts.getTransitLines().get(Id.create(dlink.getLineId(),TransitLine.class)).getRoutes().get(Id.create(dlink.getRouteId(),TransitRoute.class));
+					this.FareEntryAndExit.add(StartStopIdTrain+"___"+EndStopIdTrain+"___"+tr.getTransportMode()+"___"+dlink.getLineId()+"___"+tr.getId());
+				}else {//only bus fare is added
+					TransitRoute tr=ts.getTransitLines().get(Id.create(dlink.getLineId(),TransitLine.class)).getRoutes().get(Id.create(dlink.getRouteId(),TransitRoute.class));
+					this.FareEntryAndExit.add(StartStopIdTrain+"___"+EndStopIdTrain+"___"+tr.getTransportMode()+"___"+dlink.getLineId()+"___"+tr.getId());
+				}
+			}
+		}
+	}
 	
 	/**
 	 * Convenient method to break down route description
@@ -388,6 +441,10 @@ public class CNLTransitRoute implements AnalyticalModelTransitRoute{
 			physicalLinks.addAll(tdl.getLinkList());
 		}
 		return new ArrayList<Id<Link>>(physicalLinks);
+	}
+
+	public List<String> getFareEntryAndExit() {
+		return FareEntryAndExit;
 	}
 	
 	

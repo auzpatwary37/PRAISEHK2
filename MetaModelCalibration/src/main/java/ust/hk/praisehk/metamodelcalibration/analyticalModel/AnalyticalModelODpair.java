@@ -63,7 +63,9 @@ public class AnalyticalModelODpair {
 	private Map<Id<AnalyticalModelTransitRoute>, Integer> transitRouteCounter=new HashMap<>();
 	private ArrayList<AnalyticalModelTransitRoute> finalTrRoutes;
 	private Map<String,HashMap<Id<AnalyticalModelRoute>,Double>> RouteUtility=new ConcurrentHashMap<>();
+	private Map<String,HashMap<Id<AnalyticalModelRoute>,Double>> RouteFlow=new ConcurrentHashMap<>();
 	private Map<String,HashMap<Id<AnalyticalModelTransitRoute>, Double>> TrRouteUtility=new ConcurrentHashMap<>();
+	private Map<String,HashMap<Id<AnalyticalModelTransitRoute>, Double>> TrRouteFlow=new ConcurrentHashMap<>();
 	private final Map<String, Tuple<Double,Double>>timeBean;
 	private Map<String, ArrayList<AnalyticalModelTransitRoute>> timeBasedTransitRoutes=new HashMap<>();
 	private String subPopulation;
@@ -105,7 +107,15 @@ public class AnalyticalModelODpair {
 				Id.create(this.dnode.getId().toString(), ActivityFacility.class),this.dcoord);
 		return DestinationFacility;
 	}
+	
 
+	public Map<String, HashMap<Id<AnalyticalModelRoute>, Double>> getRouteFlow() {
+		return RouteFlow;
+	}
+
+	public Map<String, HashMap<Id<AnalyticalModelTransitRoute>, Double>> getTrRouteFlow() {
+		return TrRouteFlow;
+	}
 
 	@Inject
 	/**
@@ -128,6 +138,9 @@ public class AnalyticalModelODpair {
 		for(String timeBeanId:this.timeBean.keySet()) {
 			this.RouteUtility.put(timeBeanId, new HashMap<Id<AnalyticalModelRoute>, Double>());
 			this.TrRouteUtility.put(timeBeanId, new HashMap<Id<AnalyticalModelTransitRoute>, Double>());
+			
+			this.RouteFlow.put(timeBeanId, new HashMap<Id<AnalyticalModelRoute>, Double>());
+			this.TrRouteFlow.put(timeBeanId, new HashMap<Id<AnalyticalModelTransitRoute>, Double>());
 		}
 		
 	}
@@ -143,6 +156,9 @@ public class AnalyticalModelODpair {
 		ODpairId=Id.create(onode.getId().toString()+"_"+dnode.getId().toString()+"_"+subPopulation, AnalyticalModelODpair.class);
 		this.timeBean=timeBean2;
 		for(String timeBeanId:this.timeBean.keySet()) {
+			this.RouteFlow.put(timeBeanId, new HashMap<Id<AnalyticalModelRoute>, Double>());
+			this.TrRouteFlow.put(timeBeanId, new HashMap<Id<AnalyticalModelTransitRoute>, Double>());
+			
 			this.RouteUtility.put(timeBeanId, new HashMap<Id<AnalyticalModelRoute>, Double>());
 			this.TrRouteUtility.put(timeBeanId, new HashMap<Id<AnalyticalModelTransitRoute>, Double>());
 		}

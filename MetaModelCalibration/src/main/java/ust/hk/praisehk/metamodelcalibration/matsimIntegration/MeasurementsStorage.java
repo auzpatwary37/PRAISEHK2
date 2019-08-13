@@ -20,8 +20,9 @@ import ust.hk.praisehk.metamodelcalibration.measurements.Measurements;
  */
 
 public class MeasurementsStorage {
-	private Map<String,Measurements> linkCounts=new ConcurrentHashMap<>();
+	private Map<String,Measurements> Counts=new ConcurrentHashMap<>();
 	private final Measurements calibrationMeasurements;
+	private boolean isParamSpecific=true;
 
 	public MeasurementsStorage(Measurements calibrationMeasurements) {
 		this.calibrationMeasurements=calibrationMeasurements;
@@ -29,8 +30,13 @@ public class MeasurementsStorage {
 
 
 	public Measurements getSimMeasurement(LinkedHashMap<String,Double>param){
-		return this.linkCounts.get(this.genearteParamId(param));
+		return this.Counts.get(this.genearteParamId(param));
 	}
+	
+	public Measurements getSimMeasurement(String key){
+		return this.Counts.get(key);
+	}
+	
 	public static String genearteParamId(LinkedHashMap<String,Double> params) {
 		String paramId="";
 		for(String s:params.keySet()) {
@@ -45,17 +51,15 @@ public class MeasurementsStorage {
 
 
 	public void storeMeasurements(LinkedHashMap<String,Double>params,Measurements simMeasurements) {
-		this.linkCounts.put(this.genearteParamId(params), simMeasurements);
+		this.Counts.put(this.genearteParamId(params), simMeasurements);
 	}
 	
-	public void storeMeasurements(LinkedHashMap<String,Double>params,Map<String,Map<Id<Link>,Double>>linkVolumes) {
-		Measurements simMeasurements=this.calibrationMeasurements.clone();
-		simMeasurements.updateMeasurements(linkVolumes);
-		this.linkCounts.put(this.genearteParamId(params), simMeasurements);
+	public void storeMeasurements(String key,Measurements simMeasurements) {
+		this.isParamSpecific=false;
+		this.Counts.put(key, simMeasurements);
 	}
-	public Set<Id<Link>> getLinksToCount() {
-		return calibrationMeasurements.getLinksToCount();
-	}
+	
+	
 	public Map<String, Tuple<Double, Double>> getTimeBean() {
 		return calibrationMeasurements.getTimeBean();
 	}
