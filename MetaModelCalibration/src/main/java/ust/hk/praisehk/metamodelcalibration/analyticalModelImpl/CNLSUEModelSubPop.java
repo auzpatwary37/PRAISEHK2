@@ -22,6 +22,7 @@ import ust.hk.praisehk.metamodelcalibration.analyticalModel.AnalyticalModelODpai
 import ust.hk.praisehk.metamodelcalibration.analyticalModel.SUEModelOutput;
 import ust.hk.praisehk.metamodelcalibration.analyticalModel.TransitLink;
 import ust.hk.praisehk.metamodelcalibration.calibrator.ParamReader;
+import ust.hk.praisehk.metamodelcalibration.measurements.Measurements;
 
 
 /**
@@ -187,9 +188,9 @@ public class CNLSUEModelSubPop extends CNLSUEModel{
 	
 	
 	@Override
-	public SUEModelOutput perFormSUE(LinkedHashMap<String, Double> noparams,LinkedHashMap<String,Double> anaParams) {
+	public Measurements perFormSUE(LinkedHashMap<String, Double> noparams,LinkedHashMap<String,Double> anaParams,Measurements originalMeasurements) {
 		LinkedHashMap<String,Double>params=this.pReader.ScaleUp(noparams);
-		return super.perFormSUE(params, anaParams);
+		return super.perFormSUE(params, anaParams,originalMeasurements);
 	}
 	
 	@Override

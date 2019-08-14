@@ -23,6 +23,7 @@ public class Measurement {
 	public static final String transitRouteAttributeName="Transit_Route";
 	public static final String transitBoardingStopAtrributeName="transit_boarding_stop";
 	public static final String transitAlightingStopAttributeName="transit_alighting_stop";
+	public static final String transitModeAttributeName="transitMode";
 	
 	private final Id<Measurement> id;
 	private Map<String,Object> attributes=new HashMap<>();

@@ -200,10 +200,9 @@ public class CalibratorImpl implements Calibrator {
 	public LinkedHashMap<String,Double> generateNewParam(AnalyticalModel sue,Measurements simMeasurements,SimAndAnalyticalGradientCalculator gradFactory, String metaModelType) {
 		this.updateSimMeasurements(simMeasurements);
 		this.sueAssignment=sue;
-		Measurements anaMeasurements=this.calibrationMeasurements.clone();
+		Measurements anaMeasurements=null;
 		if(!metaModelType.equals(MetaModel.LinearMetaModelName)&&!metaModelType.equals(MetaModel.QudaraticMetaModelName)) {
-			SUEModelOutput linkVolumes= sue.perFormSUE(this.pReader.ScaleUp(this.trialParam));
-			anaMeasurements.updateMeasurements(linkVolumes,sue,null);
+			anaMeasurements= sue.perFormSUE(this.pReader.ScaleUp(this.trialParam),this.calibrationMeasurements.clone());
 		}
 		new MeasurementsWriter(anaMeasurements).write(this.fileLoc+"anaMeasurement"+this.iterationNo+".xml");
 		new MeasurementsWriter(simMeasurements).write(this.fileLoc+"simMeasurement"+this.iterationNo+".xml");

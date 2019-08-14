@@ -152,6 +152,7 @@ public enum MeasurementType {
 			// Transit line and route id will be read
 			m.setAttribute(Measurement.transitLineAttributeName, Id.create(atr.getValue("LineId"),TransitLine.class));
 			m.setAttribute(Measurement.transitRouteAttributeName, Id.create(atr.getValue("RouteId"),TransitRoute.class));
+			m.setAttribute(Measurement.transitBoardingStopAtrributeName, atr.getValue("BoardingStop"));
 		}
 	},
 	
@@ -168,14 +169,25 @@ public enum MeasurementType {
 		public void writeAttribute(Element melement,Measurement m) {
 			// TransitBoarding and alighting stop will be written
 			melement.setAttribute("BoardingStop", m.getAttribute(Measurement.transitBoardingStopAtrributeName).toString());
-			melement.setAttribute("AllightingStop", m.getAttribute(Measurement.transitAlightingStopAttributeName).toString());
+			melement.setAttribute("AlightingStop", m.getAttribute(Measurement.transitAlightingStopAttributeName).toString());
+			melement.setAttribute("Mode", m.getAttribute(Measurement.transitModeAttributeName).toString());
+			
+			if(!m.getAttribute(Measurement.transitModeAttributeName).toString().equals("train")) {
+				melement.setAttribute("LineId", m.getAttribute(Measurement.transitLineAttributeName).toString());
+				melement.setAttribute("RouteId", m.getAttribute(Measurement.transitRouteAttributeName).toString());
+			}
 		}
 
 		@Override
 		public void parseAttribute(Attributes atr,Measurement m) {
 			// TransitBoarding and alighting stop will be written
-			m.setAttribute(Measurement.transitBoardingStopAtrributeName, Id.create(atr.getValue("BoardingStop"),TransitStop.class));
-			m.setAttribute("AllightingStop", m.getAttribute(Measurement.transitAlightingStopAttributeName).toString());
+			m.setAttribute(Measurement.transitBoardingStopAtrributeName, atr.getValue("BoardingStop"));
+			m.setAttribute(Measurement.transitAlightingStopAttributeName, atr.getValue("AlightingStop"));
+			m.setAttribute(Measurement.transitModeAttributeName, atr.getValue("Mode"));
+			if(!atr.getValue("Mode").equals("train")) {
+				m.setAttribute(Measurement.transitLineAttributeName, atr.getValue("LineId"));
+				m.setAttribute(Measurement.transitRouteAttributeName, atr.getValue("RouteId"));
+			}
 		}
 	},
 	

@@ -43,14 +43,9 @@ public class SimpleOptimizationFunction extends OptimizationFunction{
 		LinkedHashMap<String, Double>params=ScaleUp(x);
 		SUEModelOutput linkVolume=null;
 		this.getSUE().clearLinkCarandTransitVolume();
-		
+		Measurements anaMeasurements=null;
 		if(!this.metaModelType.equals(MetaModel.LinearMetaModelName) && !this.metaModelType.equals(MetaModel.QudaraticMetaModelName)) {
-			linkVolume=this.getSUE().perFormSUE(this.pReader.ScaleUp(new LinkedHashMap<>(params)));
-		}
-		
-		Measurements anaMeasurements=this.getRealData().clone();
-		if(linkVolume!=null) {
-			anaMeasurements.updateMeasurements(linkVolume,this.getSUE(),null);
+			anaMeasurements=this.getSUE().perFormSUE(this.pReader.ScaleUp(new LinkedHashMap<>(params)),this.getRealData());
 		}
 		
 		double objective=calcMetaModelObjective(anaMeasurements, params);

@@ -32,9 +32,7 @@ public class HessianObjective implements ObjectiveFunction {
 		public double valueAt(Point point) {
 			double[] x= point.toArray();
 			LinkedHashMap<String,Double> params=optimizer.getOptimizationFunction().ScaleUp(x);
-			Measurements anaData=this.realData.clone();
-			SUEModelOutput linkVolume=sueAssignment.perFormSUE(params);
-			anaData.updateMeasurements(linkVolume, this.sueAssignment,null);
+			Measurements anaData=sueAssignment.perFormSUE(params,this.realData.clone());
 			double value=this.optimizer.getOptimizationFunction().calcMetaModelObjective(anaData, params);
 			return value;
 		}

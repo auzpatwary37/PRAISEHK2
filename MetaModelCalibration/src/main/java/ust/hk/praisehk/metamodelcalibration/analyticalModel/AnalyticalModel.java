@@ -34,9 +34,15 @@ public interface AnalyticalModel {
 	 * this can be single or multi-modal Assignment, but it will take calibration parameters and perform a SUE Assignment
 	 * using the supplied parameters.
 	 */
-	public SUEModelOutput perFormSUE(LinkedHashMap<String, Double> params);
+//	@Deprecated
+//	public SUEModelOutput perFormSUE(LinkedHashMap<String, Double> params);
 	
-	public SUEModelOutput perFormSUE(LinkedHashMap<String, Double> params,LinkedHashMap<String, Double> anaParams);
+	public Measurements perFormSUE(LinkedHashMap<String, Double> params,Measurements originalMeasurements);
+	
+//	@Deprecated
+//	public SUEModelOutput perFormSUE(LinkedHashMap<String, Double> params,LinkedHashMap<String, Double> anaParams);
+	
+	public Measurements perFormSUE(LinkedHashMap<String, Double> params,LinkedHashMap<String, Double> anaParams,Measurements originalMeasurements);
 	
 	public void clearLinkCarandTransitVolume();
 	
