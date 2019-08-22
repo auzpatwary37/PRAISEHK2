@@ -43,15 +43,15 @@ public class AnaModelControlerListener implements StartupListener,BeforeMobsimLi
 	private LinkCountEventHandler pcuVolumeCounter;
 	@Inject
 	private AverageOccupancyEventHandler occupancyCalculator;
-	
+	@Inject
+	private SmartCardEntryAndExitEventHandler sc;
 	@Inject
 	private TravelTimeEventHandler travelTimeCalculator;
 	
 	private MeasurementsStorage storage;
 	@Inject
 	private @Named("CurrentParam") paramContainer currentParam;
-	@Inject 
-	private TransitFareHandler fareHandler;
+	
 	
 	private @Named("Output Measurements") Measurements outputMeasurements;
 	
@@ -87,6 +87,7 @@ public class AnaModelControlerListener implements StartupListener,BeforeMobsimLi
 		this.pcuVolumeCounter.resetLinkCount();
 		this.occupancyCalculator.reset();
 		this.travelTimeCalculator.reset();
+		this.sc.reset(event.getIteration());
 	}
 	
 
