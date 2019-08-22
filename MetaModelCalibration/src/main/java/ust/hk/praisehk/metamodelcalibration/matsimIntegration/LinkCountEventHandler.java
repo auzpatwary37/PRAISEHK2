@@ -23,6 +23,8 @@ import org.matsim.vehicles.Vehicle;
 
 import com.google.inject.Inject;
 
+import ust.hk.praisehk.metamodelcalibration.measurements.Measurement;
+import ust.hk.praisehk.metamodelcalibration.measurements.MeasurementType;
 import ust.hk.praisehk.metamodelcalibration.measurements.Measurements;
 
 
@@ -33,19 +35,22 @@ public class LinkCountEventHandler implements LinkEnterEventHandler, TransitDriv
 	private Map<String,Map<Id<Link>,List<Id<Vehicle>>>> Vehicles=new ConcurrentHashMap<>();
 	private Map<Id<Vehicle>,Double> transitVehicles=new ConcurrentHashMap<>();
 	private final Map<String, Tuple<Double,Double>> timeBean;
-	private Measurements calibrationMeasurements;
+	private Measurements outputMeasurements;
 	
 	@Inject
 	private Scenario scenario;
 	
 	@Inject
-	public LinkCountEventHandler(Measurements calibrationMeasurements) {
-		this.timeBean=calibrationMeasurements.getTimeBean();
-		this.calibrationMeasurements=calibrationMeasurements;
+	public LinkCountEventHandler(Measurements outputMeasurements) {
+		this.timeBean=outputMeasurements.getTimeBean();
+		this.outputMeasurements=outputMeasurements;
+		
+		
+		
 		for(String timeBeanId:this.timeBean.keySet()) {
 			linkCounts.put(timeBeanId,new ConcurrentHashMap<Id<Link>, Double>());
 			Vehicles.put(timeBeanId, new ConcurrentHashMap<Id<Link>, List<Id<Vehicle>>>());
-			for(Id<Link> linkId:this.calibrationMeasurements.getLinksToCount()) {
+			for(Id<Link> linkId:this.outputMeasurements.getLinksToCount()) {
 				linkCounts.get(timeBeanId).put(linkId, 0.0);
 				Vehicles.get(timeBeanId).put(linkId, Collections.synchronizedList(new ArrayList<Id<Vehicle>>()));
 			}
@@ -53,7 +58,7 @@ public class LinkCountEventHandler implements LinkEnterEventHandler, TransitDriv
 		
 	}
 	
-	public Map<String,Map<Id<Link>,Double>> geenerateLinkCounts(){
+	public Measurements geenerateLinkCounts(){
 		for(String timeBeanId:this.timeBean.keySet()) {
 			for(Id<Link> LinkId:linkCounts.get(timeBeanId).keySet()) {
 				double totalVehicle=0;
@@ -68,7 +73,19 @@ public class LinkCountEventHandler implements LinkEnterEventHandler, TransitDriv
 				linkCounts.get(timeBeanId).put(LinkId,totalVehicle);
 			}
 		}
-		return linkCounts;
+		
+		for(Measurement m:this.outputMeasurements.getMeasurementsByType().get(MeasurementType.linkVolume)) {
+			ArrayList<Id<Link>> linkIds=(ArrayList<Id<Link>>)m.getAttribute(Measurement.linkListAttributeName);
+			for(String timeId:m.getVolumes().keySet()) {
+				double count=0;
+				for(Id<Link> linkId:linkIds) {
+					count+=linkCounts.get(timeId).get(linkId);
+				}
+				m.addVolume(timeId, count);
+			}
+		}
+		
+		return this.outputMeasurements;
 	}
 	
 	
@@ -76,7 +93,8 @@ public class LinkCountEventHandler implements LinkEnterEventHandler, TransitDriv
 	public void handleEvent(LinkEnterEvent event) {
 	
 		int time=(int) event.getTime();
-		if(time>=86400) {time=86400;}
+		if(time>86400) {time=time-86400;}
+		else if(time==0) {time=1;}
 		String timeId=null;
 		for(String s:this.timeBean.keySet()) {
 			if(time>this.timeBean.get(s).getFirst() && time<=timeBean.get(s).getSecond()) {
@@ -111,7 +129,7 @@ public class LinkCountEventHandler implements LinkEnterEventHandler, TransitDriv
 		for(String timeBeanId:this.timeBean.keySet()) {
 			linkCounts.put(timeBeanId,new ConcurrentHashMap<Id<Link>, Double>());
 			Vehicles.put(timeBeanId, new ConcurrentHashMap<Id<Link>, List<Id<Vehicle>>>());
-			for(Id<Link> linkId:this.calibrationMeasurements.getLinksToCount()) {
+			for(Id<Link> linkId:this.outputMeasurements.getLinksToCount()) {
 				linkCounts.get(timeBeanId).put(linkId, 0.0);
 				Vehicles.get(timeBeanId).put(linkId, Collections.synchronizedList(new ArrayList<Id<Vehicle>>()));
 			}

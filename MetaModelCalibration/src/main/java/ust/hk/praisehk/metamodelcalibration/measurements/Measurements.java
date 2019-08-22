@@ -90,11 +90,12 @@ public class Measurements {
 	 * Will return a set containing all the links to count volume for 
 	 * @return
 	 */
+	@Deprecated
 	@SuppressWarnings("unchecked")
 	public Set<Id<Link>> getLinksToCount(){
 		Set<Id<Link>>linkSet=new HashSet<>();
 		
-		for(Measurement m: this.measurements.values()) {
+		for(Measurement m: this.measurementsByType.get(MeasurementType.linkVolume)) {
 			for(Id<Link>lId:(ArrayList<Id<Link>>)m.getAttribute(m.linkListAttributeName)) {
 				linkSet.add(lId);
 			}
@@ -147,5 +148,20 @@ public class Measurements {
 		return measurementsByType;
 	}
 	
+	public void resetMeasurements() {
+		for(Measurement m:this.measurements.values()) {
+			for(String s:m.getVolumes().keySet()) {
+				m.addVolume(s, 0);
+			}
+		}
+	}
+	
+	public void resetMeasurementsByType(MeasurementType type) {
+		for(Measurement m:this.measurementsByType.get(type)) {
+			for(String s:m.getVolumes().keySet()) {
+				m.addVolume(s, 0);
+			}
+		}
+	}
 	
 }

@@ -3,6 +3,7 @@ package ust.hk.praisehk.metamodelcalibration.measurements;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.log4j.Logger;
 import org.matsim.api.core.v01.Coord;
@@ -28,7 +29,7 @@ public class Measurement {
 	private final Id<Measurement> id;
 	private Map<String,Object> attributes=new HashMap<>();
 	private final Map<String,Tuple<Double,Double>> timeBean;
-	private Map<String,Double> volumes=new HashMap<>();
+	private Map<String,Double> volumes=new ConcurrentHashMap<>();
 	private static final Logger logger=Logger.getLogger(Measurement.class);
 	private Coord coord=null;
 	private final MeasurementType measurementType;

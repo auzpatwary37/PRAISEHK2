@@ -1,13 +1,10 @@
 package ust.hk.praisehk.metamodelcalibration.matsimIntegration;
 
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.Scenario;
-import org.matsim.api.core.v01.network.Link;
 import org.matsim.core.api.experimental.events.EventsManager;
 import org.matsim.core.controler.events.AfterMobsimEvent;
 import org.matsim.core.controler.events.BeforeMobsimEvent;
@@ -24,11 +21,10 @@ import com.google.inject.Inject;
 import com.google.inject.name.Named;
 
 import dynamicTransitRouter.fareCalculators.FareCalculator;
+import transitCalculatorsWithFare.TransitFareHandler;
 import ust.hk.praisehk.metamodelcalibration.analyticalModel.AnalyticalModel;
 import ust.hk.praisehk.metamodelcalibration.measurements.Measurement;
-import ust.hk.praisehk.metamodelcalibration.measurements.MeasurementType;
 import ust.hk.praisehk.metamodelcalibration.measurements.Measurements;
-import ust.hk.praisehk.metamodelcalibration.measurements.MeasurementsWriter;
 
 
 
@@ -45,15 +41,25 @@ public class AnaModelControlerListener implements StartupListener,BeforeMobsimLi
 	private String fileLoc;
 	@Inject
 	private LinkCountEventHandler pcuVolumeCounter;
+	@Inject
+	private AverageOccupancyEventHandler occupancyCalculator;
+	
+	@Inject
+	private TravelTimeEventHandler travelTimeCalculator;
+	
 	private MeasurementsStorage storage;
 	@Inject
 	private @Named("CurrentParam") paramContainer currentParam;
+	@Inject 
+	private TransitFareHandler fareHandler;
+	
+	private @Named("Output Measurements") Measurements outputMeasurements;
 	
 	private int maxIter;
 	private final Map<String, FareCalculator> farecalc;
 	private int AverageCountOverNoOfIteration=5;
 	private boolean shouldAverageOverIteration=true;
-	private Map<String, Map<Id<Link>, Double>> counts=null;
+	private Map<Id<Measurement>, Map<String, Double>> counts=null;
 	
 	@Inject
 	public AnaModelControlerListener(Scenario scenario,AnalyticalModel sueAssignment, 
@@ -73,13 +79,14 @@ public class AnaModelControlerListener implements StartupListener,BeforeMobsimLi
 	
 	@Override
 	public void notifyStartup(StartupEvent event) {
-		this.eventsManager.addHandler(pcuVolumeCounter);
 		this.maxIter=event.getServices().getConfig().controler().getLastIteration();
 		}
 	
 	@Override
 	public void notifyBeforeMobsim(BeforeMobsimEvent event) {
 		this.pcuVolumeCounter.resetLinkCount();
+		this.occupancyCalculator.reset();
+		this.travelTimeCalculator.reset();
 	}
 	
 
@@ -87,60 +94,44 @@ public class AnaModelControlerListener implements StartupListener,BeforeMobsimLi
 		if(this.shouldAverageOverIteration) {
 			int counter=event.getIteration();
 			if(counter>this.maxIter-5) {
+				this.pcuVolumeCounter.geenerateLinkCounts();
+				this.occupancyCalculator.getOutputMeasurements();
+				this.travelTimeCalculator.getUpdatedMeasurements();
+				//this.fareHandler.getUpdatedMeasurements();
 				if(this.counts==null) {
-					counts=new HashMap<>(this.pcuVolumeCounter.geenerateLinkCounts());
+					counts=new HashMap<>();
+					for(Measurement m:this.outputMeasurements.getMeasurements().values()) {
+						counts.put(m.getId(), new HashMap<>());
+						for(String timeId:m.getVolumes().keySet()) {
+							counts.get(m.getId()).put(timeId, m.getVolumes().get(timeId));
+						}
+					}
 				}else {
-					Map<String,Map<Id<Link>,Double>> newcounts=this.pcuVolumeCounter.geenerateLinkCounts();
-					for(String s:this.counts.keySet()) {
-						for(Id<Link> lId:this.counts.get(s).keySet()) {
-							counts.get(s).put(lId, counts.get(s).get(lId)+newcounts.get(s).get(lId));
+					//Map<String,Map<Id<Link>,Double>> newcounts=this.pcuVolumeCounter.geenerateLinkCounts();
+					for(Measurement m:this.outputMeasurements.getMeasurements().values()) {
+						for(String timeId:m.getVolumes().keySet()) {
+							counts.get(m.getId()).put(timeId, counts.get(m.getId()).get(timeId)+m.getVolumes().get(timeId));
 						}
 					}
 				}
 			}
 			if(counter==this.maxIter) {
-				for(String s:this.counts.keySet()) {
-					for(Id<Link> lId:this.counts.get(s).keySet()) {
-						counts.get(s).put(lId, counts.get(s).get(lId)/this.AverageCountOverNoOfIteration);
-					}
-				}
-				Measurements m=storage.getCalibrationMeasurements().clone();
-				//m.updateMeasurements(counts);
-				//Update the measurements here for different types of measurement
-				//this one is for link volumes
-				List<Measurement> linkVolumeMeasurements=m.getMeasurementsByType().get(MeasurementType.linkVolume);
-				for(Measurement mm:linkVolumeMeasurements) {
-					for(String timeId:mm.getVolumes().keySet()) {
-						double volume=0;
-						for(Id<Link>linkId:(ArrayList<Id<Link>>)mm.getAttribute(Measurement.linkListAttributeName)) {
-							volume+=counts.get(timeId).get(linkId);
-						}
-						mm.addVolume(timeId, volume);
+				for(Measurement m:this.outputMeasurements.getMeasurements().values()) {
+					for(String timeId:m.getVolumes().keySet()) {
+						m.addVolume(timeId, counts.get(m.getId()).get(timeId)/this.AverageCountOverNoOfIteration);
 					}
 				}
 				//new MeasurementsWriter(m).write();
-				this.storage.storeMeasurements(this.currentParam.getParam(), m);
+				this.storage.storeMeasurements(this.currentParam.getParam(), this.outputMeasurements);
 			}
 		}else {
 		int counter=event.getIteration();
 			if(counter==this.maxIter) {
-				Measurements m=storage.getCalibrationMeasurements().clone();
-				Map<String,Map<Id<Link>,Double>>counts= this.pcuVolumeCounter.geenerateLinkCounts();
-				//m.updateMeasurements(counts);
-				//Update the measurements here for different types of measurement
-				//this one is for link volumes
-				List<Measurement> linkVolumeMeasurements=m.getMeasurementsByType().get(MeasurementType.linkVolume);
-				for(Measurement mm:linkVolumeMeasurements) {
-					for(String timeId:mm.getVolumes().keySet()) {
-						double volume=0;
-						for(Id<Link>linkId:(ArrayList<Id<Link>>)mm.getAttribute(Measurement.linkListAttributeName)) {
-							volume+=counts.get(timeId).get(linkId);
-						}
-						mm.addVolume(timeId, volume);
-					}
-				}
-				//m.writeCSVMeasurements(fileLoc);
-				this.storage.storeMeasurements(this.currentParam.getParam(), m);
+				this.pcuVolumeCounter.geenerateLinkCounts();
+				this.occupancyCalculator.getOutputMeasurements();
+				this.travelTimeCalculator.getUpdatedMeasurements();
+				this.outputMeasurements.writeCSVMeasurements(fileLoc);
+				this.storage.storeMeasurements(this.currentParam.getParam(), this.outputMeasurements);
 			}
 		}
 		
