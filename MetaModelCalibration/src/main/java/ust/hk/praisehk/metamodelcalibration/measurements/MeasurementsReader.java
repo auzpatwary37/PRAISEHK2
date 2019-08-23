@@ -39,7 +39,12 @@ public class MeasurementsReader extends DefaultHandler {
 				this.m=Measurements.createMeasurements(this.timeBeans);
 			}
 			this.mId=Id.create(attributes.getValue("MeasurementId"), Measurement.class);
-			MeasurementType mType=MeasurementType.valueOf(attributes.getValue("MeasurementType"));
+			MeasurementType mType;
+			if(attributes.getValue("MeasurementType")!=null) {
+				mType=MeasurementType.valueOf(attributes.getValue("MeasurementType"));
+			}else {
+				mType=MeasurementType.linkVolume;
+			}
 			this.m.createAnadAddMeasurement(mId.toString(),mType);
 		}
 		
