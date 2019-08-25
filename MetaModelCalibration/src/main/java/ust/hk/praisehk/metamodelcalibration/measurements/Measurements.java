@@ -91,7 +91,6 @@ public class Measurements {
 	 * @return
 	 */
 	@Deprecated
-	@SuppressWarnings("unchecked")
 	public Set<Id<Link>> getLinksToCount(){
 		Set<Id<Link>>linkSet=new HashSet<>();
 		

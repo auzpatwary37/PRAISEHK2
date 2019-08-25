@@ -61,11 +61,7 @@
 
 
 	<dependencies>
-		<dependency>
-		   <groupId>org.matsim</groupId>
-		   <artifactId>matsim</artifactId>
-		   <version>11.0</version>
-		</dependency>
+		
 		
 		<!-- https://mvnrepository.com/artifact/org.matsim.contrib/signals -->
 		<dependency>
@@ -156,14 +152,6 @@
 			<type>pom</type>
 		</dependency>
 
-		
-		<dependency>
-			<groupId>MATSim-HK</groupId>
-			<artifactId>MATSim-HK</artifactId>
-			<version>null</version>
-			<scope>system</scope>
-			<systemPath>${project.basedir}/src/main/resources/MATSim-HK-0.11.0.jar</systemPath>
-		</dependency>
 		
 
 		<dependency>

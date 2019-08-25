@@ -208,7 +208,7 @@ public abstract class AnalyticalModelODpairs {
 			Thread[] threads=new Thread[personList.size()];
 			for(int i=0;i<personList.size();i++) {
 				threadrun.add(new tripsCreatorFromPlan(personList.get(i),this));
-				threadrun.get(i).setPersonsAttributes(this.population.getPersonAttributes());
+				//threadrun.get(i).setPersonsAttributes(this.population.getPersonAttributes());
 				threads[i]=new Thread(threadrun.get(i));
 			}
 			for(int i=0;i<personList.size();i++) {
@@ -227,9 +227,9 @@ public abstract class AnalyticalModelODpairs {
 				trips.addAll((ArrayList<Trip>)t.getTrips());
 			}
 		}else {
-			for (Id<Person> personId:population.getPersons().keySet()){
-				TripChain tripchain=this.getNewTripChain(population.getPersons().get(personId).getSelectedPlan());
-				String s=(String) this.population.getPersonAttributes().getAttribute(personId.toString(), "SUBPOP_ATTRIB_NAME");
+			for (Person person:population.getPersons().values()){
+				TripChain tripchain=this.getNewTripChain(person.getSelectedPlan());
+				String s=person.getAttributes().getAsMap().get("SUBPOP_ATTRIB_NAME").toString();
 				for(Trip t:(ArrayList<Trip>)tripchain.getTrips()) {
 					t.setSubPopulationName(s);
 				}
@@ -292,7 +292,7 @@ class tripsCreatorFromPlan implements Runnable {
 		}else {
 			for(Person p:this.Persons) {
 				TripChain tripchain=this.odPairs.getNewTripChain(p.getSelectedPlan());
-				String s=(String) this.personsAttributes.getAttribute(p.getId().toString(), "SUBPOP_ATTRIB_NAME");
+				String s=p.getAttributes().getAsMap().get("SUBPOP_ATTRIB_NAME").toString();
 				for(Trip t:(ArrayList<Trip>)tripchain.getTrips()) {
 					t.setSubPopulationName(s);
 				}
