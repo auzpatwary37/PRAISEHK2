@@ -57,11 +57,10 @@ public class SmartCardEntryAndExitEventHandler
 	private final Map<Id<Vehicle>, Id<TransitStopFacility>> vehicleAtFacility = new HashMap<>();
 	private final Map<Id<Person>, TripsDataForFareHandler> peopleTripData = new HashMap<>();
 
-	private final Map<Id<TransitLine>, TransitLine> transitLines;
 	
-	@Inject
+	
 	private Scenario scenario;
-	
+	private Map<Id<TransitLine>, TransitLine> transitLines;
 	
 	private Measurements templateMeasurements;
 	private Map<String,Measurement> smartCardEntry=new HashMap<>();
@@ -76,9 +75,9 @@ public class SmartCardEntryAndExitEventHandler
 	@Inject
 	private MeasurementsStorage storage; 
 
-	public SmartCardEntryAndExitEventHandler(Measurements outputMeasurements) {
-
-		this.transitLines = scenario.getTransitSchedule().getTransitLines();
+	@Inject
+	public SmartCardEntryAndExitEventHandler(@Named("Output Measurements") Measurements outputMeasurements,Scenario scneario) {
+		this.scenario=scneario;
 		this.templateMeasurements=outputMeasurements;
 		//for counting  please see here
 		if(this.templateMeasurements==null) {
@@ -104,8 +103,9 @@ public class SmartCardEntryAndExitEventHandler
 				key=m.getAttribute(Measurement.transitBoardingStopAtrributeName).toString()+"___"+m.getAttribute(Measurement.transitAlightingStopAttributeName).toString()+"___"
 						+m.getAttribute(Measurement.transitLineAttributeName)+"___"+m.getAttribute(Measurement.transitRouteAttributeName);
 			}
-			this.smartCardEntry.put(key, m);
+			this.smartCardEntryAndExit.put(key, m);
 		}
+		this.transitLines=this.scenario.getTransitSchedule().getTransitLines();
 		//--------------------------------------
 	}
 	
@@ -176,10 +176,11 @@ public class SmartCardEntryAndExitEventHandler
 						this.smartCardEntry.get(key).addVolume(timeId, oldVolume+1);
 					}
 				}
-				if(this.smartCardEntryAndExit.get(key)!=null) {
-					Double oldVolume=this.smartCardEntryAndExit.get(key).getVolumes().get(timeId);
+				String key1=tripsData.getLatestStartFacility().toString()+"___"+stopAt+"___"+vData.lineId.toString()+"___"+vData.routeId.toString();
+				if(this.smartCardEntryAndExit.get(key1)!=null) {
+					Double oldVolume=this.smartCardEntryAndExit.get(key1).getVolumes().get(timeId);
 					if(oldVolume!=null) {
-						this.smartCardEntryAndExit.get(key).addVolume(timeId, oldVolume+1);
+						this.smartCardEntryAndExit.get(key1).addVolume(timeId, oldVolume+1);
 					}
 				}
 				//----------------------------------------------
@@ -287,8 +288,8 @@ public class SmartCardEntryAndExitEventHandler
 				}
 				}
 				String key1=this.lastEntryStation.toString();
-				if(SmartCardEntryAndExitEventHandler.this.smartCardEntry.get(key)!=null) {
-				Double oldVolume1=SmartCardEntryAndExitEventHandler.this.smartCardEntry.get(key).getVolumes().get(timeId);
+				if(SmartCardEntryAndExitEventHandler.this.smartCardEntry.get(key1)!=null) {
+				Double oldVolume1=SmartCardEntryAndExitEventHandler.this.smartCardEntry.get(key1).getVolumes().get(timeId);
 				if(oldVolume1!=null) {
 					SmartCardEntryAndExitEventHandler.this.smartCardEntry.get(key1).addVolume(timeId, oldVolume1+1);
 				}

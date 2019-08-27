@@ -286,7 +286,8 @@ public class ParamReader {
 		if(params.containsKey(AnalyticalModel.CapacityMultiplierName)) {
 			configOut.qsim().setFlowCapFactor(params.get(AnalyticalModel.CapacityMultiplierName));
 		}else {
-			configOut.qsim().setFlowCapFactor(params.get("All "+AnalyticalModel.CapacityMultiplierName));
+			Double factor=params.get("All "+AnalyticalModel.CapacityMultiplierName);
+			configOut.qsim().setFlowCapFactor(factor);
 		}
 		return configOut;
 	}

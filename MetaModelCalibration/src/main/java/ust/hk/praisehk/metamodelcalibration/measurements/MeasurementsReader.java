@@ -46,6 +46,14 @@ public class MeasurementsReader extends DefaultHandler {
 				mType=MeasurementType.linkVolume;
 			}
 			this.m.createAnadAddMeasurement(mId.toString(),mType);
+			for(int i=0;i<attributes.getLength();i++) {
+				String attrName = attributes.getQName(i);
+                String attrVal = attributes.getValue(i);
+                if(!attrName.equals(Measurement.linkListAttributeName)) {
+                	this.m.getMeasurements().get(this.mId).setAttribute(attrName, attrVal);
+                }
+			}
+			
 		}
 		
 		if(qName.equalsIgnoreCase("Coord")) {

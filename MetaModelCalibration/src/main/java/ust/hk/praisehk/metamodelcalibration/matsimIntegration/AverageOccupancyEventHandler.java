@@ -116,12 +116,17 @@ public class AverageOccupancyEventHandler implements TransitDriverStartsEventHan
 
 	@Override
 	public void handleEvent(PersonLeavesVehicleEvent event) {
-		this.inVehiclePassengerCount.put(event.getVehicleId(), this.inVehiclePassengerCount.get(event.getVehicleId())-1);		
+		if(this.inVehiclePassengerCount.containsKey(event.getVehicleId())) {
+			this.inVehiclePassengerCount.put(event.getVehicleId(), this.inVehiclePassengerCount.get(event.getVehicleId())-1);	
+		}
 	}
 
 	@Override
 	public void handleEvent(PersonEntersVehicleEvent event) {
-		this.inVehiclePassengerCount.put(event.getVehicleId(), this.inVehiclePassengerCount.get(event.getVehicleId())+1);
+		if(this.inVehiclePassengerCount.containsKey(event.getVehicleId())) {
+			Integer oldVolume=this.inVehiclePassengerCount.get(event.getVehicleId());
+			this.inVehiclePassengerCount.put(event.getVehicleId(), oldVolume+1);
+		}
 	}
 
 	private String getTimeId(double time) {

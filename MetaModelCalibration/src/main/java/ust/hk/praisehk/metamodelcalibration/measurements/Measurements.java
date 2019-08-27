@@ -39,6 +39,9 @@ public class Measurements {
 	
 	private Measurements(Map<String,Tuple<Double,Double>> timeBean) {
 		this.timeBean=timeBean;
+		for(MeasurementType mt:MeasurementType.values()) {
+			this.measurementsByType.put(mt,new ArrayList<>());
+		}
 	}
 	
 	public static Measurements createMeasurements(Map<String,Tuple<Double,Double>> timeBean) {
@@ -58,6 +61,10 @@ public class Measurements {
 	
 	protected void addMeasurement(Measurement m) {
 		this.measurements.put(m.getId(), m);
+		if(!this.measurementsByType.containsKey(m.getMeasurementType())) {
+			this.measurementsByType.put(m.getMeasurementType(), new ArrayList<>());
+		}
+		this.measurementsByType.get(m.getMeasurementType()).add(m);
 	}
 
 	public Map<String, Tuple<Double, Double>> getTimeBean() {
@@ -77,6 +84,7 @@ public class Measurements {
 		for(Measurement mm: this.measurements.values()) {
 			m.addMeasurement(mm.clone());
 		}
+		
 		return m;
 	}
 	
@@ -93,7 +101,11 @@ public class Measurements {
 	@Deprecated
 	public Set<Id<Link>> getLinksToCount(){
 		Set<Id<Link>>linkSet=new HashSet<>();
-		
+		if(this.measurementsByType==null) {
+			System.out.println();
+		}else if(this.measurementsByType.get(MeasurementType.linkVolume)==null) {
+			System.out.println();
+		}
 		for(Measurement m: this.measurementsByType.get(MeasurementType.linkVolume)) {
 			for(Id<Link>lId:(ArrayList<Id<Link>>)m.getAttribute(m.linkListAttributeName)) {
 				linkSet.add(lId);
@@ -159,6 +171,14 @@ public class Measurements {
 		for(Measurement m:this.measurementsByType.get(type)) {
 			for(String s:m.getVolumes().keySet()) {
 				m.addVolume(s, 0);
+			}
+		}
+	}
+	
+	public void applyFator(Double factor) {
+		for(Measurement m:this.measurements.values()) {
+			for(String timeId:m.getVolumes().keySet()) {
+				m.addVolume(timeId, m.getVolumes().get(timeId)*factor);
 			}
 		}
 	}

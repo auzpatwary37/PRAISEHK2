@@ -64,7 +64,7 @@ public class TravelTimeEventHandler implements LinkEnterEventHandler, LinkLeaveE
 	@Override
 	public void handleEvent(LinkLeaveEvent event) {
 		Id<Link>linkId=event.getLinkId();
-		if(this.vehicleBuffer.containsKey(linkId)) {
+		if(this.vehicleBuffer.containsKey(linkId) && this.vehicleBuffer.get(linkId).containsKey(event.getVehicleId())) {
 			double timeLength=event.getTime()-this.vehicleBuffer.get(linkId).get(event.getVehicleId());
 			double middleTime=event.getTime()-timeLength/2;
 			String timeId=this.getTimeId(middleTime);

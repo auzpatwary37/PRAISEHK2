@@ -4,6 +4,7 @@ import java.util.LinkedHashMap;
 
 import org.matsim.core.controler.AbstractModule;
 
+import com.google.inject.Singleton;
 import com.google.inject.name.Names;
 
 import ust.hk.praisehk.metamodelcalibration.analyticalModel.AnalyticalModel;
@@ -39,7 +40,7 @@ public class AnaModelCalibrationModule extends AbstractModule{
 		LinkCountEventHandler lc=new LinkCountEventHandler(this.outputMeasurements);
 		AverageOccupancyEventHandler ao=new AverageOccupancyEventHandler(this.outputMeasurements);
 		TravelTimeEventHandler tt=new TravelTimeEventHandler(this.outputMeasurements);
-		SmartCardEntryAndExitEventHandler sc=new SmartCardEntryAndExitEventHandler(this.outputMeasurements);
+		//SmartCardEntryAndExitEventHandler sc=new SmartCardEntryAndExitEventHandler(this.outputMeasurements);
 		
 		bind(MeasurementsStorage.class).toInstance(this.storage);
 		bind(Measurements.class).annotatedWith(Names.named("Output Measurements")).toInstance(this.outputMeasurements);
@@ -52,8 +53,8 @@ public class AnaModelCalibrationModule extends AbstractModule{
 		bind(AverageOccupancyEventHandler.class).toInstance(ao);
 		this.addEventHandlerBinding().toInstance(tt);
 		bind(TravelTimeEventHandler.class).toInstance(tt);
-		this.addEventHandlerBinding().toInstance(sc);
-		bind(SmartCardEntryAndExitEventHandler.class).toInstance(sc);
+		this.addEventHandlerBinding().to(SmartCardEntryAndExitEventHandler.class).in(Singleton.class);
+		bind(SmartCardEntryAndExitEventHandler.class).in(Singleton.class);
 		bind(boolean.class).annotatedWith(Names.named("generateRoutesAndOD")).toInstance(this.generateRoutesAndOD);
 		bind (paramContainer.class).annotatedWith(Names.named("CurrentParam")).toInstance(this.currentParam);
 		bind(Measurements.class).annotatedWith(Names.named("CalibrationCounts")).toInstance(this.storage.getCalibrationMeasurements());

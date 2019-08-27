@@ -43,7 +43,7 @@ public class AnaModelControlerListener implements StartupListener,BeforeMobsimLi
 	private LinkCountEventHandler pcuVolumeCounter;
 	@Inject
 	private AverageOccupancyEventHandler occupancyCalculator;
-	@Inject
+
 	private SmartCardEntryAndExitEventHandler sc;
 	@Inject
 	private TravelTimeEventHandler travelTimeCalculator;
@@ -51,35 +51,37 @@ public class AnaModelControlerListener implements StartupListener,BeforeMobsimLi
 	private MeasurementsStorage storage;
 	@Inject
 	private @Named("CurrentParam") paramContainer currentParam;
+	@Inject
+	private EventsManager eventsManager;
 	
-	
+	@Inject
 	private @Named("Output Measurements") Measurements outputMeasurements;
 	
 	private int maxIter;
 	private final Map<String, FareCalculator> farecalc;
 	private int AverageCountOverNoOfIteration=5;
-	private boolean shouldAverageOverIteration=true;
+	private boolean shouldAverageOverIteration=false;
 	private Map<Id<Measurement>, Map<String, Double>> counts=null;
 	
 	@Inject
 	public AnaModelControlerListener(Scenario scenario,AnalyticalModel sueAssignment, 
-			Map<String,FareCalculator> farecalc,@Named("fileLoc") String fileLoc,@Named("generateRoutesAndOD") boolean generateRoutesAndOD, MeasurementsStorage storage){
+			Map<String,FareCalculator> farecalc,@Named("fileLoc") String fileLoc,@Named("generateRoutesAndOD") boolean generateRoutesAndOD, MeasurementsStorage storage,SmartCardEntryAndExitEventHandler sc){
 		this.SueAssignment=sueAssignment;
 		this.farecalc=farecalc;
 		this.scenario=scenario;
 		this.fileLoc=fileLoc;
 		this.generateOD=generateRoutesAndOD;
 		this.storage=storage;
+		this.sc=sc;
 	}
 	
-	@Inject
-	private EventsManager eventsManager;
-	
+
 	
 	
 	@Override
 	public void notifyStartup(StartupEvent event) {
 		this.maxIter=event.getServices().getConfig().controler().getLastIteration();
+		//eventsManager.addHandler(sc);
 		}
 	
 	@Override

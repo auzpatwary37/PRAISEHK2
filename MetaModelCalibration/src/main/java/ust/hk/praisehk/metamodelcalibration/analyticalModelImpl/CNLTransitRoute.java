@@ -308,7 +308,7 @@ public class CNLTransitRoute implements AnalyticalModelTransitRoute{
 				if(StartStopIdTrain!=null) {//Train trip already started
 					EndStopIdTrain=dlink.getEndStopId();
 					if(k==this.directLinks.size()) {
-						this.FareEntryAndExit.add(StartStopIdTrain+"___"+EndStopIdTrain);
+						this.FareEntryAndExit.add(StartStopIdTrain+"___"+EndStopIdTrain+"___"+"train");
 					}
 				}else {//Train trip started in this link
 					StartStopIdTrain=dlink.getStartStopId();
@@ -321,10 +321,10 @@ public class CNLTransitRoute implements AnalyticalModelTransitRoute{
 					EndStopIdTrain=null;
 					//now bus fare of the current trip is added	
 					TransitRoute tr=ts.getTransitLines().get(Id.create(dlink.getLineId(),TransitLine.class)).getRoutes().get(Id.create(dlink.getRouteId(),TransitRoute.class));
-					this.FareEntryAndExit.add(StartStopIdTrain+"___"+EndStopIdTrain+"___"+tr.getTransportMode()+"___"+dlink.getLineId()+"___"+tr.getId());
+					this.FareEntryAndExit.add(dlink.getStartStopId()+"___"+dlink.getEndStopId()+"___"+tr.getTransportMode()+"___"+dlink.getLineId()+"___"+tr.getId());
 				}else {//only bus fare is added
 					TransitRoute tr=ts.getTransitLines().get(Id.create(dlink.getLineId(),TransitLine.class)).getRoutes().get(Id.create(dlink.getRouteId(),TransitRoute.class));
-					this.FareEntryAndExit.add(StartStopIdTrain+"___"+EndStopIdTrain+"___"+tr.getTransportMode()+"___"+dlink.getLineId()+"___"+tr.getId());
+					this.FareEntryAndExit.add(dlink.getStartStopId()+"___"+dlink.getEndStopId()+"___"+tr.getTransportMode()+"___"+dlink.getLineId()+"___"+tr.getId());
 				}
 			}
 		}

@@ -249,7 +249,7 @@ public abstract class AnalyticalModelODpairs {
 				if (ODpairset.containsKey(ODId)){
 					ODpairset.get(ODId).addtrip(trip);
 				}else{
-					AnalyticalModelODpair odpair=this.getNewODPair(trip.getOriginNode(),trip.getDestinationNode(),odNetwork,this.timeBean,trip.getSubPopulationName());
+					AnalyticalModelODpair odpair=this.getNewODPair(trip.getOriginNode(),trip.getDestinationNode(),this.network,this.timeBean,trip.getSubPopulationName());
 					odpair.addtrip(trip);
 					ODpairset.put(trip.generateODpairId(odNetwork), odpair);
 				}
@@ -267,24 +267,24 @@ public abstract class AnalyticalModelODpairs {
 class tripsCreatorFromPlan implements Runnable {
 	private List<Person> Persons;
 	AnalyticalModelODpairs odPairs;
-	private ObjectAttributes personsAttributes=null;
+	//private ObjectAttributes personsAttributes=null;
 	private ArrayList<Trip> trips=new ArrayList<>();
 	public tripsCreatorFromPlan(List<Person> persons,AnalyticalModelODpairs odPairs) {
 		this.Persons=persons;
 		this.odPairs=odPairs;
 	}
 	
-	public ObjectAttributes getPersonsAttributes() {
-		return personsAttributes;
-	}
+//	public ObjectAttributes getPersonsAttributes() {
+//		return personsAttributes;
+//	}
 
-	public void setPersonsAttributes(ObjectAttributes personsAttributes) {
-		this.personsAttributes = personsAttributes;
-	}
+//	public void setPersonsAttributes(ObjectAttributes personsAttributes) {
+//		this.personsAttributes = personsAttributes;
+//	}
 	
 	@Override
 	public void run() {
-		if(personsAttributes==null) {
+		if(this.Persons.get(0).getAttributes().getAsMap().get("SUBPOP_ATTRIB_NAME")==null) {
 			for(Person p:this.Persons) {
 				TripChain tripchain=this.odPairs.getNewTripChain(p.getSelectedPlan());
 				trips.addAll( tripchain.getTrips());

@@ -609,6 +609,7 @@ public class AnalyticalModelODpair {
 	
 	public void calcAutoRoutePathSize() {
 		Map<Id<AnalyticalModelRoute>,Double> autoPathSize=new HashMap<>();
+		if(this.finalRoutes!=null) {
 		for(AnalyticalModelRoute r:this.finalRoutes) {
 			double ps=0;
 			for(Id<Link> lId:r.getLinkIds()) {
@@ -617,6 +618,7 @@ public class AnalyticalModelODpair {
 			}
 			autoPathSize.put(r.getRouteId(),ps);
 		}
+		}
 		this.autoPathSize=autoPathSize;
 	}
 	
@@ -624,6 +626,7 @@ public class AnalyticalModelODpair {
 		Map<String,Map<Id<AnalyticalModelTransitRoute>,Double>>trPathSize=new HashMap<>();
 		for(String timeBeanId:this.timeBean.keySet()) {
 			trPathSize.put(timeBeanId, new HashMap<>());
+			if(this.getTrRoutes()!=null) {
 			for(AnalyticalModelTransitRoute anaTr:this.getTrRoutes(timeBeanId)) {
 				double ps=0;
 				double routeDistance=anaTr.getRouteDistance(network);
@@ -632,6 +635,7 @@ public class AnalyticalModelODpair {
 					ps+=link.getLength()/(routeDistance*this.trPhysiscalLinkIncidence.get(linkId).size());
 				}
 				trPathSize.get(timeBeanId).put(anaTr.getTrRouteId(),ps);
+			}
 			}
 		}
 		this.trPathSize=trPathSize;

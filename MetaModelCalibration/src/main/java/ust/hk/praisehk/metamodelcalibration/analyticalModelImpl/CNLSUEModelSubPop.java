@@ -59,8 +59,8 @@ public class CNLSUEModelSubPop extends CNLSUEModel{
 //		Config odConfig=ConfigUtils.createConfig();
 //		odConfig.network().setInputFile("data/odNetwork.xml");
 		
-		Network odNetwork=NetworkUtils.readNetwork("data/odNetwork.xml");
-		this.getOdPairs().generateODpairsetSubPop(null);//This network has priority over the constructor network. This allows to use a od pair specific network 
+		Network odNetwork=NetworkUtils.readNetwork("data/tpusbNetwork.xml");
+		this.getOdPairs().generateODpairsetSubPop(odNetwork);//This network has priority over the constructor network. This allows to use a od pair specific network 
 		this.getOdPairs().generateRouteandLinkIncidence(0.);
 		for(String s:this.getTimeBeans().keySet()) {
 			this.getNetworks().put(s, new CNLNetwork(network));
@@ -80,7 +80,9 @@ public class CNLSUEModelSubPop extends CNLSUEModel{
 			for(Id<AnalyticalModelODpair> odId:this.getDemand().get(timeBeanId).keySet()) {
 				double totalDemand=this.getDemand().get(timeBeanId).get(odId);
 				this.getCarDemand().get(timeBeanId).put(odId, 0.5*totalDemand);
-				if(this.getOdPairs().getODpairset().get(odId).getSubPopulation().contains("GV")) {
+				
+				AnalyticalModelODpair odpair=this.getOdPairs().getODpairset().get(odId);
+				if(odpair.getSubPopulation().contains("GV")) {
 					this.getCarDemand().get(timeBeanId).put(odId, totalDemand);
 				}
 				//System.out.println();
@@ -106,7 +108,7 @@ public class CNLSUEModelSubPop extends CNLSUEModel{
 	private LinkedHashMap<String,Double>generateSubPopSpecificParam(LinkedHashMap<String,Double>originalparams,String subPopName){
 		LinkedHashMap<String,Double> specificParam=new LinkedHashMap<>();
 		for(String s:originalparams.keySet()) {
-			if(s.contains(subPopName)) {
+			if(s.contains(subPopName)||s.contains("All")) {
 				specificParam.put(s.split(" ")[1],originalparams.get(s));
 			}
 		}

@@ -29,6 +29,8 @@ import org.matsim.pt.transitSchedule.api.TransitSchedule;
 import org.matsim.vehicles.VehicleCapacity;
 import org.matsim.vehicles.Vehicles;
 
+import com.google.common.collect.Lists;
+
 import de.xypron.jcobyla.Cobyla;
 import de.xypron.jcobyla.CobylaExitStatus;
 import dynamicTransitRouter.fareCalculators.FareCalculator;
@@ -83,8 +85,8 @@ public class CNLSUEModel implements AnalyticalModel{
 		private double gammaMSA=.1;//parameter for decreasing MSA step size
 		
 		//other Parameters for the Calibration Process
-		private double tollerance=0.01;
-		private double tolleranceLink=0.1;
+		private double tollerance=1;
+		private double tolleranceLink=1;
 		//user input
 	
 		private Map<String, Tuple<Double,Double>> timeBeans;
@@ -474,7 +476,8 @@ public class CNLSUEModel implements AnalyticalModel{
 		
 		Map<String,Map<String,Double>>entryCount=new HashMap<>();//First string is lineid+routeid+entryStopId second string is volume key
 		for(Measurement m:this.measurementsToUpdate.getMeasurementsByType().get(MeasurementType.smartCardEntry)) {
-			String key=m.getAttribute(Measurement.transitLineAttributeName)+"___"+m.getAttribute(Measurement.transitRouteAttributeName+"___"+m.getAttribute(Measurement.transitBoardingStopAtrributeName));
+			String key=m.getAttribute(Measurement.transitLineAttributeName)+"___"+m.getAttribute(Measurement.transitRouteAttributeName)+"___"+m.getAttribute(Measurement.transitBoardingStopAtrributeName);
+			//System.out.println();
 			entryCount.put(key, new HashMap<>());
 			for(String s:m.getVolumes().keySet()) {
 				entryCount.get(key).put(s, 0.);
@@ -494,7 +497,7 @@ public class CNLSUEModel implements AnalyticalModel{
 		}
 		
 		for(Measurement m:this.measurementsToUpdate.getMeasurementsByType().get(MeasurementType.smartCardEntry)) {
-			String key=m.getAttribute(Measurement.transitLineAttributeName)+"___"+m.getAttribute(Measurement.transitRouteAttributeName+"___"+m.getAttribute(Measurement.transitBoardingStopAtrributeName));
+			String key=m.getAttribute(Measurement.transitLineAttributeName)+"___"+m.getAttribute(Measurement.transitRouteAttributeName)+"___"+m.getAttribute(Measurement.transitBoardingStopAtrributeName);
 			for(String timeBeanId:m.getVolumes().keySet()) {
 				m.addVolume(timeBeanId, entryCount.get(key).get(timeBeanId));
 			}
@@ -503,7 +506,7 @@ public class CNLSUEModel implements AnalyticalModel{
 		//Collect smart card entry and exit
 		Map<String,Map<String,Double>>entryAndExitCountBus=new HashMap<>();//First string is lineid+routeid+entryStopId second string is volume key
 		Map<String,Map<String,Double>>entryAndExitCountMTR=new HashMap<>();
-		for(Measurement m:this.measurementsToUpdate.getMeasurementsByType().get(MeasurementType.smartCardEntry)) {
+		for(Measurement m:this.measurementsToUpdate.getMeasurementsByType().get(MeasurementType.smartCardEntryAndExit)) {
 			String mode=m.getAttribute(Measurement.transitModeAttributeName).toString();
 			String key=null;
 			if(mode.equals("train")) {
@@ -538,6 +541,7 @@ public class CNLSUEModel implements AnalyticalModel{
 		
 		for(AnalyticalModelODpair odpair:this.odPairs.getODpairset().values()) {
 			for(String timeBeanId:this.timeBeans.keySet()) {
+				if(odpair.getTrRoutes(timeBeanId)!=null) {
 				for(AnalyticalModelTransitRoute tr:odpair.getTrRoutes(timeBeanId)) {
 					for(String key:entryAndExitCountMTR.keySet()) {
 						if(((CNLTransitRoute)tr).getFareEntryAndExit().contains(key)) {
@@ -545,7 +549,9 @@ public class CNLSUEModel implements AnalyticalModel{
 						}
 					}
 				}
+				}
 			}
+				
 		}
 		
 		for(Measurement m:this.measurementsToUpdate.getMeasurementsByType().get(MeasurementType.smartCardEntryAndExit)) {
@@ -633,6 +639,7 @@ public class CNLSUEModel implements AnalyticalModel{
 				//oldUtility.put(r.getRouteId(),this.getOdPairs().getODpairset().get(ODpairId).getRouteUtility(timeBeanId).get(r.getRouteId()));
 			}else {
 				u=0;
+				utility.put(r.getRouteId(), u);
 			}
 			//oldUtility.put(r.getRouteId(),this.odPairs.getODpairset().get(ODpairId).getRouteUtility(timeBeanId).get(r.getRouteId()));
 			odpair.updateRouteUtility(r.getRouteId(), u,timeBeanId);
@@ -796,22 +803,56 @@ public class CNLSUEModel implements AnalyticalModel{
 	 * @param anaParams 
 	 * @return
 	 */
-	protected HashMap<Id<Link>,Double> performCarNetworkLoading(String timeBeanId, double counter,LinkedHashMap<String,Double> params, LinkedHashMap<String, Double> anaParams){
-		HashMap<Id<Link>,Double> linkVolume=new HashMap<>();
-		for(Id<AnalyticalModelODpair> odpairId:this.getOdPairs().getODpairset().keySet()){
-			
-			if(this.getOdPairs().getODpairset().get(odpairId).getRoutes()!=null && this.getCarDemand().get(timeBeanId).get(odpairId)!=0) {
-				HashMap <Id<Link>,Double> ODvolume=this.NetworkLoadingCarSingleOD(odpairId,timeBeanId,counter,params,anaParams);
-				for(Id<Link>linkId:ODvolume.keySet()){
-					if(linkVolume.containsKey(linkId)){
-						linkVolume.put(linkId, linkVolume.get(linkId)+ODvolume.get(linkId));
+	protected Map<Id<Link>,Double> performCarNetworkLoading(String timeBeanId, double counter,LinkedHashMap<String,Double> params, LinkedHashMap<String, Double> anaParams){
+		Map<Id<Link>,Double> linkVolume=new HashMap<>();
+		boolean multiThreading =false;
+		if(multiThreading==true) {
+			List<List<AnalyticalModelODpair>>odpairLists= Lists.partition(new ArrayList<>(this.odPairs.getODpairset().values()),Runtime.getRuntime().availableProcessors()-2);
+			Thread[] threads=new Thread[odpairLists.size()];
+			CarNetworkLoadingRunnable[] carnls=new CarNetworkLoadingRunnable[odpairLists.size()];
+			int i=0;
+			for(List<AnalyticalModelODpair> odpairList:odpairLists) {
+				carnls[i]=new CarNetworkLoadingRunnable(timeBeanId,(int)counter,params,anaParams,odpairList);
+				threads[i]=new Thread(carnls[i]);
+				threads[i].start();
+				i++;
+			}
+
+			for(i=0;i<threads.length;i++) {
+				try {
+					threads[i].join();
+				} catch (InterruptedException e1) {
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
+				}
+			}
+
+			for(i=0;i<carnls.length;i++) {
+				for(Entry<Id<Link>,Double>link:carnls[i].getLinkVolume().entrySet()) {
+					if(linkVolume.containsKey(link.getKey())){
+						linkVolume.put(link.getKey(), linkVolume.get(link.getKey())+link.getValue());
 					}else{
-						linkVolume.put(linkId, ODvolume.get(linkId));
+						linkVolume.put(link.getKey(), link.getValue());
 					}
 				}
 			}
+		}else {
+			for(AnalyticalModelODpair e:this.getOdPairs().getODpairset().values()){
+				//this.getOdPairs().getODpairset().values().parallelStream().forEach((e)->{
+				if(e.getRoutes()!=null && this.getCarDemand().get(timeBeanId).get(e.getODpairId())!=0) {
+					HashMap <Id<Link>,Double> ODvolume=this.NetworkLoadingCarSingleOD(e.getODpairId(),timeBeanId,counter,params,anaParams);
+					for(Id<Link>linkId:ODvolume.keySet()){
+						if(linkVolume.containsKey(linkId)){
+							linkVolume.put(linkId, linkVolume.get(linkId)+ODvolume.get(linkId));
+						}else{
+							linkVolume.put(linkId, ODvolume.get(linkId));
+						}
+					}
+				}
+
+				//});
+			}
 		}
-		
 		return linkVolume;
 	}
 	
@@ -821,27 +862,143 @@ public class CNLSUEModel implements AnalyticalModel{
 	 * @param anaParams 
 	 * @return
 	 */
-	protected HashMap<Id<TransitLink>,Double> performTransitNetworkLoading(String timeBeanId,int counter, LinkedHashMap<String, Double> params, LinkedHashMap<String, Double> anaParams){
-		HashMap<Id<TransitLink>,Double> linkVolume=new HashMap<>();
-		for(Id<AnalyticalModelODpair> odpairId:this.getOdPairs().getODpairset().keySet()){
-			double totalDemand=this.getDemand().get(timeBeanId).get(odpairId);
-			double carDemand=this.getCarDemand().get(timeBeanId).get(odpairId);
-			if((totalDemand-carDemand)!=0) {
-				HashMap <Id<TransitLink>,Double> ODvolume=this.NetworkLoadingTransitSingleOD(odpairId,timeBeanId,counter,params,anaParams);
-				for(Id<TransitLink> linkId:ODvolume.keySet()){
-					if(linkVolume.containsKey(linkId)){
-						linkVolume.put(linkId, linkVolume.get(linkId)+ODvolume.get(linkId));
+	protected Map<Id<TransitLink>,Double> performTransitNetworkLoading(String timeBeanId,int counter, LinkedHashMap<String, Double> params, LinkedHashMap<String, Double> anaParams){
+		Map<Id<TransitLink>,Double> linkVolume=new ConcurrentHashMap<>();
+		boolean multiThreading =false;
+		if(multiThreading==true) {
+			List<List<AnalyticalModelODpair>>odpairLists= Lists.partition(new ArrayList<>(this.odPairs.getODpairset().values()),Runtime.getRuntime().availableProcessors()-2);
+			Thread[] threads=new Thread[odpairLists.size()];
+			TransitNetworkLoadingRunnable[] transitnls=new TransitNetworkLoadingRunnable[odpairLists.size()];
+			int i=0;
+			for(List<AnalyticalModelODpair> odpairList:odpairLists) {
+				transitnls[i]=new TransitNetworkLoadingRunnable(timeBeanId,(int)counter,params,anaParams,odpairList);
+				threads[i]=new Thread(transitnls[i]);
+				threads[i].start();
+				i++;
+			}
+
+			for(i=0;i<threads.length;i++) {
+				try {
+					threads[i].join();
+				} catch (InterruptedException e1) {
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
+				}
+			}
+
+			for(i=0;i<transitnls.length;i++) {
+				for(Entry<Id<TransitLink>,Double>link:transitnls[i].getLinkVolume().entrySet()) {
+					if(linkVolume.containsKey(link.getKey())){
+						linkVolume.put(link.getKey(), linkVolume.get(link.getKey())+link.getValue());
 					}else{
-						linkVolume.put(linkId, ODvolume.get(linkId));
+						linkVolume.put(link.getKey(), link.getValue());
+					}
+				}
+			}
+		}else {
+
+			for(AnalyticalModelODpair e:this.getOdPairs().getODpairset().values()){
+				//this.odPairs.getODpairset().values().parallelStream().forEach((e)->{
+				double totalDemand=this.getDemand().get(timeBeanId).get(e.getODpairId());
+				double carDemand=this.getCarDemand().get(timeBeanId).get(e.getODpairId());
+				if((totalDemand-carDemand)!=0) {
+					HashMap <Id<TransitLink>,Double> ODvolume=this.NetworkLoadingTransitSingleOD(e.getODpairId(),timeBeanId,counter,params,anaParams);
+					for(Id<TransitLink> linkId:ODvolume.keySet()){
+						if(linkVolume.containsKey(linkId)){
+							linkVolume.put(linkId, linkVolume.get(linkId)+ODvolume.get(linkId));
+						}else{
+							linkVolume.put(linkId, ODvolume.get(linkId));
+						}
 					}
 				}
 			}
 		}
+		//});
 		//System.out.println(linkVolume.size());
 		return linkVolume;
 	}
+	private class CarNetworkLoadingRunnable implements Runnable{
+		private final String timeBeanId;
+		private List<AnalyticalModelODpair> odpairs;
+		private Map<Id<Link>,Double> linkVolume=new HashMap<>();
+		private final LinkedHashMap<String,Double> params;
+		private final LinkedHashMap<String,Double> anaParams;
+		private final int counter;
+		
+		public CarNetworkLoadingRunnable(String timeBeanId,int counter, LinkedHashMap<String, Double> params, LinkedHashMap<String, Double> anaParams,List<AnalyticalModelODpair> odpairs) {
+			this.counter=counter;
+			this.params=params;
+			this.anaParams=anaParams;
+			this.timeBeanId=timeBeanId;
+			this.odpairs=odpairs;
+		}
+		
+		@Override
+		public void run() {
+			for(AnalyticalModelODpair e:this.odpairs){
+				//this.getOdPairs().getODpairset().values().parallelStream().forEach((e)->{
+				if(e.getRoutes()!=null && CNLSUEModel.this.getCarDemand().get(timeBeanId).get(e.getODpairId())!=0) {
+					HashMap <Id<Link>,Double> ODvolume=CNLSUEModel.this.NetworkLoadingCarSingleOD(e.getODpairId(),timeBeanId,counter,params,anaParams);
+					for(Id<Link>linkId:ODvolume.keySet()){
+						if(linkVolume.containsKey(linkId)){
+							linkVolume.put(linkId, linkVolume.get(linkId)+ODvolume.get(linkId));
+						}else{
+							linkVolume.put(linkId, ODvolume.get(linkId));
+						}
+					}
+				}
+
+				//});
+			}
+		}
+
+		public Map<Id<Link>, Double> getLinkVolume() {
+			return linkVolume;
+		}
+		
+	}
 	
 	
+	private class TransitNetworkLoadingRunnable implements Runnable{
+		private final String timeBeanId;
+		private List<AnalyticalModelODpair> odpairs;
+		private Map<Id<TransitLink>,Double> linkVolume=new HashMap<>();
+		private final LinkedHashMap<String,Double> params;
+		private final LinkedHashMap<String,Double> anaParams;
+		private final int counter;
+		
+		public TransitNetworkLoadingRunnable(String timeBeanId,int counter, LinkedHashMap<String, Double> params, LinkedHashMap<String, Double> anaParams,List<AnalyticalModelODpair> odpairs) {
+			this.counter=counter;
+			this.params=params;
+			this.anaParams=anaParams;
+			this.timeBeanId=timeBeanId;
+			this.odpairs=odpairs;
+		}
+		
+		@Override
+		public void run() {
+			for(AnalyticalModelODpair e:this.odpairs){
+				//this.odPairs.getODpairset().values().parallelStream().forEach((e)->{
+					double totalDemand=CNLSUEModel.this.getDemand().get(timeBeanId).get(e.getODpairId());
+					double carDemand=CNLSUEModel.this.getCarDemand().get(timeBeanId).get(e.getODpairId());
+					if((totalDemand-carDemand)!=0) {
+						Map <Id<TransitLink>,Double> ODvolume=CNLSUEModel.this.NetworkLoadingTransitSingleOD(e.getODpairId(),timeBeanId,counter,params,anaParams);
+						for(Id<TransitLink> linkId:ODvolume.keySet()){
+							if(linkVolume.containsKey(linkId)){
+								linkVolume.put(linkId, linkVolume.get(linkId)+ODvolume.get(linkId));
+							}else{
+								linkVolume.put(linkId, ODvolume.get(linkId));
+							}
+						}
+					}
+				}
+		}
+
+		public Map<Id<TransitLink>, Double> getLinkVolume() {
+			return linkVolume;
+		}
+		
+	}
 	/**
 	 * This method updates the linkCarVolume and linkTransitVolume obtained using MSA 
 	 * @param linkVolume - Calculated link volume
@@ -851,7 +1008,7 @@ public class CNLSUEModel implements AnalyticalModel{
 	 */
 
 	@SuppressWarnings("unchecked")
-	protected boolean UpdateLinkVolume(HashMap<Id<Link>,Double> linkVolume,HashMap<Id<TransitLink>,Double> transitlinkVolume,int counter,String timeBeanId){
+	protected boolean UpdateLinkVolume(Map<Id<Link>,Double> linkVolume,Map<Id<TransitLink>,Double> transitlinkVolume,int counter,String timeBeanId){
 		double squareSum=0;
 		double flowSum=0;
 		double linkSum=0;
@@ -910,7 +1067,7 @@ public class CNLSUEModel implements AnalyticalModel{
 		}
 		error1.get(timeBeanId).add(squareSum);
 		
-		if(squareSum<this.getTollerance()) {
+		if(squareSum<this.tollerance) {
 			return true;
 			
 		}else {
@@ -924,7 +1081,7 @@ public class CNLSUEModel implements AnalyticalModel{
 	 * @param tollerance
 	 * @return
 	 */
-	protected boolean CheckConvergence(HashMap<Id<Link>,Double> linkVolume,HashMap<Id<TransitLink>,Double> transitlinkVolume, double tollerance,String timeBeanId,int counter){
+	protected boolean CheckConvergence(Map<Id<Link>,Double> linkVolume,Map<Id<TransitLink>,Double> transitlinkVolume, double tollerance,String timeBeanId,int counter){
 		
 		double squareSum=0;
 		double sum=0;
@@ -1061,8 +1218,8 @@ public class CNLSUEModel implements AnalyticalModel{
 	 * @param timeBeanId
 	 */
 	public void singleTimeBeanTA(LinkedHashMap<String, Double> params,LinkedHashMap<String,Double> anaParams,String timeBeanId) {
-		HashMap<Id<TransitLink>, Double> linkTransitVolume;
-		HashMap<Id<Link>,Double> linkCarVolume;
+		Map<Id<TransitLink>, Double> linkTransitVolume;
+		Map<Id<Link>,Double> linkCarVolume;
 		boolean shouldStop=false;
 		
 		for(int i=1;i<500;i++) {
@@ -1070,7 +1227,7 @@ public class CNLSUEModel implements AnalyticalModel{
 			//ConcurrentHashMap<String,HashMap<Id<CNLODpair>,Double>>demand=this.Demand;
 			linkCarVolume=this.performCarNetworkLoading(timeBeanId,i,params,anaParams);
 			linkTransitVolume=this.performTransitNetworkLoading(timeBeanId,i,params,anaParams);
-			shouldStop=this.CheckConvergence(linkCarVolume, linkTransitVolume, this.getTollerance(), timeBeanId,i);
+			shouldStop=this.CheckConvergence(linkCarVolume, linkTransitVolume, this.tollerance, timeBeanId,i);
 			this.UpdateLinkVolume(linkCarVolume, linkTransitVolume, i, timeBeanId);
 			if(i==1 && shouldStop==true) {
 				boolean demandEmpty=true;
@@ -1123,8 +1280,8 @@ public class CNLSUEModel implements AnalyticalModel{
 		HashMap<Integer,HashMap<Id<Link>,Double>> linkCarVolumeIteration;
 		
 		
-		HashMap<Id<TransitLink>, Double> linkTransitVolume;
-		HashMap<Id<Link>,Double> linkCarVolume;
+		Map<Id<TransitLink>, Double> linkTransitVolume;
+		Map<Id<Link>,Double> linkCarVolume;
 		
 		boolean shouldStop=false;
 		for(int j=0;j<1;j++) {
@@ -1145,8 +1302,8 @@ public class CNLSUEModel implements AnalyticalModel{
 	}
 	@Deprecated
 	public void singleTimeBeanTAOut(LinkedHashMap<String, Double> params,LinkedHashMap<String,Double> anaParams,String timeBeanId) {
-		HashMap<Id<TransitLink>, Double> linkTransitVolume=new HashMap<>();
-		HashMap<Id<Link>,Double> linkCarVolume=new HashMap<>();
+		Map<Id<TransitLink>, Double> linkTransitVolume=new HashMap<>();
+		Map<Id<Link>,Double> linkCarVolume=new HashMap<>();
 		boolean shouldStop=false;
 		for(int j=0;j<1;j++) {
 			
