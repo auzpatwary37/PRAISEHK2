@@ -85,7 +85,7 @@ public class CNLSUEModel implements AnalyticalModel{
 		private double gammaMSA=.1;//parameter for decreasing MSA step size
 		
 		//other Parameters for the Calibration Process
-		private double tollerance=1;
+		private double tollerance= 1;
 		private double tolleranceLink=1;
 		//user input
 	
@@ -1082,7 +1082,7 @@ public class CNLSUEModel implements AnalyticalModel{
 	 * @return
 	 */
 	protected boolean CheckConvergence(Map<Id<Link>,Double> linkVolume,Map<Id<TransitLink>,Double> transitlinkVolume, double tollerance,String timeBeanId,int counter){
-		
+		double linkBelow1=0;
 		double squareSum=0;
 		double sum=0;
 		double error=0;
@@ -1098,6 +1098,9 @@ public class CNLSUEModel implements AnalyticalModel{
 				}
 				if(error/newVolume*100>tollerance) {					
 					sum+=1;
+				}
+				if(error<1) {
+					linkBelow1++;
 				}
 			}
 			
@@ -1116,6 +1119,9 @@ public class CNLSUEModel implements AnalyticalModel{
 				if(error/newVolume*100>tollerance) {
 
 					sum+=1;
+				}
+				if(error<1) {
+					linkBelow1++;
 				}
 			}
 			if(error==Double.NaN||error==Double.NEGATIVE_INFINITY) {
@@ -1141,7 +1147,7 @@ public class CNLSUEModel implements AnalyticalModel{
 //			e.printStackTrace();
 //		}
 		
-		if (squareSum<=this.getTollerance()||sum==0){
+		if (squareSum<=1||sum==0||linkBelow1==linkVolume.size()+transitlinkVolume.size()){
 			return true;
 		}else{
 			return false;
