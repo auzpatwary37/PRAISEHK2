@@ -73,6 +73,8 @@ public class AnalyticalModelODpair {
 	private int minRoute=5;
 	private Map<Id<AnalyticalModelRoute>,Double> autoPathSize;
 	private Map<String,Map<Id<AnalyticalModelTransitRoute>,Double>>trPathSize;
+	private Map<String,Double> median=new HashMap<>();
+	private Map<String,List<Double>>startTimes=new HashMap<>();
 	
 	//TODO:Shift Node Based Coordinates to FacilityBased Coordinates
 	
@@ -141,6 +143,9 @@ public class AnalyticalModelODpair {
 			
 			this.RouteFlow.put(timeBeanId, new HashMap<Id<AnalyticalModelRoute>, Double>());
 			this.TrRouteFlow.put(timeBeanId, new HashMap<Id<AnalyticalModelTransitRoute>, Double>());
+			
+			this.median.put(timeBeanId, 0.);
+			this.startTimes.put(timeBeanId, new ArrayList<>());
 		}
 		
 	}
@@ -161,8 +166,14 @@ public class AnalyticalModelODpair {
 			
 			this.RouteUtility.put(timeBeanId, new HashMap<Id<AnalyticalModelRoute>, Double>());
 			this.TrRouteUtility.put(timeBeanId, new HashMap<Id<AnalyticalModelTransitRoute>, Double>());
+			
+			this.median.put(timeBeanId, 0.);
+			this.startTimes.put(timeBeanId, new ArrayList<>());
+		
 		}
 		this.subPopulation=subPopulation;
+		
+		
 	}
 	
 	
@@ -247,9 +258,17 @@ public class AnalyticalModelODpair {
 			
 		}
 		
+		
+		
 		if(trip.getRoute()!=null && timeId!=null){
+			
+			this.startTimes.get(timeId).add(trip.getStartTime());
+			this.updateMedian(timeId);
+			
 			demand.put(timeId, demand.get(timeId)+1);
 			this.agentCARCounter+=trip.getCarPCU();
+			
+			
 			if(!routeset.containsKey(trip.getRoute().getRouteId())){//A new route 
 				routeset.put(trip.getRoute().getRouteId(),1);
 				this.RoutesWithDescription.put(trip.getRoute().getRouteId(),trip.getRoute());
@@ -280,6 +299,21 @@ public class AnalyticalModelODpair {
 	}
 	
 	
+	private void updateMedian(String timeId) {
+		Collections.sort(this.startTimes.get(timeId));
+		int size=this.startTimes.get(timeId).size();
+		if(size%2==0) {
+			this.median.put(timeId, 0.5*(this.startTimes.get(timeId).get(size/2)+this.startTimes.get(timeId).get(size/2+1)));
+		}else {
+			this.median.put(timeId, this.startTimes.get(timeId).get((size+1)/2));
+		}
+	}
+
+	
+	public Double getMedian(String timeId) {
+		return median.get(timeId);
+	}
+
 	/**
 	 * This will return the full route Set
 	 * @return

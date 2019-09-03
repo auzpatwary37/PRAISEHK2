@@ -1,7 +1,9 @@
 package ust.hk.praisehk.metamodelcalibration.analyticalModelImpl;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.Map;
 
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.network.Link;
@@ -20,6 +22,7 @@ public class CNLRoute implements AnalyticalModelRoute{
 	private double distanceTravelled=0;
 	private ArrayList<Id<Link>>links=new ArrayList<>();
 	private double RouteUtility=0;
+	private Map<String,Map<Id<Link>,String>>linkReachTime=new HashMap<>();
 	
 	public CNLRoute(Route r) {
 		String[] part=r.getRouteDescription().split(" ");
@@ -103,6 +106,58 @@ public class CNLRoute implements AnalyticalModelRoute{
 	@Override
 	public ArrayList<Id<Link>> getLinkIds() {
 		return this.links;
+	}
+
+
+
+	@Override
+	public double getTravelTime(Map<String, AnalyticalModelNetwork> networks,
+			Map<String, Tuple<Double, Double>> timeBean, String timeBeanId, double startTime,
+			LinkedHashMap<String, Double> params, LinkedHashMap<String, Double> anaParams) {
+		this.travelTime=0;
+		String routeTimeId=AnalyticalModelRoute.getTimeId(startTime, timeBean);
+		this.linkReachTime.put(routeTimeId, new HashMap<>());
+		for(Id<Link> lId:this.links) {
+			String timeId=AnalyticalModelRoute.getTimeId(startTime, timeBean);
+			double linkTravelTime=((CNLLink)networks.get(timeId).getLinks().get(lId)).getLinkTravelTime(timeBean.get(timeId),params,anaParams);
+			this.travelTime+=linkTravelTime;
+			startTime+=linkTravelTime;
+			this.linkReachTime.get(routeTimeId).put(lId, timeId);
+		}
+		return this.travelTime;
+	}
+
+	@Override
+	public double calcRouteUtility(LinkedHashMap<String, Double> parmas,LinkedHashMap<String, Double> anaParmas,
+			Map<String,AnalyticalModelNetwork> networks,Map<String,Tuple<Double,Double>>timeBean,String timeBeanId,double startTime) {
+		
+		double MUTravelTime=parmas.get(CNLSUEModel.MarginalUtilityofTravelCarName)/3600.0-parmas.get(CNLSUEModel.MarginalUtilityofPerformName)/3600.0;
+		double ModeConstant;
+		if(parmas.get(CNLSUEModel.ModeConstantCarName)==null) {
+			ModeConstant=0;
+		}else {
+			ModeConstant=parmas.get(CNLSUEModel.ModeConstantCarName);
+		}
+		Double MUMoney=parmas.get(CNLSUEModel.MarginalUtilityofMoneyName);
+		if(MUMoney==null) {
+			MUMoney=1.;
+		}
+		Double DistanceBasedMoneyCostCar=parmas.get(CNLSUEModel.DistanceBasedMoneyCostCarName);
+		if(DistanceBasedMoneyCostCar==null) {
+			DistanceBasedMoneyCostCar=0.;
+		}
+		double MUDistanceCar=parmas.get(CNLSUEModel.MarginalUtilityofDistanceCarName);
+		
+		this.RouteUtility=ModeConstant+
+				this.getTravelTime(networks,timeBean,timeBeanId,startTime,parmas,anaParmas)*MUTravelTime+
+				(MUDistanceCar+MUMoney*DistanceBasedMoneyCostCar)*this.getRouteDistance();
+				
+ 		return this.RouteUtility*anaParmas.get(CNLSUEModel.LinkMiuName);
+	}
+
+	@Override
+	public Map<String, Map<Id<Link>, String>> getLinkReachTime() {
+		return this.linkReachTime;
 	}
 	
 	

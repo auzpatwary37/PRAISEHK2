@@ -32,7 +32,6 @@ public abstract class AnalyticalModelLink implements Link{
 	protected Link link;
 	protected double linkCarVolume=0;
 	protected double linkTransitVolume=0;
-	protected double linkTransitPassenger=0;
 	protected double linkTravelTime=0;
 	
 	
@@ -62,14 +61,12 @@ public abstract class AnalyticalModelLink implements Link{
 	public abstract double getLinkTravelTime(Tuple<Double,Double> timeBean,LinkedHashMap<String,Double>params,LinkedHashMap<String,Double>anaParams);
 	public void resetLinkVolume() {
 		this.linkCarVolume=0;
-		this.linkTransitPassenger=0;
+		//this.linkTransitPassenger=0;
 	}
 	public void addLinkCarVolume(double lVolume) {
 		this.linkCarVolume+=lVolume;
 	}
-	public void addLinkTransitPassengerVolume(double lVolume) {
-		this.linkTransitPassenger+=lVolume;
-	}
+
 	
 	public void addLinkTransitVolume(double lVolume) {
 		this.linkTransitVolume+=lVolume;
@@ -87,7 +84,7 @@ public abstract class AnalyticalModelLink implements Link{
 		return linkTransitVolume;
 	}
 
-
+	
 	public double getLinkTransitPassenger() {
 		return linkTransitPassenger;
 	}

@@ -3,6 +3,8 @@ package ust.hk.praisehk.metamodelcalibration.analyticalModel;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.Map.Entry;
 
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.network.Link;
@@ -21,6 +23,10 @@ public interface AnalyticalModelRoute{
 	 * @return
 	 */
 	public abstract double getTravelTime(AnalyticalModelNetwork network,Tuple<Double,Double>timeBean,LinkedHashMap<String,Double>params,LinkedHashMap<String,Double>anaParams);
+	
+	
+	public abstract double getTravelTime(Map<String,AnalyticalModelNetwork> network,Map<String,Tuple<Double,Double>> timeBean,String timeBeanId,
+			double startTime, LinkedHashMap<String,Double>params,LinkedHashMap<String,Double>anaParams);
 	
 	/**
 	 * This one gives the total route distance 
@@ -43,7 +49,23 @@ public interface AnalyticalModelRoute{
 	 */
 	public abstract double getOtherMoneyCost();
 	public abstract String getRouteDescription();
-	public abstract Id<AnalyticalModelRoute> getRouteId();
-	public abstract ArrayList<Id<Link>> getLinkIds();
+	public Id<AnalyticalModelRoute> getRouteId();
+	public ArrayList<Id<Link>> getLinkIds();
+	public Map<String, Map<Id<Link>, String>> getLinkReachTime(); 
 	
+	public static String getTimeId(Double time,Map<String,Tuple<Double,Double>>timeBeans) {
+		if(time>24*3600) time=time-24*3600;
+		if(time==0) time=1.;
+		for(Entry<String, Tuple<Double, Double>> s:timeBeans.entrySet()) {
+			if(time>s.getValue().getFirst() && time<=s.getValue().getSecond()) {
+				return s.getKey();
+			}
+		}
+		return null;
+	}
+
+
+	double calcRouteUtility(LinkedHashMap<String, Double> parmas, LinkedHashMap<String, Double> anaParmas,
+			Map<String, AnalyticalModelNetwork> networks, Map<String, Tuple<Double, Double>> timeBean,
+			String timeBeanId, double startTime);
 }

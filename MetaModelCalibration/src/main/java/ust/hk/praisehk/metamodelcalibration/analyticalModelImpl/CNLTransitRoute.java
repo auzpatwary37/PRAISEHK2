@@ -276,6 +276,10 @@ public class CNLTransitRoute implements AnalyticalModelTransitRoute{
 		}
 		return routeTravelTime;
 	}
+	
+	public void calcLinkReachTime(Map<String,AnalyticalModelNetwork> networks,Map<String,Map<Id<TransitLink>,Double>> transitLinks,Map<String,Tuple<Double,Double>>timeBeans,double startTime,LinkedHashMap<String,Double>params,LinkedHashMap<String,Double>anaParams) {
+		
+	}
 
 	@Override
 	public double getRouteWalkingDistance() {
