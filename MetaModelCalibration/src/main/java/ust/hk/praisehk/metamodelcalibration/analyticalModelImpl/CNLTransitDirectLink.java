@@ -88,6 +88,8 @@ public class CNLTransitDirectLink extends TransitDirectLink{
 				getRoutes().get(Id.create(routeId, TransitRoute.class)).getDepartures();
 		int noofVehicle=0;
 		for(Departure d:Departures.values()) {
+			
+			
 			double time=d.getDepartureTime();
 			if(time>=timeBeans.get(timeBeanId).getFirst() && time<timeBeans.get(timeBeanId).getSecond()) {
 				noofVehicle++;

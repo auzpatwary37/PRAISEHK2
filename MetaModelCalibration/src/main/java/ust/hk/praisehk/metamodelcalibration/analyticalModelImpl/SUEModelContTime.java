@@ -211,9 +211,15 @@ public class SUEModelContTime implements AnalyticalModel{
 		 * This method overlays transit vehicles on the road network
 		 * @param network
 		 * @param Schedule
+		 * Reset the total pt capacity on link (except the timeBean) if this function is called in every iteration of the sue
 		 */
-		public void performTransitVehicleOverlay(Map<String,AnalyticalModelNetwork> network, TransitSchedule schedule,Vehicles vehicles,String timeBeanId,
-				LinkedHashMap<String,Double>params,LinkedHashMap<String,Double>anaParams,double counterBuffer) {
+		
+		public Map<String,Map<Id<Link>,Double>> performTransitVehicleOverlay(Map<String,AnalyticalModelNetwork> network, TransitSchedule schedule,Vehicles vehicles,String timeBeanId,
+				LinkedHashMap<String,Double>params,LinkedHashMap<String,Double>anaParams) {
+			Map<String,Map<Id<Link>,Double>> linkVolume=new HashMap<>();
+			for(String s:this.timeBeans.keySet()) {
+				linkVolume.put(s,new HashMap<>());
+			}
 			for(TransitLine tl:schedule.getTransitLines().values()) {
 				for(TransitRoute tr:tl.getRoutes().values()) {
 					ArrayList<Id<Link>> links=new ArrayList<>(tr.getRoute().getLinkIds());
@@ -224,14 +230,15 @@ public class SUEModelContTime implements AnalyticalModel{
 							for(Id<Link> linkId:links) {
 								CNLLink link=((CNLLink)network.get(timeId).getLinks().get(linkId));
 								time+=link.getLinkTravelTime(this.timeBeans.get(timeId), params, anaParams);
-								link.addLinkTransitVolume(vehicles.getVehicles().get(d.getVehicleId()).getType().getPcuEquivalents());
+//								link.addLinkTransitVolume(vehicles.getVehicles().get(d.getVehicleId()).getType().getPcuEquivalents());
+								linkVolume.get(timeId).put(link.getId(), linkVolume.get(timeId).get(link.getId())+vehicles.getVehicles().get(d.getVehicleId()).getType().getPcuEquivalents());
 								timeId=this.getTimeId(time);
-								Double oldCap=this.totalPtCapacityOnLink.get(timeBeanId).get(linkId);
+								Double oldCap=this.totalPtCapacityOnLink.get(timeId).get(linkId);
 								VehicleCapacity cap=vehicles.getVehicles().get(d.getVehicleId()).getType().getCapacity();
 								if(oldCap!=null) {
-									this.totalPtCapacityOnLink.get(timeBeanId).put(linkId, oldCap+(cap.getSeats()+cap.getStandingRoom()));
+									this.totalPtCapacityOnLink.get(timeId).put(linkId, oldCap+(cap.getSeats()+cap.getStandingRoom()));
 								}else {
-									this.totalPtCapacityOnLink.get(timeBeanId).put(linkId, (double) cap.getSeats()+cap.getStandingRoom());
+									this.totalPtCapacityOnLink.get(timeId).put(linkId, (double) cap.getSeats()+cap.getStandingRoom());
 								}
 								}
 						}
@@ -239,6 +246,7 @@ public class SUEModelContTime implements AnalyticalModel{
 				}
 			}
 			logger.info("Completed transit vehicle overlay.");
+			return linkVolume;
 		}
 		
 		@Override
@@ -442,8 +450,8 @@ public class SUEModelContTime implements AnalyticalModel{
 //				logger.warn("STopp!!!! Total utility in the OD pair is zero. This can happen if there is no transit route in that OD pair.");
 //			}
 			for(AnalyticalModelTransitRoute r:routes){
-				double totalDemand=this.getDemand().get(timeBeanId).get(ODpairId);
-				double carDemand=this.getCarDemand().get(timeBeanId).get(ODpairId);
+				double totalDemand=this.Demand.get(timeBeanId).get(ODpairId);
+				double carDemand=this.carDemand.get(timeBeanId).get(ODpairId);
 				double q=(totalDemand-carDemand);
 				if(q<0) {
 					throw new IllegalArgumentException("Stop!!! transit demand is negative!!!");

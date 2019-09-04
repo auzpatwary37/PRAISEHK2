@@ -32,6 +32,7 @@ public abstract class AnalyticalModelLink implements Link{
 	protected Link link;
 	protected double linkCarVolume=0;
 	protected double linkTransitVolume=0;
+	protected double linkTransitPassenger=0;
 	protected double linkTravelTime=0;
 	
 	

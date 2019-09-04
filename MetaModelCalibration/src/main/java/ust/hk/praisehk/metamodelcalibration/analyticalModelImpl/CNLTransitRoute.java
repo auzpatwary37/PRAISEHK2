@@ -280,6 +280,23 @@ public class CNLTransitRoute implements AnalyticalModelTransitRoute{
 	public void calcLinkReachTime(Map<String,AnalyticalModelNetwork> networks,Map<String,Map<Id<TransitLink>,Double>> transitLinks,Map<String,Tuple<Double,Double>>timeBeans,double startTime,LinkedHashMap<String,Double>params,LinkedHashMap<String,Double>anaParams) {
 		
 	}
+	
+	public Tuple<Double,Double> calcRouteTravelAndWaitingTime(Map<String,AnalyticalModelNetwork> network,Map<String,Tuple<Double,Double>>timeBean,double startTime,LinkedHashMap<String,Double>params,LinkedHashMap<String,Double>anaParams) {
+		double time=startTime;
+		double waitingTime=0;
+		double travelTime=0;
+		Map<Id<TransitLink>,Double> linkReachTimeDL=new HashMap<>();
+		Map<Id<TransitLink>,Double> linkReachTimeTL=new HashMap<>();
+		waitingTime+=this.transferLinks.get(0).getWaitingTime(anaParams, network);
+		
+		for(int i=0;i<this.directLinks.size();i++) {
+			
+		}
+		
+		return null;
+	}
+	
+	
 
 	@Override
 	public double getRouteWalkingDistance() {
