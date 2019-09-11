@@ -51,7 +51,7 @@ public interface AnalyticalModelRoute{
 	public abstract String getRouteDescription();
 	public Id<AnalyticalModelRoute> getRouteId();
 	public ArrayList<Id<Link>> getLinkIds();
-	public Map<String, Map<Id<Link>, String>> getLinkReachTime(); 
+	public Map<Id<Link>, Double> getLinkReachTime(); 
 	
 	public static String getTimeId(Double time,Map<String,Tuple<Double,Double>>timeBeans) {
 		if(time>24*3600) time=time-24*3600;
@@ -65,7 +65,7 @@ public interface AnalyticalModelRoute{
 	}
 
 
-	double calcRouteUtility(LinkedHashMap<String, Double> parmas, LinkedHashMap<String, Double> anaParmas,
-			Map<String, AnalyticalModelNetwork> networks, Map<String, Tuple<Double, Double>> timeBean,
-			String timeBeanId, double startTime);
+//	double calcRouteUtility(LinkedHashMap<String, Double> parmas, LinkedHashMap<String, Double> anaParmas,
+//			Map<String, AnalyticalModelNetwork> networks, Map<String, Tuple<Double, Double>> timeBean,
+//			String timeBeanId, double startTime);
 }

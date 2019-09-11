@@ -1,6 +1,7 @@
 package ust.hk.praisehk.metamodelcalibration.analyticalModel;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -9,6 +10,11 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.apache.commons.lang.math.RandomUtils;
+import org.apache.commons.math3.random.AbstractRandomGenerator;
+import org.apache.commons.math3.random.JDKRandomGenerator;
+import org.apache.commons.math3.random.RandomGenerator;
+import org.apache.commons.math3.stat.descriptive.moment.StandardDeviation;
 import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.network.Link;
@@ -21,6 +27,8 @@ import org.matsim.core.utils.collections.Tuple;
 import org.matsim.facilities.ActivityFacility;
 import org.matsim.vehicles.VehicleType;
 import com.google.inject.Inject;
+
+import ust.hk.praisehk.metamodelcalibration.Utils.TruncatedNormal;
 
 /**
  * This is a self sufficient implementation of OD pair class.
@@ -75,7 +83,10 @@ public class AnalyticalModelODpair {
 	private Map<String,Map<Id<AnalyticalModelTransitRoute>,Double>>trPathSize;
 	private Map<String,Double> median=new HashMap<>();
 	private Map<String,List<Double>>startTimes=new HashMap<>();
+	//private Map<String,Double>startTimeSum=new HashMap<>();
 	
+	public boolean shouldUseDistibutionInDepartureTime=true;
+	private Map<String,TruncatedNormal> departureTimeDistributions=new HashMap<>();
 	//TODO:Shift Node Based Coordinates to FacilityBased Coordinates
 	
 	/**
@@ -218,7 +229,11 @@ public class AnalyticalModelODpair {
 		return ODpairId;
 	}
 
+	
 
+	public Map<String, TruncatedNormal> getDepartureTimeDistributions() {
+		return departureTimeDistributions;
+	}
 
 	public Coord[] getODCoord(){
 		c[0]=ocoord;
@@ -237,7 +252,23 @@ public class AnalyticalModelODpair {
 		this.TrRouteUtility.clear();
 	}
 	
-	
+	public void generateDepartureTimeDistribution() {
+		
+		for(String timeId:this.timeBean.keySet()) {
+			double[] startTimes=new double[this.startTimes.get(timeId).size()];
+			int i=0;
+			double sum=0;
+			for(Double d:this.startTimes.get(timeId)) {
+				startTimes[i]=(double)d;
+				sum+=d;
+				i++;
+			}
+			double mean=sum/(i+1);
+			double sd=new StandardDeviation().evaluate(startTimes);
+			this.departureTimeDistributions.put(timeId, new TruncatedNormal(new JDKRandomGenerator(), 
+					mean, sd, this.timeBean.get(timeId).getFirst(), this.timeBean.get(timeId).getSecond()));
+		}
+	}
 
 	/**
 	 * 
@@ -263,7 +294,13 @@ public class AnalyticalModelODpair {
 		if(trip.getRoute()!=null && timeId!=null){
 			
 			this.startTimes.get(timeId).add(trip.getStartTime());
-			this.updateMedian(timeId);
+//			Double oldVolume=this.startTimeSum.get(timeId);
+//			if(oldVolume!=null) {
+//				this.startTimeSum.put(timeId, oldVolume+trip.getStartTime());
+//			}else {
+//				this.startTimeSum.put(timeId, trip.getStartTime());
+//			}
+			//this.median.put(timeId, this.startTimeSum.get(timeId)/(this.demand.get(timeId)+1));
 			
 			demand.put(timeId, demand.get(timeId)+1);
 			this.agentCARCounter+=trip.getCarPCU();
@@ -299,15 +336,16 @@ public class AnalyticalModelODpair {
 	}
 	
 	
-	private void updateMedian(String timeId) {
-		Collections.sort(this.startTimes.get(timeId));
-		int size=this.startTimes.get(timeId).size();
-		if(size%2==0) {
-			this.median.put(timeId, 0.5*(this.startTimes.get(timeId).get(size/2)+this.startTimes.get(timeId).get(size/2+1)));
-		}else {
-			this.median.put(timeId, this.startTimes.get(timeId).get((size+1)/2));
-		}
-	}
+//	private void updateMedian(String timeId) {
+//		Collections.sort(this.startTimes.get(timeId));
+//		int size=this.startTimes.get(timeId).size();
+//		if(size%2==0) {
+//			this.median.put(timeId, 0.5*(this.startTimes.get(timeId).get(size/2)+this.startTimes.get(timeId).get(size/2+1)));
+//		}else {
+//			this.median.put(timeId, this.startTimes.get(timeId).get((size+1)/2));
+//		}
+//	}
+	
 
 	
 	public Double getMedian(String timeId) {
@@ -621,6 +659,23 @@ public class AnalyticalModelODpair {
 	}
 
 	public void generateTimeBasedTransitRoutes() {
+		if(this.finalTrRoutes!=null) {
+			for(String timeBeanId:timeBean.keySet()) {
+			ArrayList<AnalyticalModelTransitRoute> timeBasedTrRoutes=new ArrayList<>();
+			for(AnalyticalModelTransitRoute tr:this.finalTrRoutes) {
+				AnalyticalModelTransitRoute trnew=tr.cloneRoute();
+				trnew.calcCapacityHeadway(timeBean, timeBeanId);
+				if((Double)tr.getRouteCapacity().get(timeBeanId)!=0) {
+					timeBasedTrRoutes.add(trnew);
+				}
+				
+			}
+			this.timeBasedTransitRoutes.put(timeBeanId,timeBasedTrRoutes);
+		}
+	}
+	}
+	
+	public void generateTimeBasedTransitRoutes(Map<String,Map<String,Double>>capacity,Map<String,Map<String,Double>>vehicleCount) {
 		if(this.finalTrRoutes!=null) {
 			for(String timeBeanId:timeBean.keySet()) {
 			ArrayList<AnalyticalModelTransitRoute> timeBasedTrRoutes=new ArrayList<>();

@@ -171,6 +171,17 @@ public abstract class AnalyticalModelODpairs {
 		}
 	}
 	
+	public void generateRouteandLinkIncidence(double routePercentage,Map<String,Map<String,Double>>capacity,Map<String,Map<String,Double>>vehicleCount){
+		for (Id<AnalyticalModelODpair> odpairId:ODpairset.keySet()){
+			ODpairset.get(odpairId).generateRoutes(routePercentage);
+			ODpairset.get(odpairId).generateTRRoutes(routePercentage);
+			ODpairset.get(odpairId).generateLinkIncidence();
+			ODpairset.get(odpairId).generateTimeBasedTransitRoutes(capacity,vehicleCount);
+			ODpairset.get(odpairId).calcAutoRoutePathSize();
+			ODpairset.get(odpairId).calcTransitRoutePathSize();
+		}
+	}
+	
 	
 	public void resetDemand() {
 		for(AnalyticalModelODpair odpair: this.ODpairset.values()) {

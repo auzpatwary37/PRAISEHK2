@@ -108,6 +108,13 @@ public class CNLTransitDirectLink extends TransitDirectLink{
 		}
 	}
 	
+	public void calcCapacityAndHeadway(Map<String,Map<String,Double>>vehicleCount,Map<String,Map<String,Double>>capacity,
+			Map<String, Tuple<Double, Double>> timeBeans,String timeBeanId) {
+		String key=this.linkList.get(0).toString()+"___"+this.lineId.toString()+"___"+this.routeId.toString();
+		this.capacity=capacity.get(timeBeanId).get(key);
+		this.headway=(timeBeans.get(timeBeanId).getSecond()-timeBeans.get(timeBeanId).getSecond())/(Double)vehicleCount.get(timeBeanId).get(key);
+	}
+	
 	public CNLTransitDirectLink cloneLink(CNLTransitDirectLink tL) {
 		return new CNLTransitDirectLink(tL.getStartStopId(),tL.getEndStopId(),tL.getStartingLinkId(),tL.getEndingLinkId(),tL.getTs(),tL.getLineId(),tL.getRouteId(),tL.getScenario());
 		
