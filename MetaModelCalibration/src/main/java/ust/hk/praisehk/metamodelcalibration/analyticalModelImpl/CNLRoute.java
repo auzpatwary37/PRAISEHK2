@@ -113,57 +113,55 @@ public class CNLRoute implements AnalyticalModelRoute{
 
 
 
-	@Override
-	public double getTravelTime(Map<String, AnalyticalModelNetwork> networks,
-			Map<String, Tuple<Double, Double>> timeBean, String timeBeanId, double startTime,
-			LinkedHashMap<String, Double> params, LinkedHashMap<String, Double> anaParams) {
-		this.travelTime=0;
-		String routeTimeId=AnalyticalModelRoute.getTimeId(startTime, timeBean);
-		this.linkReachTime.put(routeTimeId, new HashMap<>());
-		for(Id<Link> lId:this.links) {
-			String timeId=AnalyticalModelRoute.getTimeId(startTime, timeBean);
-			double linkTravelTime=((CNLLink)networks.get(timeId).getLinks().get(lId)).getLinkTravelTime(timeBean.get(timeId),params,anaParams);
-			this.travelTime+=linkTravelTime;
-			startTime+=linkTravelTime;
-			this.linkReachTime.get(routeTimeId).put(lId, timeId);
-		}
-		return this.travelTime;
-	}
+//	@Override
+//	public double getTravelTime(Map<String, AnalyticalModelNetwork> networks,
+//			Map<String, Tuple<Double, Double>> timeBean, String timeBeanId, double startTime,
+//			LinkedHashMap<String, Double> params, LinkedHashMap<String, Double> anaParams) {
+//		this.travelTime=0;
+//		String routeTimeId=AnalyticalModelRoute.getTimeId(startTime, timeBean);
+//		this.linkReachTime.put(routeTimeId, new HashMap<>());
+//		for(Id<Link> lId:this.links) {
+//			String timeId=AnalyticalModelRoute.getTimeId(startTime, timeBean);
+//			double linkTravelTime=((CNLLink)networks.get(timeId).getLinks().get(lId)).getLinkTravelTime(timeBean.get(timeId),params,anaParams);
+//			this.travelTime+=linkTravelTime;
+//			startTime+=linkTravelTime;
+//			this.linkReachTime.get(routeTimeId).put(lId, timeId);
+//		}
+//		return this.travelTime;
+//	}
 
-	@Override
-	public double calcRouteUtility(LinkedHashMap<String, Double> parmas,LinkedHashMap<String, Double> anaParmas,
-			Map<String,AnalyticalModelNetwork> networks,Map<String,Tuple<Double,Double>>timeBean,String timeBeanId,double startTime) {
-		
-		double MUTravelTime=parmas.get(CNLSUEModel.MarginalUtilityofTravelCarName)/3600.0-parmas.get(CNLSUEModel.MarginalUtilityofPerformName)/3600.0;
-		double ModeConstant;
-		if(parmas.get(CNLSUEModel.ModeConstantCarName)==null) {
-			ModeConstant=0;
-		}else {
-			ModeConstant=parmas.get(CNLSUEModel.ModeConstantCarName);
-		}
-		Double MUMoney=parmas.get(CNLSUEModel.MarginalUtilityofMoneyName);
-		if(MUMoney==null) {
-			MUMoney=1.;
-		}
-		Double DistanceBasedMoneyCostCar=parmas.get(CNLSUEModel.DistanceBasedMoneyCostCarName);
-		if(DistanceBasedMoneyCostCar==null) {
-			DistanceBasedMoneyCostCar=0.;
-		}
-		double MUDistanceCar=parmas.get(CNLSUEModel.MarginalUtilityofDistanceCarName);
-		
-		this.RouteUtility=ModeConstant+
-				this.getTravelTime(networks,timeBean,timeBeanId,startTime,parmas,anaParmas)*MUTravelTime+
-				(MUDistanceCar+MUMoney*DistanceBasedMoneyCostCar)*this.getRouteDistance();
-				
- 		return this.RouteUtility*anaParmas.get(CNLSUEModel.LinkMiuName);
-	}
+//	@Override
+//	public double calcRouteUtility(LinkedHashMap<String, Double> parmas,LinkedHashMap<String, Double> anaParmas,
+//			Map<String,AnalyticalModelNetwork> networks,Map<String,Tuple<Double,Double>>timeBean,String timeBeanId,double startTime) {
+//		
+//		double MUTravelTime=parmas.get(CNLSUEModel.MarginalUtilityofTravelCarName)/3600.0-parmas.get(CNLSUEModel.MarginalUtilityofPerformName)/3600.0;
+//		double ModeConstant;
+//		if(parmas.get(CNLSUEModel.ModeConstantCarName)==null) {
+//			ModeConstant=0;
+//		}else {
+//			ModeConstant=parmas.get(CNLSUEModel.ModeConstantCarName);
+//		}
+//		Double MUMoney=parmas.get(CNLSUEModel.MarginalUtilityofMoneyName);
+//		if(MUMoney==null) {
+//			MUMoney=1.;
+//		}
+//		Double DistanceBasedMoneyCostCar=parmas.get(CNLSUEModel.DistanceBasedMoneyCostCarName);
+//		if(DistanceBasedMoneyCostCar==null) {
+//			DistanceBasedMoneyCostCar=0.;
+//		}
+//		double MUDistanceCar=parmas.get(CNLSUEModel.MarginalUtilityofDistanceCarName);
+//		
+//		this.RouteUtility=ModeConstant+
+//				this.getTravelTime(networks,timeBean,timeBeanId,startTime,parmas,anaParmas)*MUTravelTime+
+//				(MUDistanceCar+MUMoney*DistanceBasedMoneyCostCar)*this.getRouteDistance();
+//				
+// 		return this.RouteUtility*anaParmas.get(CNLSUEModel.LinkMiuName);
+//	}
 
 	@Override
 	public Map<Id<Link>, Double> getLinkReachTime() {
 		return this.linkReachTime;
 	}
-	
-	
 	
 	
 }

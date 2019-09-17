@@ -147,6 +147,8 @@ public class CNLTransitRoute implements AnalyticalModelTransitRoute{
 		this.calcFareEntryAndExitLinks();
 	}
 	
+	
+	
 	public CNLTransitRoute(ArrayList<CNLTransitTransferLink> transferLinks,ArrayList<CNLTransitDirectLink>dlink,Scenario scenario,TransitSchedule ts,
 			double routeWalkingDistance,String routeId) {
 		this.directLinks=dlink;
@@ -163,43 +165,44 @@ public class CNLTransitRoute implements AnalyticalModelTransitRoute{
 		this.calcFareEntryAndExitLinks();
 	}
 	
+//	@Override
+//	public double calcRouteUtility(LinkedHashMap<String, Double> params,LinkedHashMap<String, Double> anaParams,AnalyticalModelNetwork network,Map<String,FareCalculator>farecalc,Tuple<Double,Double>timeBean) {
+//		
+//		double MUTravelTime=params.get(CNLSUEModel.MarginalUtilityofTravelptName)/3600.0-params.get(CNLSUEModel.MarginalUtilityofPerformName)/3600.0;
+//		double MUDistance=params.get(CNLSUEModel.MarginalUtilityOfDistancePtName);
+//		double MUWalkTime=params.get(CNLSUEModel.MarginalUtilityOfWalkingName)/3600.0-params.get(CNLSUEModel.MarginalUtilityofPerformName)/3600.0;
+//		double MUWaitingTime=params.get(CNLSUEModel.MarginalUtilityofWaitingName)/3600-params.get(CNLSUEModel.MarginalUtilityofPerformName)/3600.0;
+//		double ModeConstant=params.get(CNLSUEModel.ModeConstantPtname);
+//		double MUMoney=params.get(CNLSUEModel.MarginalUtilityofMoneyName);
+//		double DistanceBasedMoneyCostWalk=params.get(CNLSUEModel.DistanceBasedMoneyCostWalkName);
+//		double fare=this.getFare(transitSchedule, farecalc);
+//		double travelTime=this.calcRouteTravelTime(network,timeBean,params,anaParams);
+//		double walkTime=this.getRouteWalkingDistance()/1.4;
+//		double walkDist=this.getRouteWalkingDistance();
+//		double waitingTime=this.getRouteWaitingTime(anaParams,network);
+//		double distance=this.getRouteDistance(network);
+//		double utility=0;
+//		double MUTransfer=params.get(CNLSUEModel.UtilityOfLineSwitchName);
+//		
+//		utility=ModeConstant+
+//				travelTime*MUTravelTime+
+//				MUMoney*fare+
+//				MUWalkTime*walkTime+
+//				MUMoney*DistanceBasedMoneyCostWalk*walkDist+
+//				MUWaitingTime*waitingTime
+//				+MUTransfer*(this.transferLinks.size()-1)
+//				+MUDistance*distance*MUMoney;
+//		if(utility==0) {
+//			logger.warn("Stop!!! route utility is zero.");
+//		}
+//		return utility*anaParams.get(CNLSUEModel.LinkMiuName);
+//	}
+	
+	
 	@Override
-	public double calcRouteUtility(LinkedHashMap<String, Double> params,LinkedHashMap<String, Double> anaParams,AnalyticalModelNetwork network,Map<String,FareCalculator>farecalc,Tuple<Double,Double>timeBean) {
-		
-		double MUTravelTime=params.get(CNLSUEModel.MarginalUtilityofTravelptName)/3600.0-params.get(CNLSUEModel.MarginalUtilityofPerformName)/3600.0;
-		double MUDistance=params.get(CNLSUEModel.MarginalUtilityOfDistancePtName);
-		double MUWalkTime=params.get(CNLSUEModel.MarginalUtilityOfWalkingName)/3600.0-params.get(CNLSUEModel.MarginalUtilityofPerformName)/3600.0;
-		double MUWaitingTime=params.get(CNLSUEModel.MarginalUtilityofWaitingName)/3600-params.get(CNLSUEModel.MarginalUtilityofPerformName)/3600.0;
-		double ModeConstant=params.get(CNLSUEModel.ModeConstantPtname);
-		double MUMoney=params.get(CNLSUEModel.MarginalUtilityofMoneyName);
-		double DistanceBasedMoneyCostWalk=params.get(CNLSUEModel.DistanceBasedMoneyCostWalkName);
-		double fare=this.getFare(transitSchedule, farecalc);
-		double travelTime=this.calcRouteTravelTime(network,timeBean,params,anaParams);
-		double walkTime=this.getRouteWalkingDistance()/1.4;
-		double walkDist=this.getRouteWalkingDistance();
-		double waitingTime=this.getRouteWaitingTime(anaParams,network);
-		double distance=this.getRouteDistance(network);
-		double utility=0;
-		double MUTransfer=params.get(CNLSUEModel.UtilityOfLineSwitchName);
-		
-		utility=ModeConstant+
-				travelTime*MUTravelTime+
-				MUMoney*fare+
-				MUWalkTime*walkTime+
-				MUMoney*DistanceBasedMoneyCostWalk*walkDist+
-				MUWaitingTime*waitingTime
-				+MUTransfer*(this.transferLinks.size()-1)
-				+MUDistance*distance*MUMoney;
-		if(utility==0) {
-			logger.warn("Stop!!! route utility is zero.");
-		}
-		return utility*anaParams.get(CNLSUEModel.LinkMiuName);
-	}
-	
-	
-	
-	public double calcRouteUtility(LinkedHashMap<String, Double> params,LinkedHashMap<String, Double> anaParams,Map<String,AnalyticalModelNetwork> network,Map<String,FareCalculator>farecalc,Map<String,Tuple<Double,Double>>timeBean,double startTime) {
-		routeInfoOut info=this.calcRouteTravelAndWaitingTime(network, timeBean, startTime, params, anaParams);
+	public double calcRouteUtility(LinkedHashMap<String, Double> params,LinkedHashMap<String, Double> anaParams,AnalyticalModelNetwork network,Map<String,FareCalculator>farecalc,
+			Tuple<Double,Double> timeBean) {
+		routeInfoOut info=this.calcRouteTravelAndWaitingTime(network, timeBean, params, anaParams);
 		double MUTravelTime=params.get(CNLSUEModel.MarginalUtilityofTravelptName)/3600.0-params.get(CNLSUEModel.MarginalUtilityofPerformName)/3600.0;
 		double MUDistance=params.get(CNLSUEModel.MarginalUtilityOfDistancePtName);
 		double MUWalkTime=params.get(CNLSUEModel.MarginalUtilityOfWalkingName)/3600.0-params.get(CNLSUEModel.MarginalUtilityofPerformName)/3600.0;
@@ -316,29 +319,27 @@ public class CNLTransitRoute implements AnalyticalModelTransitRoute{
 		
 	}
 	
-	public routeInfoOut calcRouteTravelAndWaitingTime(Map<String,AnalyticalModelNetwork> network,Map<String,Tuple<Double,Double>>timeBean,double startTime,LinkedHashMap<String,Double>params,LinkedHashMap<String,Double>anaParams) {
-		double time=startTime;
+	public routeInfoOut calcRouteTravelAndWaitingTime(AnalyticalModelNetwork network,Tuple<Double,Double>timeBean,LinkedHashMap<String,Double>params,LinkedHashMap<String,Double>anaParams) {
+		double time=0;
 		double waitingTime=0;
 		double travelTime=0;
 		double routeDistance=0;
-		String timeId=this.getTimeId(time, timeBean);
-		Map<Id<TransitLink>,String> linkReachTimeDL=new HashMap<>();
-		Map<Id<TransitLink>,String> linkReachTimeTL=new HashMap<>();
-		linkReachTimeTL.put(this.transferLinks.get(0).getTrLinkId(),timeId);
-		double neededwaitingTime=this.transferLinks.get(0).getWaitingTime(anaParams, network.get(this.getTimeId(time, timeBean)));
+		//String timeId=this.getTimeId(time, timeBean);
+		Map<Id<TransitLink>,Double> linkReachTimeDL=new HashMap<>();
+		Map<Id<TransitLink>,Double> linkReachTimeTL=new HashMap<>();
+		linkReachTimeTL.put(this.transferLinks.get(0).getTrLinkId(),time);
+		double neededwaitingTime=this.transferLinks.get(0).getWaitingTime(anaParams, network);
 		waitingTime+=neededwaitingTime;
 		time+=neededwaitingTime;
 			
 		for(int i=0;i<this.directLinks.size();i++) {
-			timeId=this.getTimeId(time, timeBean);
-			linkReachTimeDL.put(this.directLinks.get(i).getTrLinkId(), timeId);
-			double travelTimeDL=this.directLinks.get(i).getLinkTravelTime(network.get(timeId), timeBean.get(timeId), params, anaParams);
-			routeDistance+=this.getTransitDirectLinks().get(i).getPhysicalDistance(network.get(timeId));
+			linkReachTimeDL.put(this.directLinks.get(i).getTrLinkId(), time);
+			double travelTimeDL=this.directLinks.get(i).getLinkTravelTime(network, timeBean, params, anaParams);
+			routeDistance+=this.getTransitDirectLinks().get(i).getPhysicalDistance(network);
 			travelTime+=travelTimeDL;
 			time+=travelTimeDL;
-			timeId=this.getTimeId(time, timeBean);
-			linkReachTimeTL.put(this.transferLinks.get(i+1).getTrLinkId(), timeId);
-			double waitingTimeTL=this.transferLinks.get(i+1).getWaitingTime(anaParams, network.get(timeId));
+			linkReachTimeTL.put(this.transferLinks.get(i+1).getTrLinkId(), time);
+			double waitingTimeTL=this.transferLinks.get(i+1).getWaitingTime(anaParams, network);
 			waitingTime+=waitingTimeTL;
 			time+=waitingTimeTL;
 		}
@@ -547,10 +548,10 @@ public class CNLTransitRoute implements AnalyticalModelTransitRoute{
 class routeInfoOut{
 	private final double travelTime;
 	private final double waitingTime;
-	private final Map<Id<TransitLink>,String> directLinkReachTime;
-	private final Map<Id<TransitLink>,String> transferLinkReachTime;
+	private final Map<Id<TransitLink>,Double> directLinkReachTime;
+	private final Map<Id<TransitLink>,Double> transferLinkReachTime;
 	private final double routeDistance;
-	public routeInfoOut(Double travelTime,Double waitingTime,double routeDistance,Map<Id<TransitLink>,String>directLinkReachTime,Map<Id<TransitLink>,String>transferLinkReachTime) {
+	public routeInfoOut(Double travelTime,Double waitingTime,double routeDistance,Map<Id<TransitLink>,Double>directLinkReachTime,Map<Id<TransitLink>,Double>transferLinkReachTime) {
 		this.travelTime=travelTime;
 		this.waitingTime=waitingTime;
 		this.routeDistance=routeDistance;
@@ -563,17 +564,17 @@ class routeInfoOut{
 	public double getWaitingTime() {
 		return waitingTime;
 	}
-	public Map<Id<TransitLink>, String> getDirectLinkReachTime() {
+	public Map<Id<TransitLink>, Double> getDirectLinkReachTime() {
 		return directLinkReachTime;
 	}
-	public Map<Id<TransitLink>, String> getTransferLinkReachTime() {
+	public Map<Id<TransitLink>, Double> getTransferLinkReachTime() {
 		return transferLinkReachTime;
 	}
 	public double getRouteDistance() {
 		return routeDistance;
 	}
-	public Map<Id<TransitLink>,String> getLinkReachTime(){
-		Map<Id<TransitLink>,String> linkReachTime=new HashMap<>();
+	public Map<Id<TransitLink>,Double> getLinkReachTime(){
+		Map<Id<TransitLink>,Double> linkReachTime=new HashMap<>();
 		linkReachTime.putAll(this.directLinkReachTime);
 		linkReachTime.putAll(this.transferLinkReachTime);
 		return linkReachTime;

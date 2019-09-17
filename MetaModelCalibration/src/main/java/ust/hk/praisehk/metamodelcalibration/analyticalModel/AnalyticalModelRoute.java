@@ -25,9 +25,9 @@ public interface AnalyticalModelRoute{
 	public abstract double getTravelTime(AnalyticalModelNetwork network,Tuple<Double,Double>timeBean,LinkedHashMap<String,Double>params,LinkedHashMap<String,Double>anaParams);
 	
 	
-	public abstract double getTravelTime(Map<String,AnalyticalModelNetwork> network,Map<String,Tuple<Double,Double>> timeBean,String timeBeanId,
-			double startTime, LinkedHashMap<String,Double>params,LinkedHashMap<String,Double>anaParams);
-	
+//	public abstract double getTravelTime(Map<String,AnalyticalModelNetwork> network,Map<String,Tuple<Double,Double>> timeBean,String timeBeanId,
+//			double startTime, LinkedHashMap<String,Double>params,LinkedHashMap<String,Double>anaParams);
+//	
 	/**
 	 * This one gives the total route distance 
 	 * For distance based money cost
