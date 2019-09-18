@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -44,6 +45,7 @@ import ust.hk.praisehk.metamodelcalibration.analyticalModel.AnalyticalModelODpai
 import ust.hk.praisehk.metamodelcalibration.analyticalModel.AnalyticalModelRoute;
 import ust.hk.praisehk.metamodelcalibration.analyticalModel.AnalyticalModelTransitRoute;
 import ust.hk.praisehk.metamodelcalibration.analyticalModel.InternalParamCalibratorFunction;
+import ust.hk.praisehk.metamodelcalibration.analyticalModel.TransitDirectLink;
 import ust.hk.praisehk.metamodelcalibration.analyticalModel.TransitLink;
 import ust.hk.praisehk.metamodelcalibration.measurements.Measurement;
 import ust.hk.praisehk.metamodelcalibration.measurements.MeasurementType;
@@ -77,9 +79,9 @@ public class SUEModelContTime implements AnalyticalModel{
 			this.fileLoc = fileLoc;
 		}
 
-		private int consecutiveSUEErrorIncrease=0;
-		private LinkedHashMap<String,Double> AnalyticalModelInternalParams=new LinkedHashMap<>();
-		private LinkedHashMap<String,Double> Params=new LinkedHashMap<>();
+		protected int consecutiveSUEErrorIncrease=0;
+		protected LinkedHashMap<String,Double> AnalyticalModelInternalParams=new LinkedHashMap<>();
+		protected LinkedHashMap<String,Double> Params=new LinkedHashMap<>();
 		private LinkedHashMap<String,Tuple<Double,Double>> AnalyticalModelParamsLimit=new LinkedHashMap<>();
 		
 		
@@ -93,12 +95,12 @@ public class SUEModelContTime implements AnalyticalModel{
 		private double staticWaitingTimeAtStop=20;
 		//user input
 		
-		private Map<String, Tuple<Double,Double>> timeBeans;
+		protected Map<String, Tuple<Double,Double>> timeBeans;
 		private List<String> timeBeanOrder;
 		
 		//MATSim Input
-		private Map<String, AnalyticalModelNetwork> networks=new ConcurrentHashMap<>();
-		private TransitSchedule ts;
+		protected Map<String, AnalyticalModelNetwork> networks=new ConcurrentHashMap<>();
+		protected TransitSchedule ts;
 		private Scenario scenario;
 		private Population population;
 		protected Map<String,FareCalculator> fareCalculator=new HashMap<>();
@@ -111,8 +113,8 @@ public class SUEModelContTime implements AnalyticalModel{
 		//TimebeanId vs demands map
 		private Map<String,HashMap<Id<AnalyticalModelODpair>,Double>> Demand=new ConcurrentHashMap<>();//Holds ODpair based demand
 		private Map<String,HashMap<Id<AnalyticalModelODpair>,Double>> carDemand=new ConcurrentHashMap<>(); 
-		private CNLODpairs odPairs;
-		private Map<String,Map<Id<TransitLink>,TransitLink>> transitLinks=new ConcurrentHashMap<>();
+		protected CNLODpairs odPairs;
+		protected Map<String,Map<Id<TransitLink>,TransitLink>> transitLinks=new ConcurrentHashMap<>();
 			
 		private Population lastPopulation;
 	
@@ -121,8 +123,8 @@ public class SUEModelContTime implements AnalyticalModel{
 		protected Map<String,Map<Id<Link>,Double>> outputLinkTT=new ConcurrentHashMap<>();
 		protected Map<String,Map<Id<TransitLink>,Double>> outputTrLinkTT=new ConcurrentHashMap<>();
 		private Map<String,Map<Id<Link>,Double>> totalPtCapacityOnLink=new HashMap<>();
-		private Map<String,Map<String,Double>> individualPtCapacityOnLink=new HashMap<>();//mapping [timeId-(linkId___LineId___RouteId - vehicleSeatingAndStandignCap)
-		private Map<String,Map<String,Double>> individualPtVehicleOnLink=new HashMap<>();//mapping [timeId-(linkId___LineId___RouteId - vehicleTotalPcu)
+		protected Map<String,Map<String,Double>> individualPtCapacityOnLink=new HashMap<>();//mapping [timeId-(linkId___LineId___RouteId - vehicleSeatingAndStandignCap)
+		protected Map<String,Map<String,Double>> individualPtVehicleOnLink=new HashMap<>();//mapping [timeId-(linkId___LineId___RouteId - vehicleTotalPcu)
 		protected Map<String,Map<String,Double>>MTRCount=new ConcurrentHashMap<>();
 		//All the parameters name
 		//They are kept public to make it easily accessible as they are final they can not be modified
@@ -759,7 +761,7 @@ public class SUEModelContTime implements AnalyticalModel{
 						}else {
 							double carProportion=Math.exp(carUtility*modeMiu)/(Math.exp(carUtility*modeMiu)+Math.exp(transitUtility*modeMiu));
 							//System.out.println("Car Proportion = "+carProportion);
-							Double cardemand=Math.exp(carUtility*modeMiu)/(Math.exp(carUtility*modeMiu)+Math.exp(transitUtility*modeMiu))*this.Demand.get(timeBeanId).get(odPair.getODpairId());
+							Double cardemand=carProportion*this.Demand.get(timeBeanId).get(odPair.getODpairId());
 							if(cardemand==Double.NaN||cardemand==Double.POSITIVE_INFINITY||cardemand==Double.NEGATIVE_INFINITY) {
 								logger.error("Car Demand is invalid");
 								throw new IllegalArgumentException("car demand is invalid");
@@ -814,8 +816,9 @@ public class SUEModelContTime implements AnalyticalModel{
 		 * @param timeBeanId
 		 */
 		public void TA(LinkedHashMap<String, Double> params,LinkedHashMap<String,Double> anaParams) {
-			List<Map<String,Map<Id<TransitLink>, Double>>> linkTransitVolumes=new ArrayList<>();
-			List<Map<String,Map<Id<Link>,Double>>> linkCarVolumes=new ArrayList<>();
+			Set<Map<String,Map<Id<TransitLink>, Double>>> linkTransitVolumes=Collections.synchronizedSet(new HashSet<>());
+			Map<String,Map<Id<Link>, Double>> transitVehicles=new HashMap<>();
+			Set<Map<String,Map<Id<Link>,Double>>> linkCarVolumes=Collections.synchronizedSet(new HashSet<>());
 			
 			Map<String,Map<Id<TransitLink>, Double>> combinedTransitVolumes=new HashMap<>();
 			Map<String,Map<Id<Link>,Double>> combinedCarVolumes=new HashMap<>();
@@ -825,16 +828,32 @@ public class SUEModelContTime implements AnalyticalModel{
 			for(int i=1;i<500;i++) {
 				//for(this.car)
 				//ConcurrentHashMap<String,HashMap<Id<CNLODpair>,Double>>demand=this.Demand;
-				for(String timeBeanId:this.timeBeans.keySet()) {
-					combinedTransitVolumes.put(timeBeanId, new HashMap<>());
-					combinedCarVolumes.put(timeBeanId, new HashMap<>());
-					linkCarVolumes.add(this.performCarNetworkLoading(timeBeanId,i,params,anaParams));
-					linkTransitVolumes.add(this.performTransitNetworkLoading(timeBeanId,i,params,anaParams));
-				}
+				final int k=i;
+				transitVehicles=this.performTransitVehicleOverlay(networks, ts, this.scenario.getTransitVehicles(), params, anaParams, true, true);
+				this.timeBeans.keySet().parallelStream().forEach((timeBeanId)->{
+				//for(String timeBeanId:this.timeBeans.keySet()) {
+					linkCarVolumes.add(this.performCarNetworkLoading(timeBeanId,k,params,anaParams));
+					linkTransitVolumes.add(this.performTransitNetworkLoading(timeBeanId,k,params,anaParams));
+				//}
+				});
 				
+				//combine the flows
 				for(String timeId:this.timeBeans.keySet()) {
+					combinedTransitVolumes.put(timeId, new HashMap<>());
+					combinedCarVolumes.put(timeId, new HashMap<>());
 					Map<Id<Link>,Double>innerMap= combinedCarVolumes.get(timeId);
 					Map<Id<TransitLink>,Double>innerTrMap=combinedTransitVolumes.get(timeId);
+					
+					//transitVehicles
+					for(Entry<Id<Link>,Double>volume:transitVehicles.get(timeId).entrySet()) {
+						Double V=innerMap.get(volume.getKey());
+						if(V!=null) {
+							innerMap.put(volume.getKey(), V+volume.getValue());
+						}else {
+							innerMap.put(volume.getKey(), volume.getValue());
+						}
+					}
+					//Car vehicles
 					for(Map<String,Map<Id<Link>,Double>> linkCarVolume:linkCarVolumes) {
 						if(linkCarVolume.containsKey(timeId)) {
 							for(Entry<Id<Link>,Double>volume:linkCarVolume.get(timeId).entrySet()) {
@@ -847,7 +866,7 @@ public class SUEModelContTime implements AnalyticalModel{
 							}
 						}
 					}
-					
+					//Transit passengers
 					for(Map<String,Map<Id<TransitLink>,Double>> linkTrVolume:linkTransitVolumes) {
 						if(linkTrVolume.containsKey(timeId)) {
 							for(Entry<Id<TransitLink>,Double>volume:linkTrVolume.get(timeId).entrySet()) {
@@ -997,11 +1016,157 @@ public class SUEModelContTime implements AnalyticalModel{
 			
 			return this.perFormSUE(params,this.AnalyticalModelInternalParams, originalMeasurements);
 		}
-
+		
+		
 		@Override
-		public Measurements perFormSUE(LinkedHashMap<String, Double> params, LinkedHashMap<String, Double> anaParams,
-				Measurements originalMeasurements) {
-			// TODO Auto-generated method stub
-			return null;
+		public Measurements perFormSUE(LinkedHashMap<String, Double> params,LinkedHashMap<String,Double> anaParams,Measurements originalMeasurements) {
+			this.resetCarDemand();
+			this.measurementsToUpdate=originalMeasurements.clone();
+			LinkedHashMap<String,Double> inputParams=new LinkedHashMap<>(params);
+			LinkedHashMap<String,Double> inputAnaParams=new LinkedHashMap<>(anaParams);
+			//Loading missing parameters from the default values		
+			
+			
+			
+			//Checking and updating for the parameters 
+			for(Entry<String,Double> e:this.Params.entrySet()) {
+				if(!params.containsKey(e.getKey())) {
+					params.put(e.getKey(), e.getValue());
+				}
+			}
+			
+			//Checking and updating for the analytical model parameters
+			for(Entry<String,Double> e:this.AnalyticalModelInternalParams.entrySet()) {
+				if(!anaParams.containsKey(e.getKey())) {
+					anaParams.put(e.getKey(), e.getValue());
+				}
+			}
+			
+			this.TA(inputParams, inputAnaParams);
+
+			//Collecting the Link Flows
+			Set<Id<Link>> linkList=new HashSet<>();
+			for(Measurement m:this.measurementsToUpdate.getMeasurementsByType().get(MeasurementType.linkVolume)) {
+				for(String timeBeanId:m.getVolumes().keySet()) {
+				double count=0;
+				for(Id<Link> linkId:(ArrayList<Id<Link>>)m.getAttribute(Measurement.linkListAttributeName)) {
+					count+=((AnalyticalModelLink) this.getNetworks().get(timeBeanId).getLinks().get(linkId)).getLinkAADTVolume();
+				}
+				m.addVolume(timeBeanId, count);
+				}
+			}
+			
+			
+			
+			//collect pt occupancy
+			for(Measurement m:this.measurementsToUpdate.getMeasurementsByType().get(MeasurementType.averagePTOccumpancy)) {
+				for(String timeBeanId:m.getVolumes().keySet()) {
+					Id<Link>linkId=((ArrayList<Id<Link>>)m.getAttribute(Measurement.linkListAttributeName)).get(0);
+					double occupancy=((CNLLink)this.networks.get(timeBeanId).getLinks().get(linkId)).getLinkTransitPassenger()/this.totalPtCapacityOnLink.get(timeBeanId).get(linkId);
+					m.addVolume(timeBeanId, occupancy);
+				}
+			}
+			
+			//collect smartCard Entry
+			
+			Map<String,Map<String,Double>>entryCount=new HashMap<>();//First string is lineid+routeid+entryStopId second string is volume key
+			for(Measurement m:this.measurementsToUpdate.getMeasurementsByType().get(MeasurementType.smartCardEntry)) {
+				String key=m.getAttribute(Measurement.transitLineAttributeName)+"___"+m.getAttribute(Measurement.transitRouteAttributeName)+"___"+m.getAttribute(Measurement.transitBoardingStopAtrributeName);
+				//System.out.println();
+				entryCount.put(key, new HashMap<>());
+				for(String s:m.getVolumes().keySet()) {
+					entryCount.get(key).put(s, 0.);
+				}
+			}
+			
+			for(String timeBeanId:this.transitLinks.keySet()) {
+				for(TransitLink trl:this.transitLinks.get(timeBeanId).values()) {
+					if(trl instanceof TransitDirectLink) {
+						TransitDirectLink trdl=(TransitDirectLink)trl;
+						String key= trdl.getLineId()+"___"+trdl.getRouteId()+"___"+trdl.getStartStopId();
+						if(entryCount.containsKey(key) && entryCount.get(key).containsKey(timeBeanId)) {
+							entryCount.get(key).put(timeBeanId, entryCount.get(key).get(timeBeanId)+trl.getPassangerCount());
+						}
+					}
+				}
+			}
+			
+			for(Measurement m:this.measurementsToUpdate.getMeasurementsByType().get(MeasurementType.smartCardEntry)) {
+				String key=m.getAttribute(Measurement.transitLineAttributeName)+"___"+m.getAttribute(Measurement.transitRouteAttributeName)+"___"+m.getAttribute(Measurement.transitBoardingStopAtrributeName);
+				for(String timeBeanId:m.getVolumes().keySet()) {
+					m.addVolume(timeBeanId, entryCount.get(key).get(timeBeanId));
+				}
+			}
+			
+			//Collect smart card entry and exit
+			Map<String,Map<String,Double>>entryAndExitCountBus=new HashMap<>();//First string is lineid+routeid+entryStopId second string is volume key
+			Map<String,Map<String,Double>>entryAndExitCountMTR=new HashMap<>();
+			for(Measurement m:this.measurementsToUpdate.getMeasurementsByType().get(MeasurementType.smartCardEntryAndExit)) {
+				String mode=m.getAttribute(Measurement.transitModeAttributeName).toString();
+				String key=null;
+				if(mode.equals("train")) {
+					key=m.getAttribute(Measurement.transitBoardingStopAtrributeName).toString()+"___"+m.getAttribute(Measurement.transitAlightingStopAttributeName).toString()+"___"+m.getAttribute(Measurement.transitModeAttributeName).toString();
+					entryAndExitCountMTR.put(key, new HashMap<>());
+					for(String s:m.getVolumes().keySet()) {
+						entryAndExitCountMTR.get(key).put(s, 0.);
+					}
+				}else {
+					key=m.getAttribute(Measurement.transitBoardingStopAtrributeName).toString()+"___"+m.getAttribute(Measurement.transitAlightingStopAttributeName).toString()+"___"
+							+m.getAttribute(Measurement.transitLineAttributeName)+"___"+m.getAttribute(Measurement.transitRouteAttributeName);
+					entryAndExitCountBus.put(key, new HashMap<>());
+					for(String s:m.getVolumes().keySet()) {
+						entryAndExitCountBus.get(key).put(s, 0.);
+					}
+				}
+				               
+				
+			}
+			
+			for(String timeBeanId:this.transitLinks.keySet()) {
+				for(TransitLink trl:this.transitLinks.get(timeBeanId).values()) {
+					if(trl instanceof TransitDirectLink) {
+						TransitDirectLink trdl=(TransitDirectLink)trl;
+						String key= trdl.getStartStopId()+"___"+trdl.getEndStopId()+"___"+trdl.getLineId()+"___"+trdl.getRouteId();
+						if(entryAndExitCountBus.containsKey(key) && entryAndExitCountBus.get(key).containsKey(timeBeanId)) {
+							entryAndExitCountBus.get(key).put(timeBeanId, entryCount.get(key).get(timeBeanId)+trl.getPassangerCount());
+						}
+					}
+				}
+			}
+			
+			for(AnalyticalModelODpair odpair:this.odPairs.getODpairset().values()) {
+				for(String timeBeanId:this.timeBeans.keySet()) {
+					if(odpair.getTrRoutes(timeBeanId)!=null) {
+					for(AnalyticalModelTransitRoute tr:odpair.getTrRoutes(timeBeanId)) {
+						for(String key:entryAndExitCountMTR.keySet()) {
+							if(((CNLTransitRoute)tr).getFareEntryAndExit().contains(key)) {
+								entryAndExitCountMTR.get(key).put(timeBeanId, entryAndExitCountMTR.get(key).get(timeBeanId)+odpair.getTrRouteFlow().get(timeBeanId).get(tr.getTrRouteId()));
+							}
+						}
+					}
+					}
+				}
+					
+			}
+			
+			for(Measurement m:this.measurementsToUpdate.getMeasurementsByType().get(MeasurementType.smartCardEntryAndExit)) {
+				String mode=m.getAttribute(Measurement.transitModeAttributeName).toString();
+				String key=null;
+				if(mode.equals("train")) {
+					key=m.getAttribute(Measurement.transitBoardingStopAtrributeName).toString()+"___"+m.getAttribute(Measurement.transitAlightingStopAttributeName).toString()+"___"+m.getAttribute(Measurement.transitModeAttributeName).toString();
+					for(String s:m.getVolumes().keySet()) {
+						m.addVolume(s, entryAndExitCountMTR.get(key).get(s));
+					}
+				}else {
+					key=m.getAttribute(Measurement.transitBoardingStopAtrributeName).toString()+"___"+m.getAttribute(Measurement.transitAlightingStopAttributeName).toString()+"___"
+							+m.getAttribute(Measurement.transitLineAttributeName)+"___"+m.getAttribute(Measurement.transitRouteAttributeName);
+					for(String s:m.getVolumes().keySet()) {
+						m.addVolume(s,entryAndExitCountBus.get(key).get(s));
+					}
+				}
+			}
+			
+			//new OdInfoWriter("toyScenario/ODInfo/odInfo",this.timeBeans).writeOdInfo(this.getOdPairs(), getDemand(), getCarDemand(), inputParams, inputAnaParams);
+			return this.measurementsToUpdate;
 		}
 }
