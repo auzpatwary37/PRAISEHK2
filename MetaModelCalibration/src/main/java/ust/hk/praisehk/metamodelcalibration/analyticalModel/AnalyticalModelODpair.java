@@ -320,6 +320,7 @@ public class AnalyticalModelODpair {
 //			if(demand.get(timeId)==null) {
 //				System.out.println();
 //			}
+			this.startTimes.get(timeId).add(trip.getStartTime());
 			demand.put(timeId, demand.get(timeId)+1);
 			this.agentTrCounter++;
 			if(!this.Transitroutes.containsKey(trip.getTrRoute().getTrRouteId())) {

@@ -13,8 +13,10 @@ import org.matsim.api.core.v01.population.Population;
 import org.matsim.core.network.NetworkUtils;
 import org.matsim.core.utils.collections.Tuple;
 import org.matsim.pt.transitSchedule.api.TransitSchedule;
+import org.matsim.vehicles.Vehicles;
 
 import dynamicTransitRouter.fareCalculators.FareCalculator;
+import ust.hk.praisehk.metamodelcalibration.analyticalModel.AnalyticalModelNetwork;
 import ust.hk.praisehk.metamodelcalibration.analyticalModel.AnalyticalModelODpair;
 import ust.hk.praisehk.metamodelcalibration.analyticalModel.TransitLink;
 import ust.hk.praisehk.metamodelcalibration.calibrator.ParamReader;
@@ -36,6 +38,7 @@ public class SUEModelContTimeSubPop extends SUEModelContTime{
 		super(timeBean);
 		this.subPopulationName=pReader.getSubPopulationName();
 		this.pReader=preader;
+		this.Params.clear();
 		super.setDefaultParameters(pReader.ScaleUp(pReader.getDefaultParam()));
 		this.setTollerance(0.1);
 	}
@@ -45,6 +48,7 @@ public class SUEModelContTimeSubPop extends SUEModelContTime{
 			Scenario scenario,Map<String,FareCalculator> fareCalculator) {
 		//System.out.println("");
 		this.odPairs=new CNLODpairs(network,population,transitSchedule,scenario,this.getTimeBeans());
+		this.scenario=scenario;
 //		Config odConfig=ConfigUtils.createConfig();
 //		odConfig.network().setInputFile("data/odNetwork.xml");
 		
@@ -54,7 +58,7 @@ public class SUEModelContTimeSubPop extends SUEModelContTime{
 		for(String s:this.getTimeBeans().keySet()) {
 			this.getNetworks().put(s, new CNLNetwork(network));
 		}
-		this.performTransitVehicleOverlay(this.networks, this.ts,scenario.getVehicles(), this.Params, this.AnalyticalModelInternalParams, 
+		this.performTransitVehicleOverlay(this.networks, this.ts,scenario.getTransitVehicles(), this.Params, this.AnalyticalModelInternalParams, 
 				true, true);
 		this.odPairs.generateRouteandLinkIncidence(0.,this.individualPtCapacityOnLink,this.individualPtVehicleOnLink);
 		for(String s:this.timeBeans.keySet()) {
@@ -97,7 +101,7 @@ public class SUEModelContTimeSubPop extends SUEModelContTime{
 	private LinkedHashMap<String,Double>generateSubPopSpecificParam(LinkedHashMap<String,Double>originalparams,String subPopName){
 		LinkedHashMap<String,Double> specificParam=new LinkedHashMap<>();
 		for(String s:originalparams.keySet()) {
-			if(s.contains(subPopName)||s.contains("All")) {
+			if((subPopName!=null && s.contains(subPopName))||s.contains("All")) {
 				specificParam.put(s.split(" ")[1],originalparams.get(s));
 			}
 		}
@@ -117,7 +121,8 @@ public class SUEModelContTimeSubPop extends SUEModelContTime{
 	@Override
 	protected Map<String,Map<Id<Link>,Double>> NetworkLoadingCarSingleOD(Id<AnalyticalModelODpair> ODpairId,String timeBeanId,double counter,LinkedHashMap<String,Double> params, LinkedHashMap<String, Double> anaParams){
 		String s=this.getOdPairs().getODpairset().get(ODpairId).getSubPopulation();
-		LinkedHashMap<String,Double>newParam=params;
+		LinkedHashMap<String,Double>newParam=null;
+		//System.out.println();
 		if(s!=null) {
 			newParam=this.generateSubPopSpecificParam(params, s);
 		}
@@ -127,7 +132,7 @@ public class SUEModelContTimeSubPop extends SUEModelContTime{
 	@Override
 	protected Map<String,Map<Id<TransitLink>,Double>> NetworkLoadingTransitSingleOD(Id<AnalyticalModelODpair> ODpairId,String timeBeanId,int counter,LinkedHashMap<String,Double> params, LinkedHashMap<String, Double> anaParams){
 		String s=this.getOdPairs().getODpairset().get(ODpairId).getSubPopulation();
-		LinkedHashMap<String,Double>newParam=params;
+		LinkedHashMap<String,Double>newParam=null;
 		if(s!=null) {
 			newParam=this.generateSubPopSpecificParam(params, s);
 		}
@@ -176,7 +181,22 @@ public class SUEModelContTimeSubPop extends SUEModelContTime{
 			}
 		}
 	}
-	
+	@Override
+	public Map<String,Map<Id<Link>,Double>> performTransitVehicleOverlay(Map<String,AnalyticalModelNetwork> network, TransitSchedule schedule,Vehicles vehicles,
+			LinkedHashMap<String,Double>params,LinkedHashMap<String,Double>anaParams,boolean multiplieFactorOfSafety, boolean useConstTransferTime) {
+		String s=null;
+		LinkedHashMap<String,Double>newParam=params;
+		newParam=this.generateSubPopSpecificParam(params, s);
+		
+		return super.performTransitVehicleOverlay(network, schedule, vehicles, newParam, anaParams, multiplieFactorOfSafety, useConstTransferTime);
+	}
+	@Override
+	protected void collectTravelTime(LinkedHashMap<String,Double> params,LinkedHashMap<String,Double>anaParams) {
+		String s=null;
+		LinkedHashMap<String,Double>newParam=null;
+		newParam=this.generateSubPopSpecificParam(params, s);
+		super.collectTravelTime(newParam, anaParams);
+	}
 	
 	@Override
 	public Measurements perFormSUE(LinkedHashMap<String, Double> noparams,LinkedHashMap<String,Double> anaParams,Measurements originalMeasurements) {
