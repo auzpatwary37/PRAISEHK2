@@ -62,6 +62,9 @@ public class TruncatedNormal extends AbstractRealDistribution {
         lowerZ = unnormalized.cumulativeProbability(lowerBound);
         upperZ = 1 - unnormalized.cumulativeProbability(upperBound);
         reZ = 1 - (lowerZ + upperZ);
+        if(reZ==0) {
+        	throw new IllegalArgumentException("rerZ is null. Check!!!!");
+        }
         NormalDistribution standardNormal = new NormalDistribution();
         double alpha = (lowerBound - mu) / sigma;
         double beta = (upperBound - mu) / sigma;

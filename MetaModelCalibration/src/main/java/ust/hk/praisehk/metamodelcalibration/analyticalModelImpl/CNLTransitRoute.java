@@ -203,6 +203,7 @@ public class CNLTransitRoute implements AnalyticalModelTransitRoute{
 	public double calcRouteUtility(LinkedHashMap<String, Double> params,LinkedHashMap<String, Double> anaParams,AnalyticalModelNetwork network,Map<String,FareCalculator>farecalc,
 			Tuple<Double,Double> timeBean) {
 		routeInfoOut info=this.calcRouteTravelAndWaitingTime(network, timeBean, params, anaParams);
+		this.info=info;
 		double MUTravelTime=params.get(CNLSUEModel.MarginalUtilityofTravelptName)/3600.0-params.get(CNLSUEModel.MarginalUtilityofPerformName)/3600.0;
 		double MUDistance=params.get(CNLSUEModel.MarginalUtilityOfDistancePtName);
 		double MUWalkTime=params.get(CNLSUEModel.MarginalUtilityOfWalkingName)/3600.0-params.get(CNLSUEModel.MarginalUtilityofPerformName)/3600.0;

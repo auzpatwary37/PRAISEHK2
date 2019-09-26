@@ -1,6 +1,8 @@
 package ust.hk.praisehk.metamodelcalibration.matsimIntegration;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
@@ -25,8 +27,8 @@ public class TravelTimeEventHandler implements LinkEnterEventHandler, LinkLeaveE
 	@Inject
 	private Scenario scenario;
 	private Measurements outputMeasurements;
-	private Map<Id<Link>,Map<String,Double>>totalTime=new ConcurrentHashMap<>();
-	private Map<Id<Link>,Map<String,Double>>totalVehicle=new ConcurrentHashMap<>();
+	private Map<Id<Link>,Map<String,List<Double>>>totalTime=new ConcurrentHashMap<>();
+	//private Map<Id<Link>,Map<String,Double>>totalVehicle=new ConcurrentHashMap<>();
 	private Map<Id<Link>,Map<Id<Vehicle>,Double>> vehicleBuffer=new ConcurrentHashMap<>();
 	private Map<Id<Link>,Measurement> measurements=new ConcurrentHashMap<>();
 	private Map<String,Tuple<Double,Double>>timeBean;
@@ -38,11 +40,11 @@ public class TravelTimeEventHandler implements LinkEnterEventHandler, LinkLeaveE
 			Id<Link> linkId=((ArrayList<Id<Link>>)m.getAttribute(Measurement.linkListAttributeName)).get(0);
 			measurements.put(linkId, m);
 			this.vehicleBuffer.put(linkId, new ConcurrentHashMap<>());
-			this.totalVehicle.put(linkId, new ConcurrentHashMap<>());
+			//this.totalVehicle.put(linkId, new ConcurrentHashMap<>());
 			this.totalTime.put(linkId, new ConcurrentHashMap<>());
 			for(String timeId:m.getVolumes().keySet()) {
-				this.totalTime.get(linkId).put(timeId, 0.);
-				this.totalVehicle.get(linkId).put(timeId, 0.);
+				this.totalTime.get(linkId).put(timeId, Collections.synchronizedList(new ArrayList<Double>()));
+				//this.totalVehicle.get(linkId).put(timeId, 0.);
 			}
 		}
 	}
@@ -50,8 +52,8 @@ public class TravelTimeEventHandler implements LinkEnterEventHandler, LinkLeaveE
 	public Measurements getUpdatedMeasurements() {
 		for(Entry<Id<Link>, Measurement> m:this.measurements.entrySet()) {
 			for(String timeId:m.getValue().getVolumes().keySet()) {
-				if(this.totalVehicle.get(m.getKey()).get(timeId)!=0) {
-					m.getValue().addVolume(timeId, this.totalTime.get(m.getKey()).get(timeId)/this.totalVehicle.get(m.getKey()).get(timeId));
+				if(this.totalTime.get(m.getKey()).get(timeId).size()!=0) {
+					m.getValue().addVolume(timeId, calcAverage(this.totalTime.get(m.getKey()).get(timeId)));
 				}else {
 					Link link=scenario.getNetwork().getLinks().get(m.getKey());
 					m.getValue().addVolume(timeId, link.getLength()/link.getFreespeed());
@@ -61,6 +63,19 @@ public class TravelTimeEventHandler implements LinkEnterEventHandler, LinkLeaveE
 		return this.outputMeasurements;
 	}
 	
+	private Double calcAverage(List<Double> list) {
+		
+		double sum=0;
+		double num=list.size();
+		for(Double d:list) {
+			sum+=d;
+		}
+		if(num==0) {
+			return 0.;
+		}
+		return sum/num;
+	}
+	
 	@Override
 	public void handleEvent(LinkLeaveEvent event) {
 		Id<Link>linkId=event.getLinkId();
@@ -68,10 +83,9 @@ public class TravelTimeEventHandler implements LinkEnterEventHandler, LinkLeaveE
 			double timeLength=event.getTime()-this.vehicleBuffer.get(linkId).get(event.getVehicleId());
 			double middleTime=event.getTime()-timeLength/2;
 			String timeId=this.getTimeId(middleTime);
-			Double oldTime=this.totalTime.get(linkId).get(timeId);
-			if(oldTime!=null) {
-				this.totalTime.get(linkId).put(timeId, oldTime+timeLength);
-				this.totalVehicle.get(linkId).put(timeId, this.totalVehicle.get(linkId).get(timeId)+1);
+			if(timeId!=null && this.totalTime.get(linkId).get(timeId)!=null) {
+				this.totalTime.get(linkId).get(timeId).add(timeLength);
+				//this.totalVehicle.get(linkId).put(timeId, this.totalVehicle.get(linkId).get(timeId)+1);
 			}
 			this.vehicleBuffer.get(linkId).remove(event.getVehicleId());
 		}
@@ -104,11 +118,11 @@ public class TravelTimeEventHandler implements LinkEnterEventHandler, LinkLeaveE
 			Id<Link> linkId=((ArrayList<Id<Link>>)m.getAttribute(Measurement.linkListAttributeName)).get(0);
 			measurements.put(linkId, m);
 			this.vehicleBuffer.put(linkId, new ConcurrentHashMap<>());
-			this.totalVehicle.put(linkId, new ConcurrentHashMap<>());
+			//this.totalVehicle.put(linkId, new ConcurrentHashMap<>());
 			this.totalTime.put(linkId, new ConcurrentHashMap<>());
 			for(String timeId:m.getVolumes().keySet()) {
-				this.totalTime.get(linkId).put(timeId, 0.);
-				this.totalVehicle.get(linkId).put(timeId, 0.);
+				this.totalTime.get(linkId).put(timeId, Collections.synchronizedList(new ArrayList<>()));
+			//	this.totalVehicle.get(linkId).put(timeId, 0.);
 			}
 		}
 	}

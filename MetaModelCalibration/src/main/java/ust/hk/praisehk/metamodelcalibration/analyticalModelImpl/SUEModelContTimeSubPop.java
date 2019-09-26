@@ -62,7 +62,9 @@ public class SUEModelContTimeSubPop extends SUEModelContTime{
 				true, true);
 		this.odPairs.generateRouteandLinkIncidence(0.,this.individualPtCapacityOnLink,this.individualPtVehicleOnLink);
 		for(String s:this.timeBeans.keySet()) {
-			this.transitLinks.put(s,this.odPairs.getTransitLinks(s));
+			Map<Id<TransitLink>,TransitLink>transitLinks=this.odPairs.getTransitLinks(s);
+			this.transitLinks.get(s).putAll(this.odPairs.getTransitLinks(s));
+			this.transitLinks.get(this.getNextTimeBean(s)).putAll(this.odPairs.getTransitLinks(s));//add all the links to the next time bean as well.
 		}
 		this.setFareCalculator(fareCalculator);
 		this.consecutiveSUEErrorIncrease=0;

@@ -793,6 +793,7 @@ public class CNLSUEModel implements AnalyticalModel{
 		
 		for(AnalyticalModelTransitRoute r:routesFromOd) {
 			if(r.getTrRouteId().equals(route.getTrRouteId())) {
+				route=r;
 				return true;
 			}
 		}

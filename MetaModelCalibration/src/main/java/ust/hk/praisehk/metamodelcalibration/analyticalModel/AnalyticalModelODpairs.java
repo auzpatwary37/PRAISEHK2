@@ -168,6 +168,8 @@ public abstract class AnalyticalModelODpairs {
 			ODpairset.get(odpairId).generateTimeBasedTransitRoutes();
 			ODpairset.get(odpairId).calcAutoRoutePathSize();
 			ODpairset.get(odpairId).calcTransitRoutePathSize();
+			this.ODpairset.get(odpairId).generateDepartureTimeDistribution();
+			
 		}
 	}
 	
@@ -179,6 +181,7 @@ public abstract class AnalyticalModelODpairs {
 			ODpairset.get(odpairId).generateTimeBasedTransitRoutes(capacity,vehicleCount);
 			ODpairset.get(odpairId).calcAutoRoutePathSize();
 			ODpairset.get(odpairId).calcTransitRoutePathSize();
+			this.ODpairset.get(odpairId).generateDepartureTimeDistribution();
 		}
 	}
 	

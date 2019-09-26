@@ -133,7 +133,7 @@ public class AnaModelControlerListener implements StartupListener,BeforeMobsimLi
 				this.pcuVolumeCounter.geenerateLinkCounts();
 				this.occupancyCalculator.getOutputMeasurements();
 				this.travelTimeCalculator.getUpdatedMeasurements();
-				this.outputMeasurements.writeCSVMeasurements(fileLoc);
+				this.outputMeasurements.writeCSVMeasurements(fileLoc+"/outPutMeasurements.xml");
 				this.storage.storeMeasurements(this.currentParam.getParam(), this.outputMeasurements);
 			}
 		}

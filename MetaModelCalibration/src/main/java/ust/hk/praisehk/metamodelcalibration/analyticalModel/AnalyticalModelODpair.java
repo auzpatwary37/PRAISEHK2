@@ -255,6 +255,7 @@ public class AnalyticalModelODpair {
 	public void generateDepartureTimeDistribution() {
 		
 		for(String timeId:this.timeBean.keySet()) {
+			if(this.startTimes.get(timeId).size()>0) {
 			double[] startTimes=new double[this.startTimes.get(timeId).size()];
 			int i=0;
 			double sum=0;
@@ -263,10 +264,14 @@ public class AnalyticalModelODpair {
 				sum+=d;
 				i++;
 			}
-			double mean=sum/(i+1);
+			double mean=sum/(i);
 			double sd=new StandardDeviation().evaluate(startTimes);
+			if(sd==0) {
+				sd=1;
+			}
 			this.departureTimeDistributions.put(timeId, new TruncatedNormal(new JDKRandomGenerator(), 
 					mean, sd, this.timeBean.get(timeId).getFirst(), this.timeBean.get(timeId).getSecond()));
+		}
 		}
 	}
 
@@ -426,7 +431,7 @@ public class AnalyticalModelODpair {
 	}
 	
 	
-	
+	//TODO: giving more routes than possible
 	public void generateTRRoutes(double routePercentage) {
 		for(String timeBean:this.timeBean.keySet()) {
 			this.TrRouteUtility.put(timeBean,new HashMap<Id<AnalyticalModelTransitRoute>,Double>());
@@ -445,28 +450,28 @@ public class AnalyticalModelODpair {
 					}
 				}
 			}
-			if(finalTrRoutes.size()<=this.minRoute && finalTrRoutes.size()<=this.transitRouteCounter.size()) {
-				ArrayList<Integer> tripCount=new ArrayList<Integer>(this.transitRouteCounter.values());
-				Collections.sort(tripCount);
-				Collections.reverse(tripCount);
-				if(transitRouteCounter.size()<=this.minRoute) {
-					this.finalTrRoutes.addAll(this.Transitroutes.values());
-				}else {
-					for(Entry<Id<AnalyticalModelTransitRoute>, Integer> e:this.transitRouteCounter.entrySet()) {
-						if(e.getValue()>tripCount.get(this.minRoute-1)) {
-							this.finalTrRoutes.add(this.Transitroutes.get(e.getKey()));
-							for(String timeBeanId:this.timeBean.keySet()) {
-								AnalyticalModelTransitRoute tr=this.Transitroutes.get(e.getKey());
-								tr.calcCapacityHeadway(this.timeBean, timeBeanId);
-							}
-						}
-					}
-					
-				}
-			}
+//			if(finalTrRoutes.size()<=this.minRoute && finalTrRoutes.size()<=this.transitRouteCounter.size()) {
+//				ArrayList<Integer> tripCount=new ArrayList<Integer>(this.transitRouteCounter.values());
+//				Collections.sort(tripCount);
+//				Collections.reverse(tripCount);
+//				if(transitRouteCounter.size()<=this.minRoute) {
+//					this.finalTrRoutes.addAll(this.Transitroutes.values());
+//				}else {
+//					for(Entry<Id<AnalyticalModelTransitRoute>, Integer> e:this.transitRouteCounter.entrySet()) {
+//						if(e.getValue()>tripCount.get(this.minRoute-1)) {
+//							this.finalTrRoutes.add(this.Transitroutes.get(e.getKey()));
+//							for(String timeBeanId:this.timeBean.keySet()) {
+//								AnalyticalModelTransitRoute tr=this.Transitroutes.get(e.getKey());
+//								tr.calcCapacityHeadway(this.timeBean, timeBeanId);
+//							}
+//						}
+//					}
+//					
+//				}
+//			}
 			
 		}
-		
+		//System.out.println();
 		
 	}
 	
