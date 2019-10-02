@@ -307,7 +307,7 @@ public class AnalyticalModelODpair {
 //			}
 			//this.median.put(timeId, this.startTimeSum.get(timeId)/(this.demand.get(timeId)+1));
 			
-			demand.put(timeId, demand.get(timeId)+1);
+			demand.put(timeId, demand.get(timeId)+trip.getCarPCU());//TODO: how to fix it??
 			this.agentCARCounter+=trip.getCarPCU();
 			
 			
@@ -326,7 +326,7 @@ public class AnalyticalModelODpair {
 //				System.out.println();
 //			}
 			this.startTimes.get(timeId).add(trip.getStartTime());
-			demand.put(timeId, demand.get(timeId)+1);
+			demand.put(timeId, demand.get(timeId)+trip.getCarPCU());
 			this.agentTrCounter++;
 			if(!this.Transitroutes.containsKey(trip.getTrRoute().getTrRouteId())) {
 				this.Transitroutes.put(trip.getTrRoute().getTrRouteId(),trip.getTrRoute());

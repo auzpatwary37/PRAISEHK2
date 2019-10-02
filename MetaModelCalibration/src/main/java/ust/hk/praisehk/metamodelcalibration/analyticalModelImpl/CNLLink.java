@@ -83,7 +83,9 @@ public class CNLLink extends AnalyticalModelLink{
 		double capacity=super.getCapacity()*(timeBean.getSecond()-timeBean.getFirst())/3600*params.get(CNLSUEModel.CapacityMultiplierName);
 		double freeflowTime=super.getLength()/super.getFreespeed();
 		double linkTravelTime=freeflowTime*(1+anaParams.get(CNLSUEModel.BPRalphaName)*Math.pow(totalpcu/capacity, anaParams.get(CNLSUEModel.BPRbetaName)));
-	
+		if(linkTravelTime>2*3600) {
+			System.out.println();
+		}
 		return linkTravelTime;
 		}else {
 			linkTravelTime=this.link.getLength()/(this.link.getFreespeed()*1000/(3600));

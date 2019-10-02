@@ -28,6 +28,7 @@ import org.matsim.pt.transitSchedule.api.TransitLine;
 import org.matsim.pt.transitSchedule.api.TransitRoute;
 import org.matsim.pt.transitSchedule.api.TransitRouteStop;
 import org.matsim.pt.transitSchedule.api.TransitSchedule;
+import org.matsim.vehicles.Vehicle;
 import org.matsim.vehicles.VehicleCapacity;
 import org.matsim.vehicles.VehicleType;
 import org.matsim.vehicles.Vehicles;
@@ -86,7 +87,7 @@ public class SUEModelContTime implements AnalyticalModel{
 		
 		
 		private double alphaMSA=1.9;//parameter for decreasing MSA step size
-		private double gammaMSA=.1;//parameter for decreasing MSA step size
+		private double gammaMSA=0.1;//parameter for decreasing MSA step size
 		
 		//other Parameters for the Calibration Process
 		private double tollerance=1;
@@ -329,7 +330,9 @@ public class SUEModelContTime implements AnalyticalModel{
 								//System.out.println();
 								linkVolume.get(timeId).put(link.getId(), oldVolume+vehicles.getVehicles().get(d.getVehicleId()).getType().getPcuEquivalents());
 							}else {
-								linkVolume.get(timeId).put(link.getId(), vehicles.getVehicles().get(d.getVehicleId()).getType().getPcuEquivalents());
+								Vehicle v=vehicles.getVehicles().get(d.getVehicleId());
+								VehicleType vt=v.getType();
+								linkVolume.get(timeId).put(link.getId(), vt.getPcuEquivalents());
 							}}catch(Exception e) {
 								System.out.println(e);
 							}
@@ -376,7 +379,7 @@ public class SUEModelContTime implements AnalyticalModel{
 			for(String s:this.timeBeans.keySet()) {
 				this.networks.put(s, new CNLNetwork(network));
 			}
-			this.performTransitVehicleOverlay(this.networks, this.ts,scenario.getVehicles(), this.Params, this.AnalyticalModelInternalParams, 
+			this.performTransitVehicleOverlay(this.networks, this.ts,scenario.getTransitVehicles(), this.Params, this.AnalyticalModelInternalParams, 
 					true, true);
 			this.odPairs.generateRouteandLinkIncidence(0.,this.individualPtCapacityOnLink,this.individualPtVehicleOnLink);
 			for(String s:this.timeBeans.keySet()) {
@@ -459,11 +462,12 @@ public class SUEModelContTime implements AnalyticalModel{
 			Map<String,Map<Id<Link>,Double>> linkFlows=new HashMap<>();
 			
 			Map<Id<AnalyticalModelRoute>,Double> utility=new HashMap<>();
-			for(AnalyticalModelRoute r:routes){
+			for(AnalyticalModelRoute rr:routes){
 				double u=0;
-				
+				CNLRoute r=(CNLRoute)rr;
 				if(counter>1) {
-					u=r.calcRouteUtility(params, anaParams,this.getNetworks().get(timeBeanId),this.timeBeans.get(timeBeanId));
+					u=r.calcRouteUtility(params, anaParams,this.getNetworks(),this.timeBeans,odpair,timeBeanId,
+							this.getNextTimeBean(timeBeanId));
 					u=u+Math.log(odpair.getAutoPathSize().get(r.getRouteId()));//adding the path size term
 					utility.put(r.getRouteId(), u);
 				}else {
@@ -524,6 +528,8 @@ public class SUEModelContTime implements AnalyticalModel{
 			return linkFlows;
 		}
 		
+		
+		
 		public String getTimeId(Double time) {
 			if(time>24*3600) time=time-24*3600;
 			if(time>24*3600) time=24*3600.;
@@ -570,7 +576,7 @@ public class SUEModelContTime implements AnalyticalModel{
 				double u=0;
 				if(counter>1) {
 					u=r.calcRouteUtility(params, anaParams,
-						this.networks.get(timeBeanId),this.fareCalculator,this.timeBeans.get(timeBeanId));
+						this.networks,this.fareCalculator,this.timeBeans,odpair,timeBeanId,this.getNextTimeBean(timeBeanId));
 					u+=Math.log(odpair.getTrPathSize().get(timeBeanId).get(r.getTrRouteId()));//adding the path size term
 					
 					if(u==Double.NaN) {
@@ -659,7 +665,7 @@ public class SUEModelContTime implements AnalyticalModel{
 			}
 			return null;
 		}
-		protected List<Map<String,Map<Id<Link>,Double>>> performCarNetworkLoading(String timeBeanId, double counter,LinkedHashMap<String,Double> params, LinkedHashMap<String, Double> anaParams){
+		protected Map<String,Map<Id<Link>,Double>> performCarNetworkLoading(String timeBeanId, double counter,LinkedHashMap<String,Double> params, LinkedHashMap<String, Double> anaParams){
 			List<Map<String, Map<Id<Link>,Double>>> linkVolumes=Collections.synchronizedList(new ArrayList<>());
 			Map<String,Map<Id<Link>,Double>> linkVolume=new HashMap<>();
 			//for(AnalyticalModelODpair e:this.odPairs.getODpairset().values()){
@@ -706,9 +712,7 @@ public class SUEModelContTime implements AnalyticalModel{
 			}
 			
 			
-			linkVolumes.clear();
-			linkVolumes.add(linkVolume);
-			return linkVolumes;
+			return linkVolume;
 		}
 
 		/**
@@ -717,7 +721,7 @@ public class SUEModelContTime implements AnalyticalModel{
 		 * @param anaParams 
 		 * @return
 		 */
-		protected List<Map<String,Map<Id<TransitLink>,Double>>> performTransitNetworkLoading(String timeBeanId,int counter, LinkedHashMap<String, Double> params, LinkedHashMap<String, Double> anaParams){
+		protected Map<String,Map<Id<TransitLink>,Double>> performTransitNetworkLoading(String timeBeanId,int counter, LinkedHashMap<String, Double> params, LinkedHashMap<String, Double> anaParams){
 			List<Map<String,Map<Id<TransitLink>,Double>>> linkVolumes=Collections.synchronizedList(new ArrayList<>());
 			Map<String,Map<Id<TransitLink>,Double>>linkVolume=new HashMap<>();
 			//for(AnalyticalModelODpair e:this.odPairs.getODpairset().values()){
@@ -751,10 +755,9 @@ public class SUEModelContTime implements AnalyticalModel{
 			}
 			//});
 			//System.out.println(linkVolume.size());
-			linkVolumes.clear();
-			linkVolumes.add(linkVolume);
+			
 
-			return linkVolumes;
+			return linkVolume;
 		}
 		
 		protected boolean UpdateLinkVolume(Map<String,Map<Id<Link>,Double>> linkVolume,Map<String,Map<Id<TransitLink>,Double>> transitlinkVolume,int counter){
@@ -830,18 +833,25 @@ public class SUEModelContTime implements AnalyticalModel{
 			double squareSum=0;
 			double sum=0;
 			double error=0;
+			int highFlowLink=0;
+			int totalLink=0;
 			for(String timeBeanId:this.timeBeans.keySet()) {
 			for(Entry<Id<Link>, Double> linkid:linkVolume.get(timeBeanId).entrySet()){
+				totalLink++;
 				if(linkid.getValue()==0) {
 					error=0;
 				}else {
 					double currentVolume=((AnalyticalModelLink) this.getNetworks().get(timeBeanId).getLinks().get(linkid.getKey())).getLinkCarVolume();
 					double newVolume=linkid.getValue();
+					
+					if((newVolume-currentVolume)>10) {
+						highFlowLink++;
+					}
 					error=Math.pow((currentVolume-newVolume),2);
 					if(error==Double.POSITIVE_INFINITY||error==Double.NEGATIVE_INFINITY) {
 						throw new IllegalArgumentException("Error is infinity!!!");
 					}
-					if(error/newVolume*100>tollerance) {					
+					if(error/newVolume*10>tollerance) {					
 						sum+=1;
 					}
 					if(error<1) {
@@ -855,13 +865,14 @@ public class SUEModelContTime implements AnalyticalModel{
 				}
 			}
 			for(Entry<Id<TransitLink>, Double> transitlinkid:transitlinkVolume.get(timeBeanId).entrySet()){
+				totalLink++;
 				if(transitlinkid.getValue()==0) {
 					error=0;
 				}else {
 					double currentVolume=this.getTransitLinks().get(timeBeanId).get(transitlinkid.getKey()).getPassangerCount();
 					double newVolume=transitlinkid.getValue();
 					error=Math.pow((currentVolume-newVolume),2);
-					if(error/newVolume*100>tollerance) {
+					if(error/newVolume*10>tollerance) {
 
 						sum+=1;
 					}
@@ -883,7 +894,7 @@ public class SUEModelContTime implements AnalyticalModel{
 				this.error.clear();
 			}
 			this.error.add(squareSum);
-			logger.info("ERROR amount  = "+squareSum);
+			logger.info("ERROR amount in iter "+counter+" = "+squareSum);
 			//System.out.println("in timeBean Id "+timeBeanId+" No of link not converged = "+sum);
 			
 //			try {
@@ -893,7 +904,7 @@ public class SUEModelContTime implements AnalyticalModel{
 //				e.printStackTrace();
 //			}
 			
-			if (squareSum<=1||sum==0||linkBelow1==linkVolume.size()+transitlinkVolume.size()){
+			if (squareSum<=1||sum==0||linkBelow1==totalLink){
 				return true;
 			}else{
 				return false;
@@ -1003,8 +1014,8 @@ public class SUEModelContTime implements AnalyticalModel{
 				//this.timeBeans.keySet().parallelStream().forEach((timeBeanId)->{
 				long startTime=System.currentTimeMillis();
 				for(String timeBeanId:this.timeBeans.keySet()) {
-					linkCarVolumes.addAll(this.performCarNetworkLoading(timeBeanId,k,params,anaParams));
-					linkTransitVolumes.addAll(this.performTransitNetworkLoading(timeBeanId,k,params,anaParams));
+					linkCarVolumes.add(this.performCarNetworkLoading(timeBeanId,k,params,anaParams));
+					linkTransitVolumes.add(this.performTransitNetworkLoading(timeBeanId,k,params,anaParams));
 				}
 				//});
 				long requiredTime=System.currentTimeMillis()-startTime;
@@ -1012,49 +1023,54 @@ public class SUEModelContTime implements AnalyticalModel{
 				
 				//combine the flows
 				startTime=System.currentTimeMillis();
-				for(String timeId:this.timeBeans.keySet()) {
-					combinedTransitVolumes.put(timeId, new HashMap<>());
-					combinedCarVolumes.put(timeId, new HashMap<>());
-					Map<Id<Link>,Double>innerMap= combinedCarVolumes.get(timeId);
-					Map<Id<TransitLink>,Double>innerTrMap=combinedTransitVolumes.get(timeId);
-					
-					//transitVehicles
-					for(Entry<Id<Link>,Double>volume:transitVehicles.get(timeId).entrySet()) {
-						Double V=innerMap.get(volume.getKey());
-						if(V!=null) {
-							innerMap.put(volume.getKey(), V+volume.getValue());
-						}else {
-							innerMap.put(volume.getKey(), volume.getValue());
+				
+				for(String timeId:transitVehicles.keySet()) {
+					if(!combinedCarVolumes.containsKey(timeId)) {
+						combinedCarVolumes.put(timeId, new HashMap<>());
+					}
+					Map<Id<Link>,Double> innerMap=combinedCarVolumes.get(timeId);
+					for(Entry<Id<Link>, Double> linkVolume:transitVehicles.get(timeId).entrySet()) {
+						if(innerMap.containsKey(linkVolume.getKey())) {
+							innerMap.put(linkVolume.getKey(), innerMap.get(linkVolume.getKey())+linkVolume.getValue());
+						}else{
+							innerMap.put(linkVolume.getKey(), linkVolume.getValue());
 						}
 					}
-					//Car vehicles
-					for(Map<String,Map<Id<Link>,Double>> linkCarVolume:linkCarVolumes) {
-						if(linkCarVolume.containsKey(timeId)) {
-							for(Entry<Id<Link>,Double>volume:linkCarVolume.get(timeId).entrySet()) {
-								Double V=innerMap.get(volume.getKey());
-								if(V!=null) {
-									innerMap.put(volume.getKey(), V+volume.getValue());
-								}else {
-									innerMap.put(volume.getKey(), volume.getValue());
-								}
-							}
+				}
+				
+				for(Map<String,Map<Id<Link>,Double>>linkCarVolume:linkCarVolumes) {
+					for(String timeId:linkCarVolume.keySet()) {
+						if(!combinedCarVolumes.containsKey(timeId)) {
+							combinedCarVolumes.put(timeId, new HashMap<>());
 						}
-					}
-					//Transit passengers
-					for(Map<String,Map<Id<TransitLink>,Double>> linkTrVolume:linkTransitVolumes) {
-						if(linkTrVolume.containsKey(timeId)) {
-							for(Entry<Id<TransitLink>,Double>volume:linkTrVolume.get(timeId).entrySet()) {
-								Double V=innerTrMap.get(volume.getKey());
-								if(V!=null) {
-									innerTrMap.put(volume.getKey(), V+volume.getValue());
-								}else {
-									innerTrMap.put(volume.getKey(), volume.getValue());
-								}
+						Map<Id<Link>,Double> innerMap=combinedCarVolumes.get(timeId);
+						for(Entry<Id<Link>, Double> linkVolume:linkCarVolume.get(timeId).entrySet()) {
+							if(innerMap.containsKey(linkVolume.getKey())) {
+								innerMap.put(linkVolume.getKey(), innerMap.get(linkVolume.getKey())+linkVolume.getValue());
+							}else{
+								innerMap.put(linkVolume.getKey(), linkVolume.getValue());
 							}
 						}
 					}
 				}
 				
+				for(Map<String,Map<Id<TransitLink>,Double>>linkTrVolume:linkTransitVolumes) {
+					for(String timeId:linkTrVolume.keySet()) {
+						if(!combinedTransitVolumes.containsKey(timeId)) {
+							combinedTransitVolumes.put(timeId, new HashMap<>());
+						}
+						Map<Id<TransitLink>,Double> innerMap=combinedTransitVolumes.get(timeId);
+						for(Entry<Id<TransitLink>, Double> linkVolume:linkTrVolume.get(timeId).entrySet()) {
+							if(innerMap.containsKey(linkVolume.getKey())) {
+								innerMap.put(linkVolume.getKey(), innerMap.get(linkVolume.getKey())+linkVolume.getValue());
+							}else{
+								innerMap.put(linkVolume.getKey(), linkVolume.getValue());
+							}
+						}
+					}
+				}
+				
+
 				requiredTime=System.currentTimeMillis()-startTime;
 				System.out.println("Time required for combining flow = "+requiredTime);
 				
