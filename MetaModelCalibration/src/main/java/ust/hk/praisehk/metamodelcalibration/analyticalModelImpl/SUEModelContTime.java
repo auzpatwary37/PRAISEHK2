@@ -471,7 +471,8 @@ public class SUEModelContTime implements AnalyticalModel{
 					u=u+Math.log(odpair.getAutoPathSize().get(r.getRouteId()));//adding the path size term
 					utility.put(r.getRouteId(), u);
 				}else {
-					u=r.calcRouteUtility(params, anaParams,this.getNetworks().get(timeBeanId),this.timeBeans.get(timeBeanId));
+					u=r.calcRouteUtility(params, anaParams,this.getNetworks(),this.timeBeans,odpair,timeBeanId,
+							this.getNextTimeBean(timeBeanId));
 					u=0;
 					
 					utility.put(r.getRouteId(), u);
@@ -532,13 +533,15 @@ public class SUEModelContTime implements AnalyticalModel{
 		
 		public String getTimeId(Double time) {
 			if(time>24*3600) time=time-24*3600;
-			if(time>24*3600) time=24*3600.;
+			//if(time>24*3600) time=24*3600.;
 			if(time==0) time=1.;
+			if(time>=24*3600)return this.timeBeanOrder.get(this.timeBeans.size()-1);
 			for(Entry<String, Tuple<Double, Double>> s:this.timeBeans.entrySet()) {
 				if(time>s.getValue().getFirst() && time<=s.getValue().getSecond()) {
 					return s.getKey();
 				}
 			}
+			
 			return null;
 		}
 		
@@ -585,7 +588,7 @@ public class SUEModelContTime implements AnalyticalModel{
 					}
 				}else {
 					u=r.calcRouteUtility(params, anaParams,
-							this.networks.get(timeBeanId),this.fareCalculator,this.timeBeans.get(timeBeanId));
+							this.networks,this.fareCalculator,this.timeBeans,odpair,timeBeanId,this.getNextTimeBean(timeBeanId));
 					u=0;
 				}
 				if(u>300) {
@@ -778,6 +781,7 @@ public class SUEModelContTime implements AnalyticalModel{
 				}
 			}
 			for(String timeBeanId:this.timeBeans.keySet()) {
+				if(linkVolume.containsKey(timeBeanId)) {
 				for(Entry<Id<Link>, Double> linkId:linkVolume.get(timeBeanId).entrySet()){
 					double newVolume=linkId.getValue();
 					double oldVolume=((AnalyticalModelLink) this.getNetworks().get(timeBeanId).getLinks().get(linkId.getKey())).getLinkCarVolume();
@@ -796,8 +800,10 @@ public class SUEModelContTime implements AnalyticalModel{
 					squareSum+=update*update;
 					((AnalyticalModelLink) this.getNetworks().get(timeBeanId).getLinks().get(linkId.getKey())).addLinkCarVolume(update);
 				}
+				}
 			}
 			for(String timeBeanId:this.timeBeans.keySet()) {
+				if(transitlinkVolume.containsKey(timeBeanId)) {
 				for(Entry<Id<TransitLink>, Double> trlinkId:transitlinkVolume.get(timeBeanId).entrySet()){
 					double newVolume=trlinkId.getValue();
 					TransitLink trl=this.transitLinks.get(timeBeanId).get(trlinkId.getKey());
@@ -816,6 +822,7 @@ public class SUEModelContTime implements AnalyticalModel{
 					}
 					squareSum+=update*update;
 					this.transitLinks.get(timeBeanId).get(trlinkId.getKey()).addPassanger(update,this.getNetworks().get(timeBeanId));
+				}
 				}
 			}
 			squareSum=Math.sqrt(squareSum);
@@ -836,55 +843,60 @@ public class SUEModelContTime implements AnalyticalModel{
 			int highFlowLink=0;
 			int totalLink=0;
 			for(String timeBeanId:this.timeBeans.keySet()) {
-			for(Entry<Id<Link>, Double> linkid:linkVolume.get(timeBeanId).entrySet()){
-				totalLink++;
-				if(linkid.getValue()==0) {
-					error=0;
-				}else {
-					double currentVolume=((AnalyticalModelLink) this.getNetworks().get(timeBeanId).getLinks().get(linkid.getKey())).getLinkCarVolume();
-					double newVolume=linkid.getValue();
-					
-					if((newVolume-currentVolume)>10) {
-						highFlowLink++;
-					}
-					error=Math.pow((currentVolume-newVolume),2);
-					if(error==Double.POSITIVE_INFINITY||error==Double.NEGATIVE_INFINITY) {
-						throw new IllegalArgumentException("Error is infinity!!!");
-					}
-					if(error/newVolume*10>tollerance) {					
-						sum+=1;
-					}
-					if(error<1) {
-						linkBelow1++;
-					}
-				}
-				
-				squareSum+=error;
-				if(squareSum==Double.POSITIVE_INFINITY||squareSum==Double.NEGATIVE_INFINITY) {
-					throw new IllegalArgumentException("error is infinity!!!");
-				}
-			}
-			for(Entry<Id<TransitLink>, Double> transitlinkid:transitlinkVolume.get(timeBeanId).entrySet()){
-				totalLink++;
-				if(transitlinkid.getValue()==0) {
-					error=0;
-				}else {
-					double currentVolume=this.getTransitLinks().get(timeBeanId).get(transitlinkid.getKey()).getPassangerCount();
-					double newVolume=transitlinkid.getValue();
-					error=Math.pow((currentVolume-newVolume),2);
-					if(error/newVolume*10>tollerance) {
+				if(linkVolume.containsKey(timeBeanId)) {
+					for(Entry<Id<Link>, Double> linkid:linkVolume.get(timeBeanId).entrySet()){
+						totalLink++;
+						if(linkid.getValue()==0) {
+							error=0;
+						}else {
+							double currentVolume=((AnalyticalModelLink) this.getNetworks().get(timeBeanId).getLinks().get(linkid.getKey())).getLinkCarVolume();
+							double newVolume=linkid.getValue();
 
-						sum+=1;
-					}
-					if(error<1) {
-						linkBelow1++;
+							if((newVolume-currentVolume)>10) {
+								highFlowLink++;
+							}
+							error=Math.pow((currentVolume-newVolume),2);
+							if(error==Double.POSITIVE_INFINITY||error==Double.NEGATIVE_INFINITY) {
+								throw new IllegalArgumentException("Error is infinity!!!");
+							}
+							if(error/newVolume*10>tollerance) {					
+								sum+=1;
+							}
+							if(error<1) {
+								linkBelow1++;
+							}
+						}
+
+						squareSum+=error;
+						if(squareSum==Double.POSITIVE_INFINITY||squareSum==Double.NEGATIVE_INFINITY) {
+							throw new IllegalArgumentException("error is infinity!!!");
+						}
 					}
 				}
-				if(error==Double.NaN||error==Double.NEGATIVE_INFINITY) {
-					throw new IllegalArgumentException("Stop!!! There is something wrong!!!");
+				if(transitlinkVolume.containsKey(timeBeanId)) {
+					for(Entry<Id<TransitLink>, Double> transitlinkid:transitlinkVolume.get(timeBeanId).entrySet()){
+
+						totalLink++;
+						if(transitlinkid.getValue()==0) {
+							error=0;
+						}else {
+							double currentVolume=this.getTransitLinks().get(timeBeanId).get(transitlinkid.getKey()).getPassangerCount();
+							double newVolume=transitlinkid.getValue();
+							error=Math.pow((currentVolume-newVolume),2);
+							if(error/newVolume*10>tollerance) {
+
+								sum+=1;
+							}
+							if(error<1) {
+								linkBelow1++;
+							}
+						}
+						if(error==Double.NaN||error==Double.NEGATIVE_INFINITY) {
+							throw new IllegalArgumentException("Stop!!! There is something wrong!!!");
+						}
+						squareSum+=error;
+					}
 				}
-				squareSum+=error;
-			}
 			}
 			if(squareSum==Double.NaN) {
 				System.out.println("WAIT!!!!Problem!!!!!");

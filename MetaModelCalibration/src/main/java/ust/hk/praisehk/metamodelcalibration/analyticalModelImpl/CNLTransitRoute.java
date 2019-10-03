@@ -528,6 +528,7 @@ public class CNLTransitRoute implements AnalyticalModelTransitRoute{
 	
 	@Override
 	public Map<Id<TransitLink>,TransitLink> getTransitLinks(){
+		//System.out.println();
 		for(CNLTransitDirectLink dl:this.directLinks) {
 			this.trLinks.put(dl.getTrLinkId(), dl);
 		}
