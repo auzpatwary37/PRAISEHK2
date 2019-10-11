@@ -197,6 +197,28 @@ public class ParamReader {
 		return scaledParam;
 	}
 	
+	
+	public LinkedHashMap<String, Tuple<Double, Double>> ScaleUpLimit(LinkedHashMap<String,Tuple<Double,Double>>param) throws IllegalArgumentException{
+		if((this.ParamNoCode.values()).containsAll(param.keySet())) {
+			
+		}else if((this.ParamNoCode.keySet()).containsAll(param.keySet())) {
+			logger.warn("Parameter is already scaled up, i.e. in ParamName-Value format. Method will exit.");
+			return new LinkedHashMap<String,Tuple<Double,Double>>(param);
+		}else {
+			logger.error("Invalid input. Params can be either in ParamName-Value format or ParamCode-Value Format");
+			throw new IllegalArgumentException("Invalid input. Params can be either in ParamName-Value format or ParamCode-Value Format");
+		}
+		LinkedHashMap<String,Tuple<Double,Double>> scaledParam=new LinkedHashMap<>();
+		for(Entry<String, String> e:this.ParamNoCode.entrySet()) {
+			if(param.get(e.getValue())==null) {
+				//scaledParam.put(e.getKey(),this.DefaultParam.get(e.getValue()));
+			}else {
+				scaledParam.put(e.getKey(), param.get(e.getValue()));
+			}
+		}
+		return scaledParam;
+	}
+	
 	/**
 	 * This method will convert the ParameterName-Value format parameters to ParameterNo-Value Format
 	 * @param param

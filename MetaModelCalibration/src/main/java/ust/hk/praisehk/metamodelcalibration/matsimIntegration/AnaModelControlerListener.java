@@ -25,6 +25,7 @@ import transitCalculatorsWithFare.TransitFareHandler;
 import ust.hk.praisehk.metamodelcalibration.analyticalModel.AnalyticalModel;
 import ust.hk.praisehk.metamodelcalibration.measurements.Measurement;
 import ust.hk.praisehk.metamodelcalibration.measurements.Measurements;
+import ust.hk.praisehk.metamodelcalibration.measurements.MeasurementsWriter;
 
 
 
@@ -124,7 +125,8 @@ public class AnaModelControlerListener implements StartupListener,BeforeMobsimLi
 						m.addVolume(timeId, counts.get(m.getId()).get(timeId)/this.AverageCountOverNoOfIteration);
 					}
 				}
-				//new MeasurementsWriter(m).write();
+				new MeasurementsWriter(this.outputMeasurements).write(fileLoc+"/outPutMeasurements.xml");
+				
 				this.storage.storeMeasurements(this.currentParam.getParam(), this.outputMeasurements);
 			}
 		}else {
@@ -133,7 +135,9 @@ public class AnaModelControlerListener implements StartupListener,BeforeMobsimLi
 				this.pcuVolumeCounter.geenerateLinkCounts();
 				this.occupancyCalculator.getOutputMeasurements();
 				this.travelTimeCalculator.getUpdatedMeasurements();
-				this.outputMeasurements.writeCSVMeasurements(fileLoc+"/outPutMeasurements.xml");
+				this.outputMeasurements.writeCSVMeasurements(fileLoc+"/outPutMeasurements.csv");
+				new MeasurementsWriter(this.outputMeasurements).write(fileLoc+"/outPutMeasurements.xml");
+				
 				this.storage.storeMeasurements(this.currentParam.getParam(), this.outputMeasurements);
 			}
 		}

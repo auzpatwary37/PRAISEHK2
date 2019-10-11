@@ -64,6 +64,7 @@ public class CNLSUEModel implements AnalyticalModel{
 	 * One meta-model calibration style can be used to fix 
 	 * 
 	 */
+		private boolean emptyMeasurements=false;
 		private Measurements measurementsToUpdate=null;
 		private final Logger logger=Logger.getLogger(CNLSUEModel.class);
 		private String fileLoc="traget/";
@@ -407,27 +408,28 @@ public class CNLSUEModel implements AnalyticalModel{
 	@Override
 	public Measurements perFormSUE(LinkedHashMap<String, Double> params,LinkedHashMap<String,Double> anaParams,Measurements originalMeasurements) {
 		this.resetCarDemand();
-		this.measurementsToUpdate=originalMeasurements.clone();
-		LinkedHashMap<String,Double> inputParams=new LinkedHashMap<>(params);
-		LinkedHashMap<String,Double> inputAnaParams=new LinkedHashMap<>(anaParams);
-		//Loading missing parameters from the default values		
-		
-		
-		
+		if(originalMeasurements==null) {
+			this.emptyMeasurements=true;
+			this.measurementsToUpdate=Measurements.createMeasurements(this.timeBeans);
+		}else {
+			this.measurementsToUpdate=originalMeasurements.clone();
+		}
+
+
 		//Checking and updating for the parameters 
 		for(Entry<String,Double> e:this.Params.entrySet()) {
 			if(!params.containsKey(e.getKey())) {
 				params.put(e.getKey(), e.getValue());
 			}
 		}
-		
+
 		//Checking and updating for the analytical model parameters
 		for(Entry<String,Double> e:this.AnalyticalModelInternalParams.entrySet()) {
 			if(!anaParams.containsKey(e.getKey())) {
 				anaParams.put(e.getKey(), e.getValue());
 			}
 		}
-		
+
 		//Creating different threads for different time beans
 		Thread[] threads=new Thread[this.timeBeans.size()];
 		int i=0;
@@ -439,7 +441,7 @@ public class CNLSUEModel implements AnalyticalModel{
 		for(i=0;i<this.timeBeans.size();i++) {
 			threads[i].start();
 		}
-		
+
 		//joining the threads
 		for(i=0;i<this.timeBeans.size();i++) {
 			try {
@@ -448,21 +450,44 @@ public class CNLSUEModel implements AnalyticalModel{
 				e1.printStackTrace();
 			}
 		}
-		
+
 		//Collecting the Link Flows
-		Set<Id<Link>> linkList=new HashSet<>();
-		for(Measurement m:this.measurementsToUpdate.getMeasurementsByType().get(MeasurementType.linkVolume)) {
-			for(String timeBeanId:m.getVolumes().keySet()) {
-			double count=0;
-			for(Id<Link> linkId:(ArrayList<Id<Link>>)m.getAttribute(Measurement.linkListAttributeName)) {
-				count+=((AnalyticalModelLink) this.getNetworks().get(timeBeanId).getLinks().get(linkId)).getLinkAADTVolume();
+	
+		if(this.emptyMeasurements==true) {
+			for(String timeBeanId:this.timeBeans.keySet()) {
+				double count=0;
+				for(Link link:this.networks.get(timeBeanId).getLinks().values()) {
+					if(!link.getAllowedModes().contains("train") && !link.getId().toString().contains("stop")) {
+					count=((AnalyticalModelLink) link).getLinkAADTVolume();
+					Id<Measurement> mId=Id.create(link.getId().toString(), Measurement.class);
+					Measurement m=null;
+					if((m=this.measurementsToUpdate.getMeasurements().get(mId))==null) {
+						this.measurementsToUpdate.createAnadAddMeasurement(mId.toString(), MeasurementType.linkVolume);
+						m=this.measurementsToUpdate.getMeasurements().get(mId);
+						ArrayList<Id<Link>> linkList=new ArrayList<>();
+						linkList.add(link.getId());
+						m.setAttribute(Measurement.linkListAttributeName, linkList);
+					}
+					m.addVolume(timeBeanId, count);
+					}
+				}
+
 			}
-			m.addVolume(timeBeanId, count);
+
+		}else {
+			for(Measurement m:this.measurementsToUpdate.getMeasurementsByType().get(MeasurementType.linkVolume)) {
+				for(String timeBeanId:m.getVolumes().keySet()) {
+					double count=0;
+					for(Id<Link> linkId:(ArrayList<Id<Link>>)m.getAttribute(Measurement.linkListAttributeName)) {
+						count+=((AnalyticalModelLink) this.getNetworks().get(timeBeanId).getLinks().get(linkId)).getLinkAADTVolume();
+					}
+					m.addVolume(timeBeanId, count);
+				}
 			}
 		}
-		
-		
-		
+
+
+		//For now shut down for null Measurements
 		//collect pt occupancy
 		for(Measurement m:this.measurementsToUpdate.getMeasurementsByType().get(MeasurementType.averagePTOccumpancy)) {
 			for(String timeBeanId:m.getVolumes().keySet()) {
@@ -471,106 +496,210 @@ public class CNLSUEModel implements AnalyticalModel{
 				m.addVolume(timeBeanId, occupancy);
 			}
 		}
-		
+
 		//collect smartCard Entry
-		
-		Map<String,Map<String,Double>>entryCount=new HashMap<>();//First string is lineid+routeid+entryStopId second string is volume key
-		for(Measurement m:this.measurementsToUpdate.getMeasurementsByType().get(MeasurementType.smartCardEntry)) {
-			String key=m.getAttribute(Measurement.transitLineAttributeName)+"___"+m.getAttribute(Measurement.transitRouteAttributeName)+"___"+m.getAttribute(Measurement.transitBoardingStopAtrributeName);
-			//System.out.println();
-			entryCount.put(key, new HashMap<>());
-			for(String s:m.getVolumes().keySet()) {
-				entryCount.get(key).put(s, 0.);
-			}
-		}
-		
-		for(String timeBeanId:this.transitLinks.keySet()) {
-			for(TransitLink trl:this.transitLinks.get(timeBeanId).values()) {
-				if(trl instanceof TransitDirectLink) {
-					TransitDirectLink trdl=(TransitDirectLink)trl;
-					String key= trdl.getLineId()+"___"+trdl.getRouteId()+"___"+trdl.getStartStopId();
-					if(entryCount.containsKey(key) && entryCount.get(key).containsKey(timeBeanId)) {
-						entryCount.get(key).put(timeBeanId, entryCount.get(key).get(timeBeanId)+trl.getPassangerCount());
-					}
-				}
-			}
-		}
-		
-		for(Measurement m:this.measurementsToUpdate.getMeasurementsByType().get(MeasurementType.smartCardEntry)) {
-			String key=m.getAttribute(Measurement.transitLineAttributeName)+"___"+m.getAttribute(Measurement.transitRouteAttributeName)+"___"+m.getAttribute(Measurement.transitBoardingStopAtrributeName);
-			for(String timeBeanId:m.getVolumes().keySet()) {
-				m.addVolume(timeBeanId, entryCount.get(key).get(timeBeanId));
-			}
-		}
-		
-		//Collect smart card entry and exit
-		Map<String,Map<String,Double>>entryAndExitCountBus=new HashMap<>();//First string is lineid+routeid+entryStopId second string is volume key
-		Map<String,Map<String,Double>>entryAndExitCountMTR=new HashMap<>();
-		for(Measurement m:this.measurementsToUpdate.getMeasurementsByType().get(MeasurementType.smartCardEntryAndExit)) {
-			String mode=m.getAttribute(Measurement.transitModeAttributeName).toString();
-			String key=null;
-			if(mode.equals("train")) {
-				key=m.getAttribute(Measurement.transitBoardingStopAtrributeName).toString()+"___"+m.getAttribute(Measurement.transitAlightingStopAttributeName).toString()+"___"+m.getAttribute(Measurement.transitModeAttributeName).toString();
-				entryAndExitCountMTR.put(key, new HashMap<>());
+		if(this.emptyMeasurements==false) {
+			Map<String,Map<String,Double>>entryCount=new HashMap<>();//First string is lineid+routeid+entryStopId second string is volume key
+			for(Measurement m:this.measurementsToUpdate.getMeasurementsByType().get(MeasurementType.smartCardEntry)) {
+				String key=m.getAttribute(Measurement.transitLineAttributeName)+"___"+m.getAttribute(Measurement.transitRouteAttributeName)+"___"+m.getAttribute(Measurement.transitBoardingStopAtrributeName);
+				//System.out.println();
+				entryCount.put(key, new HashMap<>());
 				for(String s:m.getVolumes().keySet()) {
-					entryAndExitCountMTR.get(key).put(s, 0.);
-				}
-			}else {
-				key=m.getAttribute(Measurement.transitBoardingStopAtrributeName).toString()+"___"+m.getAttribute(Measurement.transitAlightingStopAttributeName).toString()+"___"
-						+m.getAttribute(Measurement.transitLineAttributeName)+"___"+m.getAttribute(Measurement.transitRouteAttributeName);
-				entryAndExitCountBus.put(key, new HashMap<>());
-				for(String s:m.getVolumes().keySet()) {
-					entryAndExitCountBus.get(key).put(s, 0.);
+					entryCount.get(key).put(s, 0.);
 				}
 			}
-			               
-			
-		}
-		
-		for(String timeBeanId:this.transitLinks.keySet()) {
-			for(TransitLink trl:this.transitLinks.get(timeBeanId).values()) {
-				if(trl instanceof TransitDirectLink) {
-					TransitDirectLink trdl=(TransitDirectLink)trl;
-					String key= trdl.getStartStopId()+"___"+trdl.getEndStopId()+"___"+trdl.getLineId()+"___"+trdl.getRouteId();
-					if(entryAndExitCountBus.containsKey(key) && entryAndExitCountBus.get(key).containsKey(timeBeanId)) {
-						entryAndExitCountBus.get(key).put(timeBeanId, entryCount.get(key).get(timeBeanId)+trl.getPassangerCount());
-					}
-				}
-			}
-		}
-		
-		for(AnalyticalModelODpair odpair:this.odPairs.getODpairset().values()) {
-			for(String timeBeanId:this.timeBeans.keySet()) {
-				if(odpair.getTrRoutes(timeBeanId)!=null) {
-				for(AnalyticalModelTransitRoute tr:odpair.getTrRoutes(timeBeanId)) {
-					for(String key:entryAndExitCountMTR.keySet()) {
-						if(((CNLTransitRoute)tr).getFareEntryAndExit().contains(key)) {
-							entryAndExitCountMTR.get(key).put(timeBeanId, entryAndExitCountMTR.get(key).get(timeBeanId)+odpair.getTrRouteFlow().get(timeBeanId).get(tr.getTrRouteId()));
+
+			for(String timeBeanId:this.transitLinks.keySet()) {
+				for(TransitLink trl:this.transitLinks.get(timeBeanId).values()) {
+					if(trl instanceof TransitDirectLink) {
+						TransitDirectLink trdl=(TransitDirectLink)trl;
+						String key= trdl.getLineId()+"___"+trdl.getRouteId()+"___"+trdl.getStartStopId();
+						if(entryCount.containsKey(key) && entryCount.get(key).containsKey(timeBeanId)) {
+							entryCount.get(key).put(timeBeanId, entryCount.get(key).get(timeBeanId)+trl.getPassangerCount());
 						}
 					}
 				}
+			}
+
+			for(Measurement m:this.measurementsToUpdate.getMeasurementsByType().get(MeasurementType.smartCardEntry)) {
+				String key=m.getAttribute(Measurement.transitLineAttributeName)+"___"+m.getAttribute(Measurement.transitRouteAttributeName)+"___"+m.getAttribute(Measurement.transitBoardingStopAtrributeName);
+				for(String timeBeanId:m.getVolumes().keySet()) {
+					m.addVolume(timeBeanId, entryCount.get(key).get(timeBeanId));
 				}
 			}
-				
-		}
-		
-		for(Measurement m:this.measurementsToUpdate.getMeasurementsByType().get(MeasurementType.smartCardEntryAndExit)) {
-			String mode=m.getAttribute(Measurement.transitModeAttributeName).toString();
-			String key=null;
-			if(mode.equals("train")) {
-				key=m.getAttribute(Measurement.transitBoardingStopAtrributeName).toString()+"___"+m.getAttribute(Measurement.transitAlightingStopAttributeName).toString()+"___"+m.getAttribute(Measurement.transitModeAttributeName).toString();
-				for(String s:m.getVolumes().keySet()) {
-					m.addVolume(s, entryAndExitCountMTR.get(key).get(s));
-				}
-			}else {
-				key=m.getAttribute(Measurement.transitBoardingStopAtrributeName).toString()+"___"+m.getAttribute(Measurement.transitAlightingStopAttributeName).toString()+"___"
-						+m.getAttribute(Measurement.transitLineAttributeName)+"___"+m.getAttribute(Measurement.transitRouteAttributeName);
-				for(String s:m.getVolumes().keySet()) {
-					m.addVolume(s,entryAndExitCountBus.get(key).get(s));
+		}else {
+			for(String timeBeanId:this.transitLinks.keySet()) {
+				for(TransitLink trl:this.transitLinks.get(timeBeanId).values()) {
+					if(trl instanceof TransitDirectLink) {
+						TransitDirectLink trdl=(TransitDirectLink)trl;
+						String key= trdl.getLineId()+"___"+trdl.getRouteId()+"___"+trdl.getStartStopId();
+						Id<TransitLine> lineId=Id.create(trdl.getLineId(),TransitLine.class);
+						Id<TransitRoute>routeId=Id.create(trdl.getRouteId(),TransitRoute.class);
+						String mode=this.ts.getTransitLines().get(lineId).getRoutes().get(routeId).getTransportMode();
+						Id<Measurement>mId=Id.create(key, Measurement.class);
+						Measurement m=null;
+						if((m=this.measurementsToUpdate.getMeasurements().get(mId))==null) {
+							this.measurementsToUpdate.createAnadAddMeasurement(key, MeasurementType.smartCardEntry);
+							m=this.measurementsToUpdate.getMeasurements().get(mId);
+							m.setAttribute(Measurement.transitLineAttributeName, trdl.getLineId());
+							m.setAttribute(Measurement.transitRouteAttributeName, trdl.getRouteId());
+							m.setAttribute(Measurement.transitBoardingStopAtrributeName, trdl.getStartStopId());
+							m.setAttribute(Measurement.transitModeAttributeName, mode);
+						}
+						Double oldVolume=null;
+						if((oldVolume=m.getVolumes().get(timeBeanId))==null) {
+							m.addVolume(timeBeanId, trl.getPassangerCount());
+						}else {
+							m.addVolume(timeBeanId, oldVolume+trl.getPassangerCount());
+						}
+					}
 				}
 			}
 		}
-		
+
+		//Collect smart card entry and exit
+		if(this.emptyMeasurements==false) {
+			Map<String,Map<String,Double>>entryAndExitCountBus=new HashMap<>();//First string is lineid+routeid+entryStopId second string is volume key
+			Map<String,Map<String,Double>>entryAndExitCountMTR=new HashMap<>();
+			for(Measurement m:this.measurementsToUpdate.getMeasurementsByType().get(MeasurementType.smartCardEntryAndExit)) {
+				String mode=m.getAttribute(Measurement.transitModeAttributeName).toString();
+				String key=null;
+				if(mode.equals("train")) {
+					key=m.getAttribute(Measurement.transitBoardingStopAtrributeName).toString()+"___"+m.getAttribute(Measurement.transitAlightingStopAttributeName).toString()+"___"+m.getAttribute(Measurement.transitModeAttributeName).toString();
+					entryAndExitCountMTR.put(key, new HashMap<>());
+					for(String s:m.getVolumes().keySet()) {
+						entryAndExitCountMTR.get(key).put(s, 0.);
+					}
+				}else {
+					key=m.getAttribute(Measurement.transitBoardingStopAtrributeName).toString()+"___"+m.getAttribute(Measurement.transitAlightingStopAttributeName).toString()+"___"
+							+m.getAttribute(Measurement.transitLineAttributeName)+"___"+m.getAttribute(Measurement.transitRouteAttributeName);
+					entryAndExitCountBus.put(key, new HashMap<>());
+					for(String s:m.getVolumes().keySet()) {
+						entryAndExitCountBus.get(key).put(s, 0.);
+					}
+				}
+
+
+			}
+
+			for(String timeBeanId:this.transitLinks.keySet()) {
+				for(TransitLink trl:this.transitLinks.get(timeBeanId).values()) {
+					if(trl instanceof TransitDirectLink) {
+						TransitDirectLink trdl=(TransitDirectLink)trl;
+						String key= trdl.getStartStopId()+"___"+trdl.getEndStopId()+"___"+trdl.getLineId()+"___"+trdl.getRouteId();
+						if(entryAndExitCountBus.containsKey(key) && entryAndExitCountBus.get(key).containsKey(timeBeanId)) {
+							entryAndExitCountBus.get(key).put(timeBeanId, entryAndExitCountBus.get(key).get(timeBeanId)+trl.getPassangerCount());
+						}
+					}
+				}
+			}
+
+			for(AnalyticalModelODpair odpair:this.odPairs.getODpairset().values()) {
+				for(String timeBeanId:this.timeBeans.keySet()) {
+					if(odpair.getTrRoutes(timeBeanId)!=null) {
+						for(AnalyticalModelTransitRoute tr:odpair.getTrRoutes(timeBeanId)) {
+							for(String key:entryAndExitCountMTR.keySet()) {
+								if(((CNLTransitRoute)tr).getFareEntryAndExit().contains(key) && this.Demand.get(timeBeanId).get(odpair.getODpairId())!=0) {
+									entryAndExitCountMTR.get(key).put(timeBeanId, entryAndExitCountMTR.get(key).get(timeBeanId)+odpair.getTrRouteFlow().get(timeBeanId).get(tr.getTrRouteId()));
+								}
+							}
+						}
+					}
+				}
+
+			}
+
+			for(Measurement m:this.measurementsToUpdate.getMeasurementsByType().get(MeasurementType.smartCardEntryAndExit)) {
+				String mode=m.getAttribute(Measurement.transitModeAttributeName).toString();
+				String key=null;
+				if(mode.equals("train")) {
+					key=m.getAttribute(Measurement.transitBoardingStopAtrributeName).toString()+"___"+m.getAttribute(Measurement.transitAlightingStopAttributeName).toString()+"___"+m.getAttribute(Measurement.transitModeAttributeName).toString();
+					for(String s:m.getVolumes().keySet()) {
+						m.addVolume(s, entryAndExitCountMTR.get(key).get(s));
+					}
+				}else {
+					key=m.getAttribute(Measurement.transitBoardingStopAtrributeName).toString()+"___"+m.getAttribute(Measurement.transitAlightingStopAttributeName).toString()+"___"
+							+m.getAttribute(Measurement.transitLineAttributeName)+"___"+m.getAttribute(Measurement.transitRouteAttributeName);
+					for(String s:m.getVolumes().keySet()) {
+						m.addVolume(s,entryAndExitCountBus.get(key).get(s));
+					}
+				}
+			}
+		}else {
+
+			for(String timeBeanId:this.transitLinks.keySet()) {
+				for(TransitLink trl:this.transitLinks.get(timeBeanId).values()) {
+					if(trl instanceof TransitDirectLink) {
+						TransitDirectLink trdl=(TransitDirectLink)trl;
+						Id<TransitLine> lineId=Id.create(trdl.getLineId(),TransitLine.class);
+						Id<TransitRoute>routeId=Id.create(trdl.getRouteId(),TransitRoute.class);
+						String mode=this.ts.getTransitLines().get(lineId).getRoutes().get(routeId).getTransportMode();
+						if(!mode.equals("train")) {
+							String key= trdl.getStartStopId()+"___"+trdl.getEndStopId()+"___"+trdl.getLineId()+"___"+trdl.getRouteId();
+							Id<Measurement> mId=Id.create(key, Measurement.class);
+							Measurement m=null;
+							if((m=this.measurementsToUpdate.getMeasurements().get(mId))==null) {
+								this.measurementsToUpdate.createAnadAddMeasurement(mId.toString(), MeasurementType.smartCardEntryAndExit);
+								m=this.measurementsToUpdate.getMeasurements().get(mId);
+								m.setAttribute(Measurement.transitModeAttributeName, mode);
+								m.setAttribute(Measurement.transitLineAttributeName, lineId.toString());
+								m.setAttribute(Measurement.transitRouteAttributeName, routeId.toString());
+								m.setAttribute(Measurement.transitBoardingStopAtrributeName, trdl.getStartStopId());
+								m.setAttribute(Measurement.transitAlightingStopAttributeName, trdl.getEndStopId());
+							}
+							if(m.getVolumes().containsKey(timeBeanId)) {
+								m.addVolume(timeBeanId, m.getVolumes().get(timeBeanId)+trl.getPassangerCount());
+							}else {
+								m.addVolume(timeBeanId, trl.getPassangerCount());
+							}
+
+						}
+
+
+
+
+
+
+
+					}
+				}
+			}
+
+			for(AnalyticalModelODpair odpair:this.odPairs.getODpairset().values()) {
+				for(String timeBeanId:this.timeBeans.keySet()) {
+					if(odpair.getTrRoutes(timeBeanId)!=null && this.Demand.get(timeBeanId).get(odpair.getODpairId())!=0) {
+						for(AnalyticalModelTransitRoute tr:odpair.getTrRoutes(timeBeanId)) {
+							for(String key:((CNLTransitRoute)tr).getFareEntryAndExit()) {
+								//							entryAndExitCountMTR.get(key).put(timeBeanId, entryAndExitCountMTR.get(key).get(timeBeanId)+odpair.getTrRouteFlow().get(timeBeanId).get(tr.getTrRouteId()));
+								String[] partKey=key.split("___");
+								String mode=partKey[2];
+								String boardingStop=partKey[0];
+								String alightingStop=partKey[1];
+								Id<Measurement> mId=Id.create(key, Measurement.class);
+								Measurement m=null;
+								if((m=this.measurementsToUpdate.getMeasurements().get(mId))==null) {
+									this.measurementsToUpdate.createAnadAddMeasurement(mId.toString(), MeasurementType.smartCardEntryAndExit);
+									m=this.measurementsToUpdate.getMeasurements().get(mId);
+									m.setAttribute(Measurement.transitModeAttributeName, mode);
+									m.setAttribute(Measurement.transitBoardingStopAtrributeName, boardingStop);
+									m.setAttribute(Measurement.transitAlightingStopAttributeName, alightingStop);
+								}
+								if(m.getVolumes().containsKey(timeBeanId)) {
+									m.addVolume(timeBeanId, m.getVolumes().get(timeBeanId)+odpair.getTrRouteFlow().get(timeBeanId).get(tr.getTrRouteId()));
+								}else {
+									m.addVolume(timeBeanId, odpair.getTrRouteFlow().get(timeBeanId).get(tr.getTrRouteId()));
+								}
+
+							}
+						}
+					}
+				}
+			}
+		}
+
+
+
+
 		//new OdInfoWriter("toyScenario/ODInfo/odInfo",this.timeBeans).writeOdInfo(this.getOdPairs(), getDemand(), getCarDemand(), inputParams, inputAnaParams);
 		return this.measurementsToUpdate;
 	}

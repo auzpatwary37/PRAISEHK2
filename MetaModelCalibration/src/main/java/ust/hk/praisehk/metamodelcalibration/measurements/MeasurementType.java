@@ -71,6 +71,7 @@ public enum MeasurementType {
 		public void parseAttribute(Attributes atr,Measurement m) {
 			// Nothing to parse as nothing to write
 		}
+		
 
 	}
 	,
