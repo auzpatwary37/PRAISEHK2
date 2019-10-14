@@ -217,7 +217,7 @@ public class CalibratorImpl implements Calibrator {
 			String s="0th Objective Value = "+ObjectiveCalculator.calcObjective(calibrationMeasurements, simMeasurements, this.ObjectiveType);
 			System.out.println(s);
 			try {
-				FileWriter fw=new FileWriter(new File("toyScenarioLarge/Calibration/0thSimObjective.txt"));
+				FileWriter fw=new FileWriter(new File(fileLoc+"0thSimObjective.txt"));
 				fw.append(s);
 				fw.flush();
 				fw.close();
