@@ -132,6 +132,9 @@ public class SimpleOptimizationFunction extends OptimizationFunction{
 	@Override
 	public double calcMetaModelObjective(Measurements anaMeasurements, LinkedHashMap<String, Double> params) {
 		double objective=0;
+		if(anaMeasurements==null) {
+			anaMeasurements=this.getRealData().clone();
+		}
 		Measurements metaMeasurements=this.getRealData().clone();
 		for(Measurement m:this.getRealData().getMeasurements().values()) {
 			for(String timeBean:m.getVolumes().keySet()) {
