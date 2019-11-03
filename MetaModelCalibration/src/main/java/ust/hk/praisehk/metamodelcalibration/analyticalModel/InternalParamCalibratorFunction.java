@@ -1,5 +1,8 @@
 package ust.hk.praisehk.metamodelcalibration.analyticalModel;
 
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -26,7 +29,8 @@ public class InternalParamCalibratorFunction implements Calcfc{
 		private Map<Integer,LinkedHashMap<String,Double>> Parmas;
 		private final LinkedHashMap<String,Double> currentParam;
 		private final Map<String,Tuple<Double,Double>> timeBean;
-			
+		private int iterationCounter=0;
+		private FileWriter fw;
 		/**
 		 * 
 		 * @param simData: all simulation measurements
@@ -36,8 +40,15 @@ public class InternalParamCalibratorFunction implements Calcfc{
 		 * @param currentParamNo The current selected parameter no
 		 */
 		public InternalParamCalibratorFunction(Map<Integer,Measurements> simData,Map<Integer,LinkedHashMap<String,Double>>params,AnalyticalModel sue, LinkedHashMap<String, Double> initialParam,Integer currentParamNo) {
-
+				
 				this.sue=sue;
+				try {
+					this.fw=new FileWriter(new File(sue.getFileLoc()+"/Calibration/internalParamOptimization"+currentParamNo+".csv"));
+					fw.append("iterationNo,Gap\n");
+				} catch (IOException e1) {
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
+				}
 				this.initialParam=initialParam;
 				this.currentParam=params.get(currentParamNo);
 				this.simMeasurements=simData;
@@ -60,6 +71,7 @@ public class InternalParamCalibratorFunction implements Calcfc{
 
 			@Override
 			public double compute(int m, int n, double[] x, double[] c) {
+				
 				double[] y=new double[x.length];
 				int j=0;
 				for(double d:this.initialParam.values()) {
@@ -82,15 +94,22 @@ public class InternalParamCalibratorFunction implements Calcfc{
 						}
 					}
 				}
-				for(double d:x) {
-					objective+=d*d;
-				}
+//				for(double d:x) {
+//					objective+=d*d;
+//				}
 				int d=0;
 				for(double xi:calcConstrain(x,this.paramLimit)) {
 					c[d]=xi;
 					d++;
 				}
-				
+				try {
+					fw.append(this.iterationCounter+","+objective+"\n");
+					fw.flush();
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+				this.iterationCounter++;
 				return objective;
 			}
 
