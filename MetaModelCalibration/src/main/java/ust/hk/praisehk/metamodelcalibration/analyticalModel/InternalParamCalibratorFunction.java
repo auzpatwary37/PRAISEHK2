@@ -31,6 +31,7 @@ public class InternalParamCalibratorFunction implements Calcfc{
 		private final Map<String,Tuple<Double,Double>> timeBean;
 		private int iterationCounter=0;
 		private FileWriter fw;
+		private static int constructionCounter=0;
 		/**
 		 * 
 		 * @param simData: all simulation measurements
@@ -40,10 +41,10 @@ public class InternalParamCalibratorFunction implements Calcfc{
 		 * @param currentParamNo The current selected parameter no
 		 */
 		public InternalParamCalibratorFunction(Map<Integer,Measurements> simData,Map<Integer,LinkedHashMap<String,Double>>params,AnalyticalModel sue, LinkedHashMap<String, Double> initialParam,Integer currentParamNo) {
-				
+				constructionCounter++;
 				this.sue=sue;
 				try {
-					this.fw=new FileWriter(new File(sue.getFileLoc()+"/Calibration/internalParamOptimization"+currentParamNo+".csv"));
+					this.fw=new FileWriter(new File(sue.getFileLoc()+"/Calibration/internalParamOptimization"+constructionCounter+".csv"));
 					fw.append("iterationNo,Gap\n");
 				} catch (IOException e1) {
 					// TODO Auto-generated catch block
