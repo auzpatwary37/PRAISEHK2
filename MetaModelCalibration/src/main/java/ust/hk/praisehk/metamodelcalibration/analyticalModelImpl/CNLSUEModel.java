@@ -599,7 +599,7 @@ public class CNLSUEModel implements AnalyticalModel{
 					if(odpair.getTrRoutes(timeBeanId)!=null) {
 						for(AnalyticalModelTransitRoute tr:odpair.getTrRoutes(timeBeanId)) {
 							for(String key:entryAndExitCountMTR.keySet()) {
-								if(((CNLTransitRoute)tr).getFareEntryAndExit().contains(key) && this.Demand.get(timeBeanId).get(odpair.getODpairId())!=0) {
+								if(((CNLTransitRoute)tr).getFareEntryAndExit().contains(key) && this.Demand.get(timeBeanId).get(odpair.getODpairId())!=0 && entryAndExitCountMTR.get(key).containsKey(timeBeanId)) {
 									entryAndExitCountMTR.get(key).put(timeBeanId, entryAndExitCountMTR.get(key).get(timeBeanId)+odpair.getTrRouteFlow().get(timeBeanId).get(tr.getTrRouteId()));
 								}
 							}
