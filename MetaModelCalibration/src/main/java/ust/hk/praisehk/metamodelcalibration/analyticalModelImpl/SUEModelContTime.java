@@ -69,6 +69,8 @@ public class SUEModelContTime implements AnalyticalModel{
 	/**
 	 * Most probably should back propogate instead of front propogation
 	 */
+		private FileWriter fw;
+		private int iterNo=0;
 		private Measurements measurementsToUpdate=null;
 		private final Logger logger=Logger.getLogger(CNLSUEModel.class);
 		private String fileLoc="traget/";
@@ -763,6 +765,17 @@ public class SUEModelContTime implements AnalyticalModel{
 			return linkVolume;
 		}
 		
+		private void writeDownError(int iteration,double error) {
+			try {
+				fw.append(iteration+","+error+"\n");
+				fw.flush();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			
+		}
+		
 		protected boolean UpdateLinkVolume(Map<String,Map<Id<Link>,Double>> linkVolume,Map<String,Map<Id<TransitLink>,Double>> transitlinkVolume,int counter){
 			double squareSum=0;
 			double flowSum=0;
@@ -907,6 +920,9 @@ public class SUEModelContTime implements AnalyticalModel{
 			}
 			this.error.add(squareSum);
 			logger.info("ERROR amount in iter "+counter+" = "+squareSum);
+			
+			this.writeDownError(counter, squareSum);
+			
 			//System.out.println("in timeBean Id "+timeBeanId+" No of link not converged = "+sum);
 			
 //			try {
@@ -1232,6 +1248,14 @@ public class SUEModelContTime implements AnalyticalModel{
 		@Override
 		public Measurements perFormSUE(LinkedHashMap<String, Double> params,LinkedHashMap<String,Double> anaParams,Measurements originalMeasurements) {
 			this.resetCarDemand();
+			try {
+				this.fw=new FileWriter(new File(this.fileLoc+"Calibration/errorLogger"+iterNo+".csv"));
+				this.fw.append("IterationNo,Error\n");
+				this.fw.flush();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 			this.measurementsToUpdate=originalMeasurements.clone();
 			LinkedHashMap<String,Double> inputParams=new LinkedHashMap<>(params);
 			LinkedHashMap<String,Double> inputAnaParams=new LinkedHashMap<>(anaParams);
@@ -1339,7 +1363,7 @@ public class SUEModelContTime implements AnalyticalModel{
 						TransitDirectLink trdl=(TransitDirectLink)trl;
 						String key= trdl.getStartStopId()+"___"+trdl.getEndStopId()+"___"+trdl.getLineId()+"___"+trdl.getRouteId();
 						if(entryAndExitCountBus.containsKey(key) && entryAndExitCountBus.get(key).containsKey(timeBeanId)) {
-							entryAndExitCountBus.get(key).put(timeBeanId, entryCount.get(key).get(timeBeanId)+trl.getPassangerCount());
+							entryAndExitCountBus.get(key).put(timeBeanId, entryAndExitCountBus.get(key).get(timeBeanId)+trl.getPassangerCount());
 						}
 					}
 				}
@@ -1378,7 +1402,7 @@ public class SUEModelContTime implements AnalyticalModel{
 					}
 				}
 			}
-			
+			this.iterNo++;
 			//new OdInfoWriter("toyScenario/ODInfo/odInfo",this.timeBeans).writeOdInfo(this.getOdPairs(), getDemand(), getCarDemand(), inputParams, inputAnaParams);
 			return this.measurementsToUpdate;
 		}
