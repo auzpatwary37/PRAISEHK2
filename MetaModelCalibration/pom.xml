@@ -171,6 +171,7 @@
 			<scope>system</scope>
 			<systemPath>${project.basedir}/src/main/resources/jcool-core.jar</systemPath>
 		</dependency>
-
+		
+	
 	</dependencies>
 </project>
