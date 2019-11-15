@@ -229,8 +229,8 @@ public class CNLTransitRoute implements AnalyticalModelTransitRoute{
 				MUWaitingTime*waitingTime
 				+MUTransfer*(this.transferLinks.size()-1)
 				+MUDistance*distance*MUMoney;
-		if(utility==0) {
-			logger.warn("Stop!!! route utility is zero.");
+		if(utility==0 ||Double.isNaN(utility)) {
+			logger.warn("Stop!!! route utility is zero or infinity.");
 		}
 		return utility*anaParams.get(CNLSUEModel.LinkMiuName);
 	}
@@ -264,7 +264,7 @@ public class CNLTransitRoute implements AnalyticalModelTransitRoute{
 				MUWaitingTime*waitingTime
 				+MUTransfer*(this.transferLinks.size()-1)
 				+MUDistance*distance*MUMoney;
-		if(utility==0) {
+		if(utility==0 || Double.isNaN(utility)) {
 			logger.warn("Stop!!! route utility is zero.");
 		}
 		return utility*anaParams.get(CNLSUEModel.LinkMiuName);
@@ -372,6 +372,7 @@ public class CNLTransitRoute implements AnalyticalModelTransitRoute{
 		for(int i=0;i<this.directLinks.size();i++) {
 			linkReachTimeDL.put(this.directLinks.get(i).getTrLinkId(), time);
 			double travelTimeDL=this.directLinks.get(i).getLinkTravelTime(network, timeBean, params, anaParams);
+			//System.out.println();
 			routeDistance+=this.getTransitDirectLinks().get(i).getPhysicalDistance(network);
 			travelTime+=travelTimeDL;
 			time+=travelTimeDL;
@@ -528,7 +529,6 @@ public class CNLTransitRoute implements AnalyticalModelTransitRoute{
 	
 	@Override
 	public Map<Id<TransitLink>,TransitLink> getTransitLinks(){
-		//System.out.println();
 		for(CNLTransitDirectLink dl:this.directLinks) {
 			this.trLinks.put(dl.getTrLinkId(), dl);
 		}
@@ -542,7 +542,6 @@ public class CNLTransitRoute implements AnalyticalModelTransitRoute{
 	public void calcCapacityHeadway(Map<String,Tuple<Double,Double>>timeBeans,String timeBeanId) {
 		double routecapacity=Double.MAX_VALUE;
 		for(CNLTransitDirectLink dl:this.directLinks) {
-			//System.out.println("test");
 			dl.calcCapacityAndHeadway(timeBeans, timeBeanId);
 			routecapacity=Double.min(routecapacity, dl.capacity);
 		}

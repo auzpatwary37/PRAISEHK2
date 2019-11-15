@@ -35,7 +35,7 @@ public abstract class AnalyticalModelLink implements Link{
 	protected double linkTransitPassenger=0;
 	protected double linkTravelTime=0;
 	
-	
+	private double gcRatio=1;
 	
 	/**
 	 * Constructor
@@ -220,6 +220,16 @@ public abstract class AnalyticalModelLink implements Link{
 	}
 
 
+	public double getGcRatio() {
+		return gcRatio;
+	}
+
+
+	public void setGcRatio(double gcRatio) {
+		this.gcRatio = gcRatio;
+	}
+
+	
 	
 	
 }

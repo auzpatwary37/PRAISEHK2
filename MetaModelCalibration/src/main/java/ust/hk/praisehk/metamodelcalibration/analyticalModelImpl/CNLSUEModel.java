@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -46,6 +47,7 @@ import ust.hk.praisehk.metamodelcalibration.analyticalModel.SUEModelOutput;
 import ust.hk.praisehk.metamodelcalibration.analyticalModel.TransitDirectLink;
 import ust.hk.praisehk.metamodelcalibration.analyticalModel.TransitLink;
 import ust.hk.praisehk.metamodelcalibration.analyticalModel.TransitTransferLink;
+import ust.hk.praisehk.metamodelcalibration.matsimIntegration.SignalFlowReductionGenerator;
 import ust.hk.praisehk.metamodelcalibration.measurements.Measurement;
 import ust.hk.praisehk.metamodelcalibration.measurements.MeasurementType;
 import ust.hk.praisehk.metamodelcalibration.measurements.Measurements;
@@ -64,6 +66,7 @@ public class CNLSUEModel implements AnalyticalModel{
 	 * One meta-model calibration style can be used to fix 
 	 * 
 	 */
+		private Map<Id<AnalyticalModelODpair>,Map<String,String>> odMultiplierId=null;
 		private boolean emptyMeasurements=false;
 		private Measurements measurementsToUpdate=null;
 		private final Logger logger=Logger.getLogger(CNLSUEModel.class);
@@ -152,6 +155,17 @@ public class CNLSUEModel implements AnalyticalModel{
 		
 	}
 	
+	
+	
+
+	public Map<Id<AnalyticalModelODpair>, Map<String, String>> getOdMultiplierId() {
+		return odMultiplierId;
+	}
+
+	public void setOdMultiplierId(Map<Id<AnalyticalModelODpair>, Map<String, String>> odMultiplierId) {
+		this.odMultiplierId = odMultiplierId;
+	}
+
 	/**
 	 * This method loads default values to all the parameters 
 	 * Including the internal parameters
@@ -247,8 +261,9 @@ public class CNLSUEModel implements AnalyticalModel{
 		this.setOdPairs(new CNLODpairs(network,population,transitSchedule,scenario,this.timeBeans));
 		this.getOdPairs().generateODpairset();
 		this.getOdPairs().generateRouteandLinkIncidence(0.);
+		SignalFlowReductionGenerator sg=new SignalFlowReductionGenerator(scenario);
 		for(String s:this.timeBeans.keySet()) {
-			this.getNetworks().put(s, new CNLNetwork(network));
+			this.getNetworks().put(s, new CNLNetwork(network,sg));
 			this.performTransitVehicleOverlay(this.getNetworks().get(s),
 					transitSchedule,scenario.getTransitVehicles(),s);
 			this.getTransitLinks().put(s,this.getOdPairs().getTransitLinks(s));
@@ -310,7 +325,7 @@ public class CNLSUEModel implements AnalyticalModel{
 	public Measurements perFormSUE(LinkedHashMap<String, Double> params,Measurements originalMeasurements) {
 		if(!(this.Params.keySet()).containsAll(params.keySet())) {
 			logger.error("The parameters key do not match with the default parameter keys. Invalid Parameter!! Did you send the wrong parameter format?");
-			throw new IllegalArgumentException("The parameters key do not match with the default parameter keys. Invalid Parameter!! Did you send the wrong parameter format?");
+			//throw new IllegalArgumentException("The parameters key do not match with the default parameter keys. Invalid Parameter!! Did you send the wrong parameter format?");
 		}
 		return this.perFormSUE(params, this.AnalyticalModelInternalParams,originalMeasurements);
 	}
@@ -735,6 +750,13 @@ public class CNLSUEModel implements AnalyticalModel{
 
 		}
 	}
+	
+	public static String getODtoODMultiplierId(String odId,String timeId) {
+		String oTPU=odId.split("_")[0].substring(0,3);
+		String dTPU=odId.split("_")[1].substring(0,3);
+		
+		return oTPU+"_"+dTPU+"_"+timeId+"_"+"ODMultiplier";
+	}
 	/**
 	 * This method does single OD network loading of only car demand.
 	 * 
@@ -749,7 +771,6 @@ public class CNLSUEModel implements AnalyticalModel{
 		List<AnalyticalModelRoute> routes=odpair.getRoutes();
 		HashMap<Id<AnalyticalModelRoute>,Double> routeFlows=new HashMap<>();
 		HashMap<Id<Link>,Double> linkFlows=new HashMap<>();
-		
 		
 		
 		//double totalUtility=0;
@@ -802,6 +823,15 @@ public class CNLSUEModel implements AnalyticalModel{
 		for(AnalyticalModelRoute r:routes){
 			double u=utility.get(r.getRouteId());
 			double demand=this.getCarDemand().get(timeBeanId).get(ODpairId);
+			String id=null;
+			if(this.odMultiplierId==null) {
+				id=CNLSUEModel.getODtoODMultiplierId(odpair.getODpairId().toString(),timeBeanId);
+			}else {
+				id=this.odMultiplierId.get(odpair.getODpairId()).get(timeBeanId);
+			}
+			if(params.containsKey(id)) {
+				demand=demand*params.get(id);
+			}
 			double totalUtility=0;
 			for(double d:utility.values()) {
 				totalUtility+=Math.exp(d-u);
@@ -875,8 +905,15 @@ public class CNLSUEModel implements AnalyticalModel{
 			double totalDemand=this.getDemand().get(timeBeanId).get(ODpairId);
 			double carDemand=this.getCarDemand().get(timeBeanId).get(ODpairId);
 			double q=(totalDemand-carDemand);
-			if(q<0) {
-				throw new IllegalArgumentException("Stop!!! transit demand is negative!!!");
+			String id=null;
+			if(this.odMultiplierId==null) {
+				id=CNLSUEModel.getODtoODMultiplierId(odpair.getODpairId().toString(),timeBeanId);
+			}else {
+				id=this.odMultiplierId.get(odpair.getODpairId()).get(timeBeanId);
+			}
+			if(params.containsKey(id)) {
+				double d=params.get(id);
+				q=q*d;
 			}
 			double u=utility.get(r.getTrRouteId());
 			double totalUtility=0;
@@ -935,37 +972,52 @@ public class CNLSUEModel implements AnalyticalModel{
 	 */
 	protected Map<Id<Link>,Double> performCarNetworkLoading(String timeBeanId, double counter,LinkedHashMap<String,Double> params, LinkedHashMap<String, Double> anaParams){
 		Map<Id<Link>,Double> linkVolume=new HashMap<>();
-		boolean multiThreading =false;
+		boolean multiThreading =true;
 		if(multiThreading==true) {
-			List<List<AnalyticalModelODpair>>odpairLists= Lists.partition(new ArrayList<>(this.odPairs.getODpairset().values()),Runtime.getRuntime().availableProcessors()-2);
-			Thread[] threads=new Thread[odpairLists.size()];
-			CarNetworkLoadingRunnable[] carnls=new CarNetworkLoadingRunnable[odpairLists.size()];
-			int i=0;
-			for(List<AnalyticalModelODpair> odpairList:odpairLists) {
-				carnls[i]=new CarNetworkLoadingRunnable(timeBeanId,(int)counter,params,anaParams,odpairList);
-				threads[i]=new Thread(carnls[i]);
-				threads[i].start();
-				i++;
-			}
-
-			for(i=0;i<threads.length;i++) {
-				try {
-					threads[i].join();
-				} catch (InterruptedException e1) {
-					// TODO Auto-generated catch block
-					e1.printStackTrace();
+			List<Map<Id<Link>, Double>> linkVolumes=Collections.synchronizedList(new ArrayList<>());
+			
+			this.odPairs.getODpairset().values().parallelStream().forEach(odpair->{
+				if(odpair.getRoutes()!=null && this.getCarDemand().get(timeBeanId).get(odpair.getODpairId())!=0) {
+					linkVolumes.add(this.NetworkLoadingCarSingleOD(odpair.getODpairId(),timeBeanId,counter,params,anaParams));
 				}
-			}
-
-			for(i=0;i<carnls.length;i++) {
-				for(Entry<Id<Link>,Double>link:carnls[i].getLinkVolume().entrySet()) {
-					if(linkVolume.containsKey(link.getKey())){
-						linkVolume.put(link.getKey(), linkVolume.get(link.getKey())+link.getValue());
-					}else{
-						linkVolume.put(link.getKey(), link.getValue());
+			});
+//			List<List<AnalyticalModelODpair>>odpairLists= Lists.partition(new ArrayList<>(this.odPairs.getODpairset().values()),Runtime.getRuntime().availableProcessors()-2);
+//			Thread[] threads=new Thread[odpairLists.size()];
+//			CarNetworkLoadingRunnable[] carnls=new CarNetworkLoadingRunnable[odpairLists.size()];
+//			int i=0;
+//			for(List<AnalyticalModelODpair> odpairList:odpairLists) {
+//				carnls[i]=new CarNetworkLoadingRunnable(timeBeanId,(int)counter,params,anaParams,odpairList);
+//				threads[i]=new Thread(carnls[i]);
+//				threads[i].start();
+//				i++;
+//			}
+//
+//			for(i=0;i<threads.length;i++) {
+//				try {
+//					threads[i].join();
+//				} catch (InterruptedException e1) {
+//					// TODO Auto-generated catch block
+//					e1.printStackTrace();
+//				}
+//			}
+			for(Map<Id<Link>,Double>lv:linkVolumes) {
+				for(Entry<Id<Link>, Double> d:lv.entrySet()) {
+					if(linkVolume.containsKey(d.getKey())) {
+						linkVolume.put(d.getKey(), linkVolume.get(d.getKey())+d.getValue());
+					}else {
+						linkVolume.put(d.getKey(), d.getValue());
 					}
 				}
 			}
+//			for(i=0;i<carnls.length;i++) {
+//				for(Entry<Id<Link>,Double>link:carnls[i].getLinkVolume().entrySet()) {
+//					if(linkVolume.containsKey(link.getKey())){
+//						linkVolume.put(link.getKey(), linkVolume.get(link.getKey())+link.getValue());
+//					}else{
+//						linkVolume.put(link.getKey(), link.getValue());
+//					}
+//				}
+//			}
 		}else {
 			for(AnalyticalModelODpair e:this.getOdPairs().getODpairset().values()){
 				//this.getOdPairs().getODpairset().values().parallelStream().forEach((e)->{
@@ -986,6 +1038,8 @@ public class CNLSUEModel implements AnalyticalModel{
 		return linkVolume;
 	}
 	
+	
+	
 	/**
 	 * This method should do the network loading for transit
 	 * @param params 
@@ -994,37 +1048,57 @@ public class CNLSUEModel implements AnalyticalModel{
 	 */
 	protected Map<Id<TransitLink>,Double> performTransitNetworkLoading(String timeBeanId,int counter, LinkedHashMap<String, Double> params, LinkedHashMap<String, Double> anaParams){
 		Map<Id<TransitLink>,Double> linkVolume=new ConcurrentHashMap<>();
-		boolean multiThreading =false;
+		boolean multiThreading =true;
 		if(multiThreading==true) {
-			List<List<AnalyticalModelODpair>>odpairLists= Lists.partition(new ArrayList<>(this.odPairs.getODpairset().values()),Runtime.getRuntime().availableProcessors()-2);
-			Thread[] threads=new Thread[odpairLists.size()];
-			TransitNetworkLoadingRunnable[] transitnls=new TransitNetworkLoadingRunnable[odpairLists.size()];
-			int i=0;
-			for(List<AnalyticalModelODpair> odpairList:odpairLists) {
-				transitnls[i]=new TransitNetworkLoadingRunnable(timeBeanId,(int)counter,params,anaParams,odpairList);
-				threads[i]=new Thread(transitnls[i]);
-				threads[i].start();
-				i++;
-			}
-
-			for(i=0;i<threads.length;i++) {
-				try {
-					threads[i].join();
-				} catch (InterruptedException e1) {
-					// TODO Auto-generated catch block
-					e1.printStackTrace();
+			
+			List<Map<Id<TransitLink>, Double>> linkTransitVolumes=Collections.synchronizedList(new ArrayList<>());
+			
+			this.odPairs.getODpairset().values().parallelStream().forEach(odpair->{
+				double totalDemand=this.getDemand().get(timeBeanId).get(odpair.getODpairId());
+				double carDemand=this.getCarDemand().get(timeBeanId).get(odpair.getODpairId());
+				if((totalDemand-carDemand)!=0) {
+					linkTransitVolumes.add(this.NetworkLoadingTransitSingleOD(odpair.getODpairId(),timeBeanId,counter,params,anaParams));
 				}
-			}
-
-			for(i=0;i<transitnls.length;i++) {
-				for(Entry<Id<TransitLink>,Double>link:transitnls[i].getLinkVolume().entrySet()) {
-					if(linkVolume.containsKey(link.getKey())){
-						linkVolume.put(link.getKey(), linkVolume.get(link.getKey())+link.getValue());
-					}else{
-						linkVolume.put(link.getKey(), link.getValue());
+			});	
+			
+			for(Map<Id<TransitLink>, Double> lv:linkTransitVolumes) {
+				for(Entry<Id<TransitLink>, Double> d:lv.entrySet()) {
+					if(linkVolume.containsKey(d.getKey())) {
+						linkVolume.put(d.getKey(), linkVolume.get(d.getKey())+d.getValue());
+					}else {
+						linkVolume.put(d.getKey(), d.getValue());
 					}
 				}
 			}
+//			List<List<AnalyticalModelODpair>>odpairLists= Lists.partition(new ArrayList<>(this.odPairs.getODpairset().values()),Runtime.getRuntime().availableProcessors()-2);
+//			Thread[] threads=new Thread[odpairLists.size()];
+//			TransitNetworkLoadingRunnable[] transitnls=new TransitNetworkLoadingRunnable[odpairLists.size()];
+//			int i=0;
+//			for(List<AnalyticalModelODpair> odpairList:odpairLists) {
+//				transitnls[i]=new TransitNetworkLoadingRunnable(timeBeanId,(int)counter,params,anaParams,odpairList);
+//				threads[i]=new Thread(transitnls[i]);
+//				threads[i].start();
+//				i++;
+//			}
+//
+//			for(i=0;i<threads.length;i++) {
+//				try {
+//					threads[i].join();
+//				} catch (InterruptedException e1) {
+//					// TODO Auto-generated catch block
+//					e1.printStackTrace();
+//				}
+//			}
+//
+//			for(i=0;i<transitnls.length;i++) {
+//				for(Entry<Id<TransitLink>,Double>link:transitnls[i].getLinkVolume().entrySet()) {
+//					if(linkVolume.containsKey(link.getKey())){
+//						linkVolume.put(link.getKey(), linkVolume.get(link.getKey())+link.getValue());
+//					}else{
+//						linkVolume.put(link.getKey(), link.getValue());
+//					}
+//				}
+//			}
 		}else {
 
 			for(AnalyticalModelODpair e:this.getOdPairs().getODpairset().values()){

@@ -9,7 +9,9 @@ import org.matsim.api.core.v01.network.Network;
 import org.matsim.api.core.v01.network.Node;
 import org.matsim.pt.transitSchedule.api.TransitSchedule;
 
+import ust.hk.praisehk.metamodelcalibration.analyticalModel.AnalyticalModelLink;
 import ust.hk.praisehk.metamodelcalibration.analyticalModel.AnalyticalModelNetwork;
+import ust.hk.praisehk.metamodelcalibration.matsimIntegration.SignalFlowReductionGenerator;
 
 
 
@@ -31,6 +33,22 @@ public class CNLNetwork extends AnalyticalModelNetwork{
 		}
 		for(Id<Link> linkId:network.getLinks().keySet()){
 			this.network.addLink(new CNLLink(network.getLinks().get(linkId)));
+		}
+		
+	}
+	
+	public CNLNetwork(Network network,SignalFlowReductionGenerator sg){
+		
+		for(Id<Node> NodeId:network.getNodes().keySet()){
+			
+			this.network.addNode(cloneNode(network.getNodes().get(NodeId),network.getFactory()));
+		}
+		for(Id<Link> linkId:network.getLinks().keySet()){
+			AnalyticalModelLink link=new CNLLink(network.getLinks().get(linkId));
+			if(sg!=null) {
+				link.setGcRatio(sg.getGCratio(network.getLinks().get(linkId))[0]);
+			}
+			this.network.addLink(link);
 		}
 		
 	}
@@ -92,7 +110,7 @@ public class CNLNetwork extends AnalyticalModelNetwork{
 	@Override
 	public void addLinkTransitVolume(TransitSchedule ts) {
 		// TODO Auto-generated method stub
-		
+		throw new IllegalArgumentException("Not active function!!!");
 	}
 
 

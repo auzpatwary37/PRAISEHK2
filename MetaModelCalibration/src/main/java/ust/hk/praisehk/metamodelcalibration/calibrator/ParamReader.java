@@ -50,6 +50,8 @@ public class ParamReader {
 	//In No Code Format
 	private LinkedHashMap<String,Double>DefaultParam=new LinkedHashMap<>();
 	
+	private boolean allowUnkownParamaeterWhileScalingUp=false;
+	
 	//In No Code Format
 	private LinkedHashMap<String,Tuple<Double,Double>>paramLimit=new LinkedHashMap<>();
 	private ArrayList<String>paramName=new ArrayList<>();
@@ -183,8 +185,10 @@ public class ParamReader {
 			logger.warn("Parameter is already scaled up, i.e. in ParamName-Value format. Method will exit.");
 			return new LinkedHashMap<String,Double>(param);
 		}else {
-			logger.error("Invalid input. Params can be either in ParamName-Value format or ParamCode-Value Format");
-			throw new IllegalArgumentException("Invalid input. Params can be either in ParamName-Value format or ParamCode-Value Format");
+			if(this.allowUnkownParamaeterWhileScalingUp==false) {
+				logger.error("Invalid input. Params can be either in ParamName-Value format or ParamCode-Value Format");
+				throw new IllegalArgumentException("Invalid input. Params can be either in ParamName-Value format or ParamCode-Value Format");
+			}
 		}
 		LinkedHashMap<String,Double> scaledParam=new LinkedHashMap<String,Double>();
 		for(Entry<String, String> e:this.ParamNoCode.entrySet()) {
@@ -194,10 +198,29 @@ public class ParamReader {
 				scaledParam.put(e.getKey(), param.get(e.getValue()));
 			}
 		}
+		
+		if(this.allowUnkownParamaeterWhileScalingUp) {
+			for(Entry<String,Double> parameter:param.entrySet()) {
+				if(!this.ParamNoCode.containsValue(parameter.getKey())){
+					scaledParam.put(parameter.getKey(), parameter.getValue());
+				}
+			}
+		}
+		//System.out.println();
 		return scaledParam;
 	}
 	
 	
+	public boolean isAllowUnkownParamaeterWhileScalingUp() {
+		return allowUnkownParamaeterWhileScalingUp;
+	}
+
+
+	public void setAllowUnkownParamaeterWhileScalingUp(boolean allowUnkownParamaeterWhileScalingUp) {
+		this.allowUnkownParamaeterWhileScalingUp = allowUnkownParamaeterWhileScalingUp;
+	}
+
+
 	public LinkedHashMap<String, Tuple<Double, Double>> ScaleUpLimit(LinkedHashMap<String,Tuple<Double,Double>>param) throws IllegalArgumentException{
 		if((this.ParamNoCode.values()).containsAll(param.keySet())) {
 			

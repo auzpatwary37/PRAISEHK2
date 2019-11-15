@@ -22,6 +22,7 @@ import ust.hk.praisehk.metamodelcalibration.analyticalModel.AnalyticalModelODpai
 import ust.hk.praisehk.metamodelcalibration.analyticalModel.SUEModelOutput;
 import ust.hk.praisehk.metamodelcalibration.analyticalModel.TransitLink;
 import ust.hk.praisehk.metamodelcalibration.calibrator.ParamReader;
+import ust.hk.praisehk.metamodelcalibration.matsimIntegration.SignalFlowReductionGenerator;
 import ust.hk.praisehk.metamodelcalibration.measurements.Measurements;
 
 
@@ -62,8 +63,9 @@ public class CNLSUEModelSubPop extends CNLSUEModel{
 		Network odNetwork=NetworkUtils.readNetwork("data/tpusbNetwork.xml");
 		this.getOdPairs().generateODpairsetSubPop(odNetwork);//This network has priority over the constructor network. This allows to use a od pair specific network 
 		this.getOdPairs().generateRouteandLinkIncidence(0.);
+		SignalFlowReductionGenerator sg=new SignalFlowReductionGenerator(scenario);
 		for(String s:this.getTimeBeans().keySet()) {
-			this.getNetworks().put(s, new CNLNetwork(network));
+			this.getNetworks().put(s, new CNLNetwork(network,sg));
 			this.performTransitVehicleOverlay(this.getNetworks().get(s),
 					transitSchedule,scenario.getTransitVehicles(),s);
 			this.getTransitLinks().put(s,this.getOdPairs().getTransitLinks(s));

@@ -6,6 +6,7 @@ import java.util.List;
 import org.apache.log4j.Logger;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.Scenario;
+import org.matsim.api.core.v01.network.Network;
 import org.matsim.api.core.v01.population.Activity;
 import org.matsim.api.core.v01.population.Leg;
 import org.matsim.api.core.v01.population.Person;
@@ -30,9 +31,10 @@ public abstract class TripChain{
 	/**
 	 * Creating from a plan
 	 * @param plan
+	 * @param network 
 	 */
 	@SuppressWarnings("unchecked")
-	public TripChain(Plan plan, TransitSchedule ts,Scenario scenario){
+	public TripChain(Plan plan, TransitSchedule ts,Scenario scenario, Network network){
 		//System.out.println();
 		Id<Person>PersonId= plan.getPerson().getId();
 		List<Leg> leglist=new ArrayList<>();
@@ -105,6 +107,14 @@ public abstract class TripChain{
 			trip.setEndTime(trip.getStartTime()+leglist.get(i).getTravelTime());
 			trip.setMode(leglist.get(i).getMode());
 			if(leglist.get(i).getMode().equals("car")){
+				Route r;
+				if((r=leglist.get(i).getRoute()).getDistance()==0) {
+					double d=0;
+					for(String s:r.getRouteDescription().split(" ")) {
+						d+=network.getLinks().get(Id.createLinkId(s)).getLength();
+					}
+					r.setDistance(d);
+				}
 				trip.setRoute(this.createRoute((leglist.get(i).getRoute())));
 				
 			}else if(leglist.get(i).getMode().equals("pt")){

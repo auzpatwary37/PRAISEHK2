@@ -711,6 +711,10 @@ public class AnalyticalModelODpair {
 				double length=this.network.getLinks().get(lId).getLength();
 				ps+=length/(r.getRouteDistance()*this.linkIncidence.get(lId).size());
 			}
+			if(Double.isInfinite(ps)) {
+				System.out.println("PathSize infinie");
+			}
+				
 			autoPathSize.put(r.getRouteId(),ps);
 		}
 		}
@@ -728,6 +732,9 @@ public class AnalyticalModelODpair {
 				for(Id<Link> linkId:anaTr.getPhysicalLinks()) {
 					Link link=this.network.getLinks().get(linkId);
 					ps+=link.getLength()/(routeDistance*this.trPhysiscalLinkIncidence.get(linkId).size());
+				}
+				if(Double.isInfinite(ps)) {
+					System.out.println("PathSize infinite");
 				}
 				trPathSize.get(timeBeanId).put(anaTr.getTrRouteId(),ps);
 			}

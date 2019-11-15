@@ -3,6 +3,7 @@ package ust.hk.praisehk.metamodelcalibration.analyticalModelImpl;
 import java.util.ArrayList;
 
 import org.matsim.api.core.v01.Scenario;
+import org.matsim.api.core.v01.network.Network;
 import org.matsim.api.core.v01.population.Activity;
 import org.matsim.api.core.v01.population.Leg;
 import org.matsim.api.core.v01.population.Plan;
@@ -22,8 +23,8 @@ import ust.hk.praisehk.metamodelcalibration.analyticalModel.TripChain;
 
 public class CNLTripChain extends TripChain{
 
-	public CNLTripChain(Plan plan, TransitSchedule ts,Scenario scenario) {
-		super(plan, ts,scenario);
+	public CNLTripChain(Plan plan, TransitSchedule ts,Scenario scenario, CNLODpairs cnloDpairs, Network network) {
+		super(plan, ts,scenario,network);
 		
 	}
 
