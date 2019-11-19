@@ -267,6 +267,8 @@ public class CNLSUEModel implements AnalyticalModel{
 			this.performTransitVehicleOverlay(this.getNetworks().get(s),
 					transitSchedule,scenario.getTransitVehicles(),s);
 			this.getTransitLinks().put(s,this.getOdPairs().getTransitLinks(s));
+			System.out.println("No of active signal link = "+sg.activeGc);
+			sg.activeGc=0;
 		}
 		this.fareCalculator=fareCalculator;
 		

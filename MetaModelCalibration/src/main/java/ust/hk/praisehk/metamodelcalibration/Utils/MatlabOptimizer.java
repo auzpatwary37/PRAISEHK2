@@ -5,7 +5,7 @@ import com.mathworks.toolbox.javabuilder.MWClassID;
 import com.mathworks.toolbox.javabuilder.MWJavaObjectRef;
 import com.mathworks.toolbox.javabuilder.MWNumericArray;
 
-import OptimDemo1.Optimizer;
+import OptimDemo2.Optimizer;
 
 public class MatlabOptimizer {
 	
@@ -21,6 +21,14 @@ public class MatlabOptimizer {
 		this.upperBound=upperBound;
 	}
 	
+	
+	
+	public MatlabObj getObjective() {
+		return objective;
+	}
+
+
+
 	public MatlabResult performOptimization() {
 		Optimizer theOptimizer = null;		/* Stores component 
         instance */
@@ -111,22 +119,4 @@ public class MatlabOptimizer {
 
 }
 
-class MatlabResult {
-	
-	private final double[] x;
-	private final double fval;
-	
-	public MatlabResult(double[] x, double fval) {
-		this.x=x;
-		this.fval=fval;
-	}
 
-	public double[] getX() {
-		return x;
-	}
-
-	public double getFval() {
-		return fval;
-	}
-
-}

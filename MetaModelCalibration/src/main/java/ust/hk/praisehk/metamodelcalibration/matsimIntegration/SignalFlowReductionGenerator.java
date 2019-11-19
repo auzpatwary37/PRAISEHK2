@@ -27,15 +27,15 @@ import com.google.common.collect.Sets;
 
 public class SignalFlowReductionGenerator {
 	private final Scenario scenario;
-	
+	public int activeGc=0;
 	public SignalFlowReductionGenerator(Scenario scenario){
 		this.scenario = scenario;
 	}
 	
 	public double[] getGCratio(Link link) {
-		if(link!=null) {
-			return new double[] {1,60};
-		}
+//		if(link!=null) {
+//			return new double[] {1,60};
+//		}
 		if((SignalsData) scenario.getScenarioElement("signalsData")==null) {
 			return new double[] {1,60};
 		}
@@ -74,14 +74,22 @@ public class SignalFlowReductionGenerator {
 		double cycleTime = planData.getCycleTime();
 		double out = 0;
 		for(Id<SignalGroup> entry : sigIds.values()) {
+			if(entry == null)
+				continue;
 			SignalGroupSettingsData thing = planData.getSignalGroupSettingsDataByGroupId().get(entry);
 			int onSet = thing.getOnset();
 			int dropping = thing.getDropping();
 			//add this gc ratio into out
 			out += ((onSet>=dropping ? dropping+cycleTime : dropping) - onSet) / cycleTime;
 		}
-
-		return new double[] {out/sigIds.size(), cycleTime};
+		if(out/sigIds.size()!=1) {
+			this.activeGc++;
+		}
+		double gc=out/sigIds.size();
+		if(gc==0) {
+			gc=1;
+		}
+		return new double[] {gc, cycleTime};
 	}
 	
 	public double[] getGCratio(Link link, Id<Link> toLinkId) {
