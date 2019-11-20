@@ -31,4 +31,10 @@ public interface AnalyticalModelOptimizer{
 	 */
 	
 	public OptimizationFunction getOptimizationFunction();
+	
+	public final String MATLABOptimizerName="MATLABOptimizer";
+	public final String TROptimizerName="JCobylaOptimizer";
+	public String getOptimizerType();
+
+	public void setOptimizerType(String optimizerType);
 }

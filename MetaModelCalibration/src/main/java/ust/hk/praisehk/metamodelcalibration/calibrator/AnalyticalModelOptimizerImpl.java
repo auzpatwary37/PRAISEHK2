@@ -39,8 +39,7 @@ public class AnalyticalModelOptimizerImpl implements AnalyticalModelOptimizer{
 	private CentralDifferenceHessian HassinCalculator;
 	private boolean useUnitDiag=true;
 	private final LinkedHashMap<String,Double> currentParams;
-	public final String MATLABOptimizerName="MATLABOptimizer";
-	public final String TROptimizerName="JCobylaOptimizer";
+	
 	private String optimizerType=this.TROptimizerName;
 	
 
@@ -111,11 +110,11 @@ public class AnalyticalModelOptimizerImpl implements AnalyticalModelOptimizer{
 	
 	
 	
-
+	@Override
 	public String getOptimizerType() {
 		return optimizerType;
 	}
-
+	@Override
 	public void setOptimizerType(String optimizerType) {
 		this.optimizerType = optimizerType;
 	}

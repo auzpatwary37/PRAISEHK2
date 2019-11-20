@@ -55,7 +55,7 @@ public class CalibratorImpl implements Calibrator {
 
 	private LinkedHashMap<String,Double> currentParam;
 	private LinkedHashMap<String,Double> trialParam;
-
+	private String OptimzerName=AnalyticalModelOptimizer.TROptimizerName;
 
 
 	private AnalyticalModel sueAssignment;
@@ -128,6 +128,18 @@ public class CalibratorImpl implements Calibrator {
 	}
 
 	
+	public String getOptimzerName() {
+		return OptimzerName;
+	}
+
+
+
+	public void setOptimzerName(String optimzerName) {
+		OptimzerName = optimzerName;
+	}
+
+
+
 	/**
 	 * The input gradients can be null for non gradient based meatamodels.
 	 * The gradient must contain the same measurement IDs and volumes as the calibration measurements
@@ -297,6 +309,7 @@ public class CalibratorImpl implements Calibrator {
 				trialParam=this.drawRandomPoint(this.pReader.getInitialParamLimit());
 			}else {
 				AnalyticalModelOptimizer anaOptimizer=new AnalyticalModelOptimizerImpl(sue, this.calibrationMeasurements, this.metaModels, this.currentParam, this.TrRadius, this.pReader.getInitialParamLimit(),this.ObjectiveType ,metaModelType,this.pReader, this.iterationNo,this.fileLoc);
+				anaOptimizer.setOptimizerType(AnalyticalModelOptimizer.MATLABOptimizerName);
 				this.trialParam=anaOptimizer.performOptimization();
 			}
 			
