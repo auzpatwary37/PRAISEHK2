@@ -30,7 +30,7 @@
 			<attribute name="maven.pomderived" value="true"/>
 		</attributes>
 	</classpathentry>
-	<classpathentry kind="lib" path="src/main/resources/javabuilder.jar"/>
-	<classpathentry kind="lib" path="src/main/resources/OptimDemo1.jar"/>
+	<classpathentry kind="lib" path="/trialMatlabJava/OptimDemo2/for_redistribution_files_only/OptimDemo2.jar"/>
+	<classpathentry kind="lib" path="C:/Program Files/MATLAB/MATLAB Runtime/v96/toolbox/javabuilder/jar/javabuilder.jar"/>
 	<classpathentry kind="output" path="target/classes"/>
 </classpath>
