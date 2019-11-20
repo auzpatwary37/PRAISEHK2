@@ -170,7 +170,7 @@ public class SmartCardEntryAndExitEventHandler
 				//Record the entry and entry and exit
 				String key=tripsData.getLatestStartFacility().toString()+"___"+vData.lineId.toString()+"___"+vData.routeId.toString();
 				String timeId=this.getTimeBeanId(tripsData.getLastStartTime(false));
-				if(this.smartCardEntry.get(key)!=null) {
+				if(this.smartCardEntry.get(key)!=null && timeId!=null) {
 				Double oldVolume=this.smartCardEntry.get(key).getVolumes().get(timeId);
 					if(oldVolume!=null) {
 						this.smartCardEntry.get(key).addVolume(timeId, oldVolume+1);
@@ -281,7 +281,8 @@ public class SmartCardEntryAndExitEventHandler
 				//Save the 'entry' and 'entry and exit'................
 				String key=this.lastEntryStation.toString()+"___"+lastMTRTrip.endFacilityId.toString();
 				String timeId=SmartCardEntryAndExitEventHandler.this.getTimeBeanId(time);
-				if(SmartCardEntryAndExitEventHandler.this.smartCardEntryAndExit.containsKey(key)) {
+				
+				if(SmartCardEntryAndExitEventHandler.this.smartCardEntryAndExit.containsKey(key) && timeId!=null) {
 				Double oldVolume=SmartCardEntryAndExitEventHandler.this.smartCardEntryAndExit.get(key).getVolumes().get(timeId);
 				if(oldVolume!=null) {
 					SmartCardEntryAndExitEventHandler.this.smartCardEntryAndExit.get(key).addVolume(timeId, oldVolume+1);

@@ -8,13 +8,14 @@ import org.matsim.api.core.v01.network.Link;
 import org.matsim.core.utils.collections.Tuple;
 
 import de.xypron.jcobyla.Calcfc;
+import ust.hk.praisehk.metamodelcalibration.Utils.MatlabObj;
 import ust.hk.praisehk.metamodelcalibration.analyticalModel.AnalyticalModel;
 import ust.hk.praisehk.metamodelcalibration.matamodels.MetaModel;
 import ust.hk.praisehk.metamodelcalibration.measurements.Measurement;
 import ust.hk.praisehk.metamodelcalibration.measurements.Measurements;
 
 
-public abstract class OptimizationFunction implements Calcfc  {
+public abstract class OptimizationFunction implements Calcfc, MatlabObj  {
 
 	private AnalyticalModel SUE;
 	private final int numberOfVariables;
@@ -49,7 +50,7 @@ public abstract class OptimizationFunction implements Calcfc  {
 	
 	public abstract double[] calcConstrain(double[] x, LinkedHashMap<String,Tuple<Double,Double>> paramLimit);
 	
-	protected LinkedHashMap<String,Double> ScaleUp(double[] x) {
+	public LinkedHashMap<String,Double> ScaleUp(double[] x) {
 		LinkedHashMap<String,Double> params=new LinkedHashMap<>();
 		int j=0;
 		for(String s:this.currentParams.keySet()) {

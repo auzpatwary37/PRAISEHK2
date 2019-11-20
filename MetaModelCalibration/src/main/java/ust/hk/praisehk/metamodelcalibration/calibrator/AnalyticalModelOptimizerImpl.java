@@ -17,6 +17,8 @@ import cz.cvut.fit.jcool.core.Point;
 import cz.cvut.fit.jcool.utils.CentralDifferenceHessian;
 import de.xypron.jcobyla.Cobyla;
 import de.xypron.jcobyla.CobylaExitStatus;
+import ust.hk.praisehk.metamodelcalibration.Utils.MatlabOptimizer;
+import ust.hk.praisehk.metamodelcalibration.Utils.MatlabResult;
 import ust.hk.praisehk.metamodelcalibration.analyticalModel.AnalyticalModel;
 import ust.hk.praisehk.metamodelcalibration.matamodels.MetaModel;
 import ust.hk.praisehk.metamodelcalibration.measurements.Measurement;
@@ -37,6 +39,10 @@ public class AnalyticalModelOptimizerImpl implements AnalyticalModelOptimizer{
 	private CentralDifferenceHessian HassinCalculator;
 	private boolean useUnitDiag=true;
 	private final LinkedHashMap<String,Double> currentParams;
+	public final String MATLABOptimizerName="MATLABOptimizer";
+	public final String TROptimizerName="JCobylaOptimizer";
+	private String optimizerType=this.TROptimizerName;
+	
 
 	
 	public AnalyticalModelOptimizerImpl(OptimizationFunction optimFunc) {
@@ -106,6 +112,14 @@ public class AnalyticalModelOptimizerImpl implements AnalyticalModelOptimizer{
 	
 	
 
+	public String getOptimizerType() {
+		return optimizerType;
+	}
+
+	public void setOptimizerType(String optimizerType) {
+		this.optimizerType = optimizerType;
+	}
+
 	@Override
 	public OptimizationFunction getOptimizationFunction() {
 		return optimFunction;
@@ -121,12 +135,29 @@ public class AnalyticalModelOptimizerImpl implements AnalyticalModelOptimizer{
 			j++;
 		}
 
-		//Call the optimization subroutine
-		CobylaExitStatus result = Cobyla.findMinimum(this.optimFunction,this.noOfVariables, this.noOfVariables*2+1,
-				x,this.startingRadius,this.endingRadius ,3, this.maxIter);
-		for(int i=0;i<x.length;i++)System.out.println(x[i]);
-		LinkedHashMap<String,Double> resultParam=this.optimFunction.ScaleUp(x);
-		System.out.println();
-		return resultParam;
+		if(this.optimizerType.equals(this.TROptimizerName)) {
+			//Call the optimization subroutine
+			CobylaExitStatus result = Cobyla.findMinimum(this.optimFunction,this.noOfVariables, this.noOfVariables*2+1,
+					x,this.startingRadius,this.endingRadius ,3, this.maxIter);
+			for(int i=0;i<x.length;i++)System.out.println(x[i]);
+			LinkedHashMap<String,Double> resultParam=this.optimFunction.ScaleUp(x);
+			
+			return resultParam;
+		}else {
+			double[] xl=new double[x.length];
+			double[] xu=new double[x.length];
+			int j=0;
+			for(Tuple<Double,Double> tp:this.optimFunction.getParamLimit().values()) {
+				xl[j]=tp.getFirst();
+				xu[j]=tp.getSecond();
+				j++;
+			}
+			MatlabOptimizer optimizer= new MatlabOptimizer(this.optimFunction,x,xl,xu);
+			MatlabResult result=optimizer.performOptimization();
+			double[] xr=result.getX();
+			for(int i=0;i<xr.length;i++)System.out.println(xr[i]);
+			LinkedHashMap<String,Double> resultParam=this.optimFunction.ScaleUp(xr);
+			return resultParam;
+		}
 	}	
 }

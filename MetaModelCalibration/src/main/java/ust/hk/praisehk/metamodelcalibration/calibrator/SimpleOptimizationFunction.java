@@ -147,6 +147,39 @@ public class SimpleOptimizationFunction extends OptimizationFunction{
 		objective=ObjectiveCalculator.calcObjective(this.getRealData(), metaMeasurements,type);
 		return objective;
 	}
+
+	@Override
+	public double evaluateFunction(double[] x) {
+		LinkedHashMap<String, Double>params=ScaleUp(x);
+		SUEModelOutput linkVolume=null;
+		this.getSUE().clearLinkCarandTransitVolume();
+		Measurements anaMeasurements=null;
+		if(!this.metaModelType.equals(MetaModel.LinearMetaModelName) && !this.metaModelType.equals(MetaModel.QudaraticMetaModelName)) {
+			anaMeasurements=this.getSUE().perFormSUE(this.pReader.ScaleUp(new LinkedHashMap<>(params)),this.getRealData());
+		}
+		
+		double objective=calcMetaModelObjective(anaMeasurements, params);
+		//Add the ridge penalty term 
+		for(Double e:params.values()) {
+			objective+=e*e;
+		}
+		
+		this.logOoptimizationDetails(this.currentIterNo, this.optimIter, this.fileLoc, this.pReader.ScaleUp(new LinkedHashMap<>(params)), objective);
+		this.optimIter++;
+		return objective;
+	}
+
+	@Override
+	public double evaluateConstrain(double[] x) {
+		double trustRegionConst=0;
+		int j=0;
+		for(double d:this.getCurrentParams().values()) {
+			trustRegionConst+=Math.pow(d*x[j]*this.getHessian()[j]/100,2);
+			j++;
+		}
+		double c=this.getTrustRegionRadius()-Math.sqrt(trustRegionConst);
+		return c;
+	}
 	
 
 }
