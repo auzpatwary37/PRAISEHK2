@@ -25,6 +25,7 @@ public abstract class TripChain{
 	
 	int no_of_trips=0;
 	private List<Trip> chain=new ArrayList<>();
+	List<Activity> activitylist=new ArrayList<>();
 	private PopulationFactory popfac=PopulationUtils.getFactory();
 	private static final Logger logger=Logger.getLogger(TripChain.class);
 	
@@ -38,11 +39,9 @@ public abstract class TripChain{
 		//System.out.println();
 		Id<Person>PersonId= plan.getPerson().getId();
 		List<Leg> leglist=new ArrayList<>();
-		List<Activity> activitylist=new ArrayList<>();
+		
 		int a=0;
 		double pt_traveltime=0;
-		double pt_starttime=0;
-		int no_of_ptleg=0;
 		ArrayList<Activity> ptactivityList=null;
 		ArrayList<Leg>ptlegList=null;
 		ArrayList<AnalyticalModelTransitRoute> ptlegs=new ArrayList<>();
@@ -135,7 +134,7 @@ public abstract class TripChain{
 		}
 
 	}
-	protected ArrayList<Trip> getTrips(){
+	public ArrayList<Trip> getTrips(){
 		return new ArrayList<Trip>(this.chain);
 	}
 	
@@ -146,5 +145,8 @@ public abstract class TripChain{
 	protected abstract AnalyticalModelRoute createRoute(Route r);
 	protected abstract AnalyticalModelTransitRoute getTransitRoute(ArrayList<Leg> ptlegList,
 			ArrayList<Activity> ptactivityList,TransitSchedule ts,Scenario scenario);
+	public List<Activity> getActivitylist() {
+		return activitylist;
+	}
 	
 }

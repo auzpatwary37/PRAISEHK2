@@ -23,7 +23,7 @@ import ust.hk.praisehk.metamodelcalibration.analyticalModel.TripChain;
 
 public class CNLTripChain extends TripChain{
 
-	public CNLTripChain(Plan plan, TransitSchedule ts,Scenario scenario, CNLODpairs cnloDpairs, Network network) {
+	public CNLTripChain(Plan plan, TransitSchedule ts,Scenario scenario, Network network) {
 		super(plan, ts,scenario,network);
 		
 	}

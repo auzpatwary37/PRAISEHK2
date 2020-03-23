@@ -39,7 +39,7 @@ public class CNLODpairs extends AnalyticalModelODpairs{
 
 	@Override
 	protected TripChain getNewTripChain(Plan plan) {
-		return new CNLTripChain(plan,this.ts,this.scenario,this,network);
+		return new CNLTripChain(plan,this.ts,this.scenario,network);
 		
 	}
 
