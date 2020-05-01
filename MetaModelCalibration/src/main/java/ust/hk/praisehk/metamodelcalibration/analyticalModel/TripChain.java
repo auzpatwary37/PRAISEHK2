@@ -17,7 +17,10 @@ import org.matsim.api.core.v01.population.Route;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.population.PopulationUtils;
 import org.matsim.core.scenario.ScenarioUtils;
+import org.matsim.core.utils.misc.OptionalTime;
+import org.matsim.core.utils.misc.Time;
 import org.matsim.pt.transitSchedule.api.TransitSchedule;
+
 
 
 
@@ -56,7 +59,7 @@ public abstract class TripChain{
 					ptactivityList.add(activitylist.get(activitylist.size()-1));
 					ptactivityList.add(activity);
 					ptlegList.add(leglist.get(leglist.size()-1));
-					pt_traveltime+=leglist.get(leglist.size()-1).getTravelTime();
+					pt_traveltime+=leglist.get(leglist.size()-1).getTravelTime().seconds();
 					leglist.remove(leglist.size()-1);
 					continue;
 					
@@ -71,7 +74,8 @@ public abstract class TripChain{
 					AnalyticalModelTransitRoute ptleg=this.getTransitRoute(ptlegList,ptactivityList,ts,scenario);
 					ptlegs.add(ptleg);
 					Leg l=popfac.createLeg("pt");
-					l.setDepartureTime(ptactivityList.get(0).getEndTime());
+					
+					l.setDepartureTime(ptactivityList.get(0).getEndTime().seconds());
 					l.setTravelTime(pt_traveltime);
 					leglist.add(l);
 					pt_traveltime=0;
@@ -93,7 +97,7 @@ public abstract class TripChain{
 				}else if(a==1) {
 					ptlegList.add((Leg)planElement);
 					Leg l=(Leg)planElement;
-					pt_traveltime+=l.getTravelTime();
+					pt_traveltime+=l.getTravelTime().seconds();
 				}
 			}
 		}
@@ -102,8 +106,8 @@ public abstract class TripChain{
 			Trip trip=this.createBlankTrip();
 			trip.setAct1coord(activitylist.get(i).getCoord());
 			trip.setAct2coord(activitylist.get(i+1).getCoord());
-			trip.setStartTime(activitylist.get(i).getEndTime());
-			trip.setEndTime(trip.getStartTime()+leglist.get(i).getTravelTime());
+			trip.setStartTime(activitylist.get(i).getEndTime().seconds());
+			trip.setEndTime(trip.getStartTime()+leglist.get(i).getTravelTime().seconds());
 			trip.setMode(leglist.get(i).getMode());
 			if(leglist.get(i).getMode().equals("car")){
 				Route r;

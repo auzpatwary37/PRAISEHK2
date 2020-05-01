@@ -265,7 +265,15 @@ public class ParamReader {
 		return scaledDownParam;
 	}
 	
-	
+	public LinkedHashMap<String,Double>generateSubPopSpecificParam(LinkedHashMap<String,Double>originalparams,String subPopName){
+		LinkedHashMap<String,Double> specificParam=new LinkedHashMap<>();
+		for(String s:originalparams.keySet()) {
+			if(s.contains(subPopName)||s.contains("All")) {
+				specificParam.put(s.split(" ")[1],originalparams.get(s));
+			}
+		}
+		return specificParam;
+	}
 	
 	
 	/**
