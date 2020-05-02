@@ -16,6 +16,7 @@ import org.matsim.api.core.v01.population.Plan;
 import org.matsim.api.core.v01.population.Population;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
+import org.matsim.core.population.PopulationUtils;
 import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.core.utils.collections.Tuple;
 import org.matsim.facilities.ActivityFacility;
@@ -298,7 +299,7 @@ class tripsCreatorFromPlan implements Runnable {
 	
 	@Override
 	public void run() {
-		if(this.Persons.get(0).getAttributes().getAsMap().get("SUBPOP_ATTRIB_NAME")==null) {
+		if(PopulationUtils.getSubpopulation(this.Persons.get(0))==null) {
 			for(Person p:this.Persons) {
 				TripChain tripchain=this.odPairs.getNewTripChain(p.getSelectedPlan());
 				trips.addAll( tripchain.getTrips());
@@ -306,7 +307,7 @@ class tripsCreatorFromPlan implements Runnable {
 		}else {
 			for(Person p:this.Persons) {
 				TripChain tripchain=this.odPairs.getNewTripChain(p.getSelectedPlan());
-				String s=p.getAttributes().getAsMap().get("SUBPOP_ATTRIB_NAME").toString();
+				String s=PopulationUtils.getSubpopulation(p);
 				for(Trip t:(ArrayList<Trip>)tripchain.getTrips()) {
 					t.setSubPopulationName(s);
 				}
