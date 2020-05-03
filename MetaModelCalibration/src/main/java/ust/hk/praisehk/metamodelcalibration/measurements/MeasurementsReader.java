@@ -70,7 +70,7 @@ public class MeasurementsReader extends DefaultHandler {
 		}
 		
 		if(qName.equalsIgnoreCase("Volume")) {
-			this.m.getMeasurements().get(this.mId).addVolume(attributes.getValue("TimeBeanId"), Double.parseDouble(attributes.getValue("PCUVolume")));
+			this.m.getMeasurements().get(this.mId).putVolume(attributes.getValue("TimeBeanId"), Double.parseDouble(attributes.getValue("PCUVolume")));
 		}
 		
 	}

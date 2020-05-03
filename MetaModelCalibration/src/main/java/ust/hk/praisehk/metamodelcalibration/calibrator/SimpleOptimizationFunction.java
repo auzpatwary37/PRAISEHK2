@@ -140,7 +140,7 @@ public class SimpleOptimizationFunction extends OptimizationFunction{
 			for(String timeBean:m.getVolumes().keySet()) {
 				double AnaLyticalModelLinkCount=anaMeasurements.getMeasurements().get(m.getId()).getVolumes().get(timeBean);
 				MetaModel metaModel=this.getMetaModels().get(m.getId()).get(timeBean);
-				metaMeasurements.getMeasurements().get(m.getId()).addVolume(timeBean, metaModel.calcMetaModel(AnaLyticalModelLinkCount, params));
+				metaMeasurements.getMeasurements().get(m.getId()).putVolume(timeBean, metaModel.calcMetaModel(AnaLyticalModelLinkCount, params));
 			}
 		}
 		

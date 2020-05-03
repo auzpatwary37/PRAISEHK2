@@ -1152,7 +1152,7 @@ public class SUEModelContTime implements AnalyticalModel{
 				for(String timeBeanId:this.timeBeans.keySet()) {
 				for(Measurement m:ms) {
 					if(m.getVolumes().containsKey(timeBeanId)) {
-						m.addVolume(timeBeanId, ((CNLLink)this.networks.get(timeBeanId).getLinks().get(((ArrayList<Id<Link>>)m.getAttribute(Measurement.linkListAttributeName)).get(0))).getLinkTravelTime(this.timeBeans.get(timeBeanId),
+						m.putVolume(timeBeanId, ((CNLLink)this.networks.get(timeBeanId).getLinks().get(((ArrayList<Id<Link>>)m.getAttribute(Measurement.linkListAttributeName)).get(0))).getLinkTravelTime(this.timeBeans.get(timeBeanId),
 						params, anaParams));
 					}
 				}
@@ -1287,7 +1287,7 @@ public class SUEModelContTime implements AnalyticalModel{
 				for(Id<Link> linkId:(ArrayList<Id<Link>>)m.getAttribute(Measurement.linkListAttributeName)) {
 					count+=((AnalyticalModelLink) this.getNetworks().get(timeBeanId).getLinks().get(linkId)).getLinkAADTVolume();
 				}
-				m.addVolume(timeBeanId, count);
+				m.putVolume(timeBeanId, count);
 				}
 			}
 			
@@ -1298,7 +1298,7 @@ public class SUEModelContTime implements AnalyticalModel{
 				for(String timeBeanId:m.getVolumes().keySet()) {
 					Id<Link>linkId=((ArrayList<Id<Link>>)m.getAttribute(Measurement.linkListAttributeName)).get(0);
 					double occupancy=((CNLLink)this.networks.get(timeBeanId).getLinks().get(linkId)).getLinkTransitPassenger()/this.totalPtCapacityOnLink.get(timeBeanId).get(linkId);
-					m.addVolume(timeBeanId, occupancy);
+					m.putVolume(timeBeanId, occupancy);
 				}
 			}
 			
@@ -1329,7 +1329,7 @@ public class SUEModelContTime implements AnalyticalModel{
 			for(Measurement m:this.measurementsToUpdate.getMeasurementsByType().get(MeasurementType.smartCardEntry)) {
 				String key=m.getAttribute(Measurement.transitLineAttributeName)+"___"+m.getAttribute(Measurement.transitRouteAttributeName)+"___"+m.getAttribute(Measurement.transitBoardingStopAtrributeName);
 				for(String timeBeanId:m.getVolumes().keySet()) {
-					m.addVolume(timeBeanId, entryCount.get(key).get(timeBeanId));
+					m.putVolume(timeBeanId, entryCount.get(key).get(timeBeanId));
 				}
 			}
 			
@@ -1392,13 +1392,13 @@ public class SUEModelContTime implements AnalyticalModel{
 				if(mode.equals("train")) {
 					key=m.getAttribute(Measurement.transitBoardingStopAtrributeName).toString()+"___"+m.getAttribute(Measurement.transitAlightingStopAttributeName).toString()+"___"+m.getAttribute(Measurement.transitModeAttributeName).toString();
 					for(String s:m.getVolumes().keySet()) {
-						m.addVolume(s, entryAndExitCountMTR.get(key).get(s));
+						m.putVolume(s, entryAndExitCountMTR.get(key).get(s));
 					}
 				}else {
 					key=m.getAttribute(Measurement.transitBoardingStopAtrributeName).toString()+"___"+m.getAttribute(Measurement.transitAlightingStopAttributeName).toString()+"___"
 							+m.getAttribute(Measurement.transitLineAttributeName)+"___"+m.getAttribute(Measurement.transitRouteAttributeName);
 					for(String s:m.getVolumes().keySet()) {
-						m.addVolume(s,entryAndExitCountBus.get(key).get(s));
+						m.putVolume(s,entryAndExitCountBus.get(key).get(s));
 					}
 				}
 			}

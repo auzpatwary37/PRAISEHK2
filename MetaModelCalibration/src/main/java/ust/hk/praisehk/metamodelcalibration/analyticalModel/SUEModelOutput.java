@@ -18,13 +18,14 @@ public class SUEModelOutput {
 	
 	//private Map<String,Map<Id<TransitStopFacility>,Double>> smartCardEntry;
 	
-	private Map<String,Map<String,Double>>smartCardEntryAndExit;
+	private Map<String,Map<String,Double>>FareLinkVolume;
 	
-	public SUEModelOutput(Map<String,Map<Id<Link>,Double>> linkVolume,Map<String,Map<Id<TransitLink>,Double>> linkTransitVolume,Map<String,Map<Id<Link>,Double>> linkTravelTime,Map<String,Map<Id<TransitLink>,Double>>trLinkTravelTime) {
+	public SUEModelOutput(Map<String,Map<Id<Link>,Double>> linkVolume,Map<String,Map<Id<TransitLink>,Double>> linkTransitVolume,Map<String,Map<Id<Link>,Double>> linkTravelTime,Map<String,Map<Id<TransitLink>,Double>>trLinkTravelTime, Map<String,Map<String,Double>> fareLinkVolume) {
 		this.linkVolume=linkVolume;
 		this.linkTransitVolume=linkTransitVolume;
 		this.linkTravelTime=linkTravelTime;
 		this.trLinkTravelTime=trLinkTravelTime;
+		this.FareLinkVolume = fareLinkVolume;
 	}
 
 	public Map<String, Map<Id<Link>, Double>> getLinkVolume() {
@@ -51,14 +52,8 @@ public class SUEModelOutput {
 		this.averagePtOccupancyOnLink = averagePtOccupancyOnLink;
 	}
 
-	
-
-	public Map<String, Map<String, Double>> getSmartCardEntryAndExit() {
-		return smartCardEntryAndExit;
-	}
-
-	public void setSmartCardEntryAndExit(Map<String, Map<String, Double>> smartCardEntryAndExit) {
-		this.smartCardEntryAndExit = smartCardEntryAndExit;
+	public Map<String, Map<String, Double>> getFareLinkVolume() {
+		return FareLinkVolume;
 	}
 	
 	

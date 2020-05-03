@@ -143,7 +143,7 @@ public class Measurements {
 					this.createAnadAddMeasurement(measurementId.toString(),MeasurementType.valueOf(part[3]));
 				}
 				String timeBeanId=part[1].trim();
-				this.measurements.get(measurementId).addVolume(timeBeanId, Double.parseDouble(part[2].trim()));
+				this.measurements.get(measurementId).putVolume(timeBeanId, Double.parseDouble(part[2].trim()));
 			}
 			bf.close();
 		} catch (FileNotFoundException e) {
@@ -162,7 +162,7 @@ public class Measurements {
 	public void resetMeasurements() {
 		for(Measurement m:this.measurements.values()) {
 			for(String s:m.getVolumes().keySet()) {
-				m.addVolume(s, 0);
+				m.putVolume(s, 0);
 			}
 		}
 	}
@@ -170,7 +170,7 @@ public class Measurements {
 	public void resetMeasurementsByType(MeasurementType type) {
 		for(Measurement m:this.measurementsByType.get(type)) {
 			for(String s:m.getVolumes().keySet()) {
-				m.addVolume(s, 0);
+				m.putVolume(s, 0);
 			}
 		}
 	}
@@ -178,7 +178,7 @@ public class Measurements {
 	public void applyFator(Double factor) {
 		for(Measurement m:this.measurements.values()) {
 			for(String timeId:m.getVolumes().keySet()) {
-				m.addVolume(timeId, m.getVolumes().get(timeId)*factor);
+				m.putVolume(timeId, m.getVolumes().get(timeId)*factor);
 			}
 		}
 	}

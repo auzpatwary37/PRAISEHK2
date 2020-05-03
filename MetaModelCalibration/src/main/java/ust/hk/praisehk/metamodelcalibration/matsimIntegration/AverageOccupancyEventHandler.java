@@ -102,7 +102,7 @@ public class AverageOccupancyEventHandler implements TransitDriverStartsEventHan
 		for(Entry<Id<Link>,Measurement> measurement:this.measurements.entrySet()) {
 			for(String timeId:measurement.getValue().getVolumes().keySet()) {
 				if(this.vehicleCapacity.get(measurement.getKey()).get(timeId)!=0){
-					measurement.getValue().addVolume(timeId, this.passengerVolume.get(measurement.getKey()).get(timeId)/this.vehicleCapacity.get(measurement.getKey()).get(timeId));
+					measurement.getValue().putVolume(timeId, this.passengerVolume.get(measurement.getKey()).get(timeId)/this.vehicleCapacity.get(measurement.getKey()).get(timeId));
 				}
 			}
 		}

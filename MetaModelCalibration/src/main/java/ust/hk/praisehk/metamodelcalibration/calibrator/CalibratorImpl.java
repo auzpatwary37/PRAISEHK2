@@ -361,7 +361,7 @@ public class CalibratorImpl implements Calibrator {
 		Measurements metaModelMeasurements=this.calibrationMeasurements.clone();
 		for(Measurement m: this.calibrationMeasurements.getMeasurements().values()) {
 			for(String timeBeanId:m.getVolumes().keySet()) {
-				metaModelMeasurements.getMeasurements().get(m.getId()).addVolume(timeBeanId, this.metaModels.get(m.getId()).get(timeBeanId).calcMetaModel(this.anaMeasurements.get(iterNo).getMeasurements().get(m.getId()).getVolumes().get(timeBeanId), this.params.get(iterNo)));
+				metaModelMeasurements.getMeasurements().get(m.getId()).putVolume(timeBeanId, this.metaModels.get(m.getId()).get(timeBeanId).calcMetaModel(this.anaMeasurements.get(iterNo).getMeasurements().get(m.getId()).getVolumes().get(timeBeanId), this.params.get(iterNo)));
 			}
 		}
 		return metaModelMeasurements;

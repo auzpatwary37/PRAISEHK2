@@ -27,18 +27,40 @@ import dynamicTransitRouter.fareCalculators.FareCalculator;
 public interface AnalyticalModelTransitRoute{
 	
 	/**
+	 * Deprecated, will be removed in future 
+	 * Use the calcRouteUtility(LinkedHashMap<String,Double> params,
+			LinkedHashMap<String,Double> AnaParam,AnalyticalModelNetwork network,Map<String,FareCalculator> farecalc,
+			Map<String,Object> AdditionalDataContainer, Tuple<Double,Double>timeBean) instead
+	 * calculates the route utility
+	 * @param params
+	 * @return
+	 */
+	@Deprecated
+	public double calcRouteUtility(LinkedHashMap<String,Double> params,
+			LinkedHashMap<String,Double> AnaParam,AnalyticalModelNetwork network,Map<String,FareCalculator> farecalc,Tuple<Double,Double>timeBean);
+	
+	/**
 	 * calculates the route utility
 	 * @param params
 	 * @return
 	 */
 	public double calcRouteUtility(LinkedHashMap<String,Double> params,
-			LinkedHashMap<String,Double> AnaParam,AnalyticalModelNetwork network,Map<String,FareCalculator> farecalc,Tuple<Double,Double>timeBean);
+			LinkedHashMap<String,Double> AnaParam,AnalyticalModelNetwork network,Map<String,FareCalculator> farecalc,Map<String,Object> AdditionalDataContainer, Tuple<Double,Double>timeBean);
+	/**
+	 * Deprecated. Use the getFare(TransitSchedule ts,Map<String,FareCalculator> farecalc, Map<String,Object> AdditionalDataContainer) instead.
+	 * Calculates the route fare
+	 * @param fc
+	 * @return
+	 */
+	@Deprecated
+	public double getFare(TransitSchedule ts,Map<String,FareCalculator> farecalc);
+	
 	/**
 	 * Calculates the route fare
 	 * @param fc
 	 * @return
 	 */
-	public double getFare(TransitSchedule ts,Map<String,FareCalculator> farecalc);
+	public double getFare(TransitSchedule ts,Map<String,FareCalculator> farecalc, Map<String,Object> AdditionalDataContainer);
 	
 	/**
 	 * Calculates the route travel Time (Only direct Link Travel Times are taken)
@@ -72,6 +94,7 @@ public interface AnalyticalModelTransitRoute{
 	public Map<Id<TransitLink>, TransitLink> getTransitLinks();
 	
 	public List<TransitDirectLink> getTransitDirectLinks();
+	public List<TransitTransferLink> getTransitTransferLinks();
 	
 	public List<Id<Link>> getPhysicalLinks();
 }

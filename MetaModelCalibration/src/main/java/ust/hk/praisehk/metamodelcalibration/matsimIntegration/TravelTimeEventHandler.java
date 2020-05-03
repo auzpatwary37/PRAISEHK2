@@ -53,10 +53,10 @@ public class TravelTimeEventHandler implements LinkEnterEventHandler, LinkLeaveE
 		for(Entry<Id<Link>, Measurement> m:this.measurements.entrySet()) {
 			for(String timeId:m.getValue().getVolumes().keySet()) {
 				if(this.totalTime.get(m.getKey()).get(timeId).size()!=0) {
-					m.getValue().addVolume(timeId, calcAverage(this.totalTime.get(m.getKey()).get(timeId)));
+					m.getValue().putVolume(timeId, calcAverage(this.totalTime.get(m.getKey()).get(timeId)));
 				}else {
 					Link link=scenario.getNetwork().getLinks().get(m.getKey());
-					m.getValue().addVolume(timeId, link.getLength()/link.getFreespeed());
+					m.getValue().putVolume(timeId, link.getLength()/link.getFreespeed());
 				}
 			}
 		}

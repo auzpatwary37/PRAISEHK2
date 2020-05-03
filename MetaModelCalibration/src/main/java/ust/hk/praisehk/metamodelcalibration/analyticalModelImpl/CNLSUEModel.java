@@ -42,6 +42,7 @@ import ust.hk.praisehk.metamodelcalibration.analyticalModel.AnalyticalModelODpai
 import ust.hk.praisehk.metamodelcalibration.analyticalModel.AnalyticalModelODpairs;
 import ust.hk.praisehk.metamodelcalibration.analyticalModel.AnalyticalModelRoute;
 import ust.hk.praisehk.metamodelcalibration.analyticalModel.AnalyticalModelTransitRoute;
+import ust.hk.praisehk.metamodelcalibration.analyticalModel.FareLink;
 import ust.hk.praisehk.metamodelcalibration.analyticalModel.InternalParamCalibratorFunction;
 import ust.hk.praisehk.metamodelcalibration.analyticalModel.SUEModelOutput;
 import ust.hk.praisehk.metamodelcalibration.analyticalModel.TransitDirectLink;
@@ -430,6 +431,7 @@ public class CNLSUEModel implements AnalyticalModel{
 			this.measurementsToUpdate=Measurements.createMeasurements(this.timeBeans);
 		}else {
 			this.measurementsToUpdate=originalMeasurements.clone();
+			this.measurementsToUpdate.resetMeasurements();
 		}
 
 
@@ -485,7 +487,7 @@ public class CNLSUEModel implements AnalyticalModel{
 						linkList.add(link.getId());
 						m.setAttribute(Measurement.linkListAttributeName, linkList);
 					}
-					m.addVolume(timeBeanId, count);
+					m.putVolume(timeBeanId, count);
 					}
 				}
 
@@ -498,7 +500,7 @@ public class CNLSUEModel implements AnalyticalModel{
 					for(Id<Link> linkId:(ArrayList<Id<Link>>)m.getAttribute(Measurement.linkListAttributeName)) {
 						count+=((AnalyticalModelLink) this.getNetworks().get(timeBeanId).getLinks().get(linkId)).getLinkAADTVolume();
 					}
-					m.addVolume(timeBeanId, count);
+					m.putVolume(timeBeanId, count);
 				}
 			}
 		}
@@ -510,7 +512,7 @@ public class CNLSUEModel implements AnalyticalModel{
 			for(String timeBeanId:m.getVolumes().keySet()) {
 				Id<Link>linkId=((ArrayList<Id<Link>>)m.getAttribute(Measurement.linkListAttributeName)).get(0);
 				double occupancy=((CNLLink)this.networks.get(timeBeanId).getLinks().get(linkId)).getLinkTransitPassenger()/this.totalPtCapacityOnLink.get(timeBeanId).get(linkId);
-				m.addVolume(timeBeanId, occupancy);
+				m.putVolume(timeBeanId, occupancy);
 			}
 		}
 
@@ -541,7 +543,7 @@ public class CNLSUEModel implements AnalyticalModel{
 			for(Measurement m:this.measurementsToUpdate.getMeasurementsByType().get(MeasurementType.smartCardEntry)) {
 				String key=m.getAttribute(Measurement.transitLineAttributeName)+"___"+m.getAttribute(Measurement.transitRouteAttributeName)+"___"+m.getAttribute(Measurement.transitBoardingStopAtrributeName);
 				for(String timeBeanId:m.getVolumes().keySet()) {
-					m.addVolume(timeBeanId, entryCount.get(key).get(timeBeanId));
+					m.putVolume(timeBeanId, entryCount.get(key).get(timeBeanId));
 				}
 			}
 		}else {
@@ -565,146 +567,51 @@ public class CNLSUEModel implements AnalyticalModel{
 						}
 						Double oldVolume=null;
 						if((oldVolume=m.getVolumes().get(timeBeanId))==null) {
-							m.addVolume(timeBeanId, trl.getPassangerCount());
+							m.putVolume(timeBeanId, trl.getPassangerCount());
 						}else {
-							m.addVolume(timeBeanId, oldVolume+trl.getPassangerCount());
+							m.putVolume(timeBeanId, oldVolume+trl.getPassangerCount());
 						}
 					}
 				}
 			}
 		}
 
-		//Collect smart card entry and exit
+		//Collect smart card entry and exit through farelink
 		if(this.emptyMeasurements==false) {
-			Map<String,Map<String,Double>>entryAndExitCountBus=new HashMap<>();//First string is lineid+routeid+entryStopId second string is volume key
-			Map<String,Map<String,Double>>entryAndExitCountMTR=new HashMap<>();
-			for(Measurement m:this.measurementsToUpdate.getMeasurementsByType().get(MeasurementType.smartCardEntryAndExit)) {
-				String mode=m.getAttribute(Measurement.transitModeAttributeName).toString();
-				String key=null;
-				if(mode.equals("train")) {
-					key=m.getAttribute(Measurement.transitBoardingStopAtrributeName).toString()+"___"+m.getAttribute(Measurement.transitAlightingStopAttributeName).toString()+"___"+m.getAttribute(Measurement.transitModeAttributeName).toString();
-					entryAndExitCountMTR.put(key, new HashMap<>());
-					for(String s:m.getVolumes().keySet()) {
-						entryAndExitCountMTR.get(key).put(s, 0.);
-					}
-				}else {
-					key=m.getAttribute(Measurement.transitBoardingStopAtrributeName).toString()+"___"+m.getAttribute(Measurement.transitAlightingStopAttributeName).toString()+"___"
-							+m.getAttribute(Measurement.transitLineAttributeName)+"___"+m.getAttribute(Measurement.transitRouteAttributeName);
-					entryAndExitCountBus.put(key, new HashMap<>());
-					for(String s:m.getVolumes().keySet()) {
-						entryAndExitCountBus.get(key).put(s, 0.);
-					}
-				}
-
-
-			}
-
-			for(String timeBeanId:this.transitLinks.keySet()) {
-				for(TransitLink trl:this.transitLinks.get(timeBeanId).values()) {
-					if(trl instanceof TransitDirectLink) {
-						TransitDirectLink trdl=(TransitDirectLink)trl;
-						String key= trdl.getStartStopId()+"___"+trdl.getEndStopId()+"___"+trdl.getLineId()+"___"+trdl.getRouteId();
-						if(entryAndExitCountBus.containsKey(key) && entryAndExitCountBus.get(key).containsKey(timeBeanId)) {
-							entryAndExitCountBus.get(key).put(timeBeanId, entryAndExitCountBus.get(key).get(timeBeanId)+trl.getPassangerCount());
-						}
-					}
-				}
-			}
-
 			for(AnalyticalModelODpair odpair:this.odPairs.getODpairset().values()) {
 				for(String timeBeanId:this.timeBeans.keySet()) {
-					if(odpair.getTrRoutes(timeBeanId)!=null) {
+					if(odpair.getTrRoutes(timeBeanId)!=null && this.Demand.get(timeBeanId).get(odpair.getODpairId())!=0) {
 						for(AnalyticalModelTransitRoute tr:odpair.getTrRoutes(timeBeanId)) {
-							for(String key:entryAndExitCountMTR.keySet()) {
-								if(((CNLTransitRoute)tr).getFareEntryAndExit().contains(key) && this.Demand.get(timeBeanId).get(odpair.getODpairId())!=0 && entryAndExitCountMTR.get(key).containsKey(timeBeanId)) {
-									entryAndExitCountMTR.get(key).put(timeBeanId, entryAndExitCountMTR.get(key).get(timeBeanId)+odpair.getTrRouteFlow().get(timeBeanId).get(tr.getTrRouteId()));
+							for(FareLink fl:((CNLTransitRoute)tr).getFareEntryAndExit()) {
+								Id<Measurement> mId=Id.create(fl.toString(), Measurement.class);
+								Measurement m=this.measurementsToUpdate.getMeasurements().get(mId);
+								if(m.getVolumes().containsKey(timeBeanId)) {
+									m.putVolume(timeBeanId, m.getVolumes().get(timeBeanId)+odpair.getTrRouteFlow().get(timeBeanId).get(tr.getTrRouteId()));
 								}
+
 							}
 						}
-					}
-				}
-
-			}
-
-			for(Measurement m:this.measurementsToUpdate.getMeasurementsByType().get(MeasurementType.smartCardEntryAndExit)) {
-				String mode=m.getAttribute(Measurement.transitModeAttributeName).toString();
-				String key=null;
-				if(mode.equals("train")) {
-					key=m.getAttribute(Measurement.transitBoardingStopAtrributeName).toString()+"___"+m.getAttribute(Measurement.transitAlightingStopAttributeName).toString()+"___"+m.getAttribute(Measurement.transitModeAttributeName).toString();
-					for(String s:m.getVolumes().keySet()) {
-						m.addVolume(s, entryAndExitCountMTR.get(key).get(s));
-					}
-				}else {
-					key=m.getAttribute(Measurement.transitBoardingStopAtrributeName).toString()+"___"+m.getAttribute(Measurement.transitAlightingStopAttributeName).toString()+"___"
-							+m.getAttribute(Measurement.transitLineAttributeName)+"___"+m.getAttribute(Measurement.transitRouteAttributeName);
-					for(String s:m.getVolumes().keySet()) {
-						m.addVolume(s,entryAndExitCountBus.get(key).get(s));
 					}
 				}
 			}
 		}else {
 
-			for(String timeBeanId:this.transitLinks.keySet()) {
-				for(TransitLink trl:this.transitLinks.get(timeBeanId).values()) {
-					if(trl instanceof TransitDirectLink) {
-						TransitDirectLink trdl=(TransitDirectLink)trl;
-						Id<TransitLine> lineId=Id.create(trdl.getLineId(),TransitLine.class);
-						Id<TransitRoute>routeId=Id.create(trdl.getRouteId(),TransitRoute.class);
-						String mode=this.ts.getTransitLines().get(lineId).getRoutes().get(routeId).getTransportMode();
-						if(!mode.equals("train")) {
-							String key= trdl.getStartStopId()+"___"+trdl.getEndStopId()+"___"+trdl.getLineId()+"___"+trdl.getRouteId();
-							Id<Measurement> mId=Id.create(key, Measurement.class);
-							Measurement m=null;
-							if((m=this.measurementsToUpdate.getMeasurements().get(mId))==null) {
-								this.measurementsToUpdate.createAnadAddMeasurement(mId.toString(), MeasurementType.smartCardEntryAndExit);
-								m=this.measurementsToUpdate.getMeasurements().get(mId);
-								m.setAttribute(Measurement.transitModeAttributeName, mode);
-								m.setAttribute(Measurement.transitLineAttributeName, lineId.toString());
-								m.setAttribute(Measurement.transitRouteAttributeName, routeId.toString());
-								m.setAttribute(Measurement.transitBoardingStopAtrributeName, trdl.getStartStopId());
-								m.setAttribute(Measurement.transitAlightingStopAttributeName, trdl.getEndStopId());
-							}
-							if(m.getVolumes().containsKey(timeBeanId)) {
-								m.addVolume(timeBeanId, m.getVolumes().get(timeBeanId)+trl.getPassangerCount());
-							}else {
-								m.addVolume(timeBeanId, trl.getPassangerCount());
-							}
-
-						}
-
-
-
-
-
-
-
-					}
-				}
-			}
-
 			for(AnalyticalModelODpair odpair:this.odPairs.getODpairset().values()) {
 				for(String timeBeanId:this.timeBeans.keySet()) {
 					if(odpair.getTrRoutes(timeBeanId)!=null && this.Demand.get(timeBeanId).get(odpair.getODpairId())!=0) {
 						for(AnalyticalModelTransitRoute tr:odpair.getTrRoutes(timeBeanId)) {
-							for(String key:((CNLTransitRoute)tr).getFareEntryAndExit()) {
-								//							entryAndExitCountMTR.get(key).put(timeBeanId, entryAndExitCountMTR.get(key).get(timeBeanId)+odpair.getTrRouteFlow().get(timeBeanId).get(tr.getTrRouteId()));
-								String[] partKey=key.split("___");
-								String mode=partKey[2];
-								String boardingStop=partKey[0];
-								String alightingStop=partKey[1];
-								Id<Measurement> mId=Id.create(key, Measurement.class);
+							for(FareLink fl:((CNLTransitRoute)tr).getFareEntryAndExit()) {
+								Id<Measurement> mId=Id.create(fl.toString(), Measurement.class);
 								Measurement m=null;
 								if((m=this.measurementsToUpdate.getMeasurements().get(mId))==null) {
 									this.measurementsToUpdate.createAnadAddMeasurement(mId.toString(), MeasurementType.smartCardEntryAndExit);
 									m=this.measurementsToUpdate.getMeasurements().get(mId);
-									m.setAttribute(Measurement.transitModeAttributeName, mode);
-									m.setAttribute(Measurement.transitBoardingStopAtrributeName, boardingStop);
-									m.setAttribute(Measurement.transitAlightingStopAttributeName, alightingStop);
+									m.setAttribute(Measurement.FareLinkAttributeName, fl);
 								}
 								if(m.getVolumes().containsKey(timeBeanId)) {
-									m.addVolume(timeBeanId, m.getVolumes().get(timeBeanId)+odpair.getTrRouteFlow().get(timeBeanId).get(tr.getTrRouteId()));
+									m.putVolume(timeBeanId, m.getVolumes().get(timeBeanId)+odpair.getTrRouteFlow().get(timeBeanId).get(tr.getTrRouteId()));
 								}else {
-									m.addVolume(timeBeanId, odpair.getTrRouteFlow().get(timeBeanId).get(tr.getTrRouteId()));
+									m.putVolume(timeBeanId, odpair.getTrRouteFlow().get(timeBeanId).get(tr.getTrRouteId()));
 								}
 
 							}
@@ -883,7 +790,7 @@ public class CNLSUEModel implements AnalyticalModel{
 			double u=0;
 			if(counter>1) {
 				u=r.calcRouteUtility(params, anaParams,
-					this.getNetworks().get(timeBeanId),this.fareCalculator,this.timeBeans.get(timeBeanId));
+					this.getNetworks().get(timeBeanId),this.fareCalculator,null,this.timeBeans.get(timeBeanId));
 				u+=Math.log(odpair.getTrPathSize().get(timeBeanId).get(r.getTrRouteId()));//adding the path size term
 				
 				if(u==Double.NaN) {
@@ -1459,7 +1366,7 @@ public class CNLSUEModel implements AnalyticalModel{
 					List<Measurement>ms= this.measurementsToUpdate.getMeasurementsByType().get(MeasurementType.linkTravelTime);
 					for(Measurement m:ms) {
 						if(m.getVolumes().containsKey(timeBeanId)) {
-							m.addVolume(timeBeanId, ((CNLLink)this.networks.get(timeBeanId).getLinks().get(((ArrayList<Id<Link>>)m.getAttribute(Measurement.linkListAttributeName)).get(0))).getLinkTravelTime(this.timeBeans.get(timeBeanId),
+							m.putVolume(timeBeanId, ((CNLLink)this.networks.get(timeBeanId).getLinks().get(((ArrayList<Id<Link>>)m.getAttribute(Measurement.linkListAttributeName)).get(0))).getLinkTravelTime(this.timeBeans.get(timeBeanId),
 							params, anaParams));
 						}
 					}

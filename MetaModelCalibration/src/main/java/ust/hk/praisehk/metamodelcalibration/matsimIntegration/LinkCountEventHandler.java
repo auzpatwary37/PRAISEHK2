@@ -81,7 +81,7 @@ public class LinkCountEventHandler implements LinkEnterEventHandler, TransitDriv
 				for(Id<Link> linkId:linkIds) {
 					count+=linkCounts.get(timeId).get(linkId);
 				}
-				m.addVolume(timeId, count);
+				m.putVolume(timeId, count);
 			}
 		}
 		

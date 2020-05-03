@@ -173,14 +173,14 @@ public class SmartCardEntryAndExitEventHandler
 				if(this.smartCardEntry.get(key)!=null && timeId!=null) {
 				Double oldVolume=this.smartCardEntry.get(key).getVolumes().get(timeId);
 					if(oldVolume!=null) {
-						this.smartCardEntry.get(key).addVolume(timeId, oldVolume+1);
+						this.smartCardEntry.get(key).putVolume(timeId, oldVolume+1);
 					}
 				}
 				String key1=tripsData.getLatestStartFacility().toString()+"___"+stopAt+"___"+vData.lineId.toString()+"___"+vData.routeId.toString();
 				if(this.smartCardEntryAndExit.get(key1)!=null) {
 					Double oldVolume=this.smartCardEntryAndExit.get(key1).getVolumes().get(timeId);
 					if(oldVolume!=null) {
-						this.smartCardEntryAndExit.get(key1).addVolume(timeId, oldVolume+1);
+						this.smartCardEntryAndExit.get(key1).putVolume(timeId, oldVolume+1);
 					}
 				}
 				//----------------------------------------------
@@ -285,14 +285,14 @@ public class SmartCardEntryAndExitEventHandler
 				if(SmartCardEntryAndExitEventHandler.this.smartCardEntryAndExit.containsKey(key) && timeId!=null) {
 				Double oldVolume=SmartCardEntryAndExitEventHandler.this.smartCardEntryAndExit.get(key).getVolumes().get(timeId);
 				if(oldVolume!=null) {
-					SmartCardEntryAndExitEventHandler.this.smartCardEntryAndExit.get(key).addVolume(timeId, oldVolume+1);
+					SmartCardEntryAndExitEventHandler.this.smartCardEntryAndExit.get(key).putVolume(timeId, oldVolume+1);
 				}
 				}
 				String key1=this.lastEntryStation.toString();
 				if(SmartCardEntryAndExitEventHandler.this.smartCardEntry.get(key1)!=null) {
 				Double oldVolume1=SmartCardEntryAndExitEventHandler.this.smartCardEntry.get(key1).getVolumes().get(timeId);
 				if(oldVolume1!=null) {
-					SmartCardEntryAndExitEventHandler.this.smartCardEntry.get(key1).addVolume(timeId, oldVolume1+1);
+					SmartCardEntryAndExitEventHandler.this.smartCardEntry.get(key1).putVolume(timeId, oldVolume1+1);
 				}
 				}
 				//.............................

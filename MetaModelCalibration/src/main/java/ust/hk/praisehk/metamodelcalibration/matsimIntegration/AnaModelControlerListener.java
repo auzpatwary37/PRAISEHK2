@@ -122,7 +122,7 @@ public class AnaModelControlerListener implements StartupListener,BeforeMobsimLi
 			if(counter==this.maxIter) {
 				for(Measurement m:this.outputMeasurements.getMeasurements().values()) {
 					for(String timeId:m.getVolumes().keySet()) {
-						m.addVolume(timeId, counts.get(m.getId()).get(timeId)/this.AverageCountOverNoOfIteration);
+						m.putVolume(timeId, counts.get(m.getId()).get(timeId)/this.AverageCountOverNoOfIteration);
 					}
 				}
 				new MeasurementsWriter(this.outputMeasurements).write(fileLoc+"/outPutMeasurements.xml");

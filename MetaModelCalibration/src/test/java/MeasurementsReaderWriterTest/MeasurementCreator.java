@@ -38,9 +38,9 @@ public class MeasurementCreator {
 		linkIds.add(Id.createLinkId("1_4"));
 	
 		m.getMeasurements().get(m1Id).setAttribute(Measurement.linkListAttributeName, new ArrayList<>(linkIds));
-		m.getMeasurements().get(m1Id).addVolume("BeforeMorningPeak",40);
-		m.getMeasurements().get(m1Id).addVolume("MorningPeak",70);
-		m.getMeasurements().get(m1Id).addVolume("AfterMorningPeak",140);
+		m.getMeasurements().get(m1Id).putVolume("BeforeMorningPeak",40);
+		m.getMeasurements().get(m1Id).putVolume("MorningPeak",70);
+		m.getMeasurements().get(m1Id).putVolume("AfterMorningPeak",140);
 		
 		Id<Measurement> m2Id=Id.create("2", Measurement.class);
 		m.createAnadAddMeasurement("2",MeasurementType.linkVolume);
@@ -51,10 +51,10 @@ public class MeasurementCreator {
 		linkIds.add(Id.createLinkId("2_4"));
 	
 		m.getMeasurements().get(m2Id).setAttribute(Measurement.linkListAttributeName, new ArrayList<>(linkIds));
-		m.getMeasurements().get(m2Id).addVolume("BeforeMorningPeak",50);
-		m.getMeasurements().get(m2Id).addVolume("MorningPeak",80);
-		m.getMeasurements().get(m2Id).addVolume("AfterMorningPeak",120);
-		m.getMeasurements().get(m2Id).addVolume("AfternoonPeak",240);
+		m.getMeasurements().get(m2Id).putVolume("BeforeMorningPeak",50);
+		m.getMeasurements().get(m2Id).putVolume("MorningPeak",80);
+		m.getMeasurements().get(m2Id).putVolume("AfterMorningPeak",120);
+		m.getMeasurements().get(m2Id).putVolume("AfternoonPeak",240);
 	
 		new MeasurementsWriter(m).write("src/main/resources/Measurements.xml");
 		new MeasurementsWriter(m).write("src/main/resources/Measurements1.xml");

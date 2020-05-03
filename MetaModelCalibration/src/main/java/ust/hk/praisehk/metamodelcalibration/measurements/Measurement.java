@@ -12,6 +12,7 @@ import org.matsim.api.core.v01.network.Link;
 import org.matsim.core.utils.collections.Tuple;
 
 import ust.hk.praisehk.metamodelcalibration.analyticalModel.AnalyticalModel;
+import ust.hk.praisehk.metamodelcalibration.analyticalModel.FareLink;
 import ust.hk.praisehk.metamodelcalibration.analyticalModel.SUEModelOutput;
 
 public class Measurement {
@@ -25,6 +26,7 @@ public class Measurement {
 	public static final String transitBoardingStopAtrributeName="transit_boarding_stop";
 	public static final String transitAlightingStopAttributeName="transit_alighting_stop";
 	public static final String transitModeAttributeName="transitMode";
+	public static final String FareLinkAttributeName=FareLink.FareLinkAttributeName;
 	
 	private final Id<Measurement> id;
 	private Map<String,Object> attributes=new HashMap<>();
@@ -48,8 +50,12 @@ public class Measurement {
 		this.attributes.put(linkListAttributeName, new ArrayList<Id<Link>>());
 		this.measurementType=mType;
 	}
-	
-	public void addVolume(String timeBeanId,double volume) {
+	/**
+	 * Sorry for the confusing name. maybe put volume is more suitable. No it do not add. Rather it replaces the old volume
+	 * @param timeBeanId
+	 * @param volume
+	 */
+	public void putVolume(String timeBeanId,double volume) {
 		
 		if(!this.timeBean.containsKey(timeBeanId)){
 			logger.error("timeBean do not contain timeBeanId"+timeBeanId+", please check.");
@@ -87,7 +93,7 @@ public class Measurement {
 	public Measurement clone() {
 		Measurement m=new Measurement(this.id.toString(),new HashMap<>(timeBean),this.measurementType);
 		for(String s:this.volumes.keySet()) {
-			m.addVolume(s, this.getVolumes().get(s));
+			m.putVolume(s, this.getVolumes().get(s));
 		}
 		for(String s:this.attributes.keySet()) {
 			m.setAttribute(s, this.attributes.get(s));

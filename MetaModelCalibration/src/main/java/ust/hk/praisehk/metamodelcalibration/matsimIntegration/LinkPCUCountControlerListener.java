@@ -76,7 +76,7 @@ public class LinkPCUCountControlerListener implements StartupListener,BeforeMobs
 					for(Id<Link>linkId:(ArrayList<Id<Link>>)mm.getAttribute(Measurement.linkListAttributeName)) {
 						volume+=counts.get(timeId).get(linkId);
 					}
-					mm.addVolume(timeId, volume);
+					mm.putVolume(timeId, volume);
 				}
 			}
 			this.simStorage.storeMeasurements(this.currentParam.getParam(),m);

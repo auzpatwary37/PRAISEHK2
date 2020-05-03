@@ -77,7 +77,7 @@ public class ObjectiveCalculator {
 		Measurements metaMeasurements=realMeasurements.clone();
 		for(Measurement m:realMeasurements.getMeasurements().values()) {
 			for(String timeBeanid:m.getVolumes().keySet()) {
-				metaMeasurements.getMeasurements().get(m.getId()).addVolume(timeBeanid, metaModels.get(m.getId()).get(timeBeanid).calcMetaModel(anaMeasurements.getMeasurements().get(m.getId()).getVolumes().get(timeBeanid), param));
+				metaMeasurements.getMeasurements().get(m.getId()).putVolume(timeBeanid, metaModels.get(m.getId()).get(timeBeanid).calcMetaModel(anaMeasurements.getMeasurements().get(m.getId()).getVolumes().get(timeBeanid), param));
 			}
 		}
 		return calcObjective(realMeasurements,metaMeasurements,Type);

@@ -28,8 +28,10 @@ import dynamicTransitRouter.fareCalculators.MTRFareCalculator;
 import ust.hk.praisehk.metamodelcalibration.analyticalModel.AnalyticalModelNetwork;
 import ust.hk.praisehk.metamodelcalibration.analyticalModel.AnalyticalModelODpair;
 import ust.hk.praisehk.metamodelcalibration.analyticalModel.AnalyticalModelTransitRoute;
+import ust.hk.praisehk.metamodelcalibration.analyticalModel.FareLink;
 import ust.hk.praisehk.metamodelcalibration.analyticalModel.TransitDirectLink;
 import ust.hk.praisehk.metamodelcalibration.analyticalModel.TransitLink;
+import ust.hk.praisehk.metamodelcalibration.analyticalModel.TransitTransferLink;
 
 
 
@@ -43,6 +45,7 @@ import ust.hk.praisehk.metamodelcalibration.analyticalModel.TransitLink;
  */
 /*
  * TODO: Fix Route Utility
+ * TODO: Move to Fare Link based fare
  */
 public class CNLTransitRoute implements AnalyticalModelTransitRoute{
 	
@@ -54,10 +57,10 @@ public class CNLTransitRoute implements AnalyticalModelTransitRoute{
 	private double routeTravelTime=0;
 	private double routeWalkingDistance=0;
 	private double routeWaitingTime=0;
-	private double routeFare=0;
-	private ArrayList<CNLTransitDirectLink> directLinks=new ArrayList<>();
-	private List<String>FareEntryAndExit=new ArrayList<>(); 
-	private ArrayList<CNLTransitTransferLink> transferLinks=new ArrayList<>();
+	protected double routeFare=0;
+	private List<CNLTransitDirectLink> directLinks=new ArrayList<>();
+	protected List<FareLink>FareEntryAndExit=new ArrayList<>(); 
+	private List<CNLTransitTransferLink> transferLinks=new ArrayList<>();
 	private Map<Id<TransitLink>, TransitLink> trLinks=new HashMap<>();
 	private Map<String,Double> routeCapacity=new HashMap<>();
 	private routeInfoOut info;
@@ -150,7 +153,7 @@ public class CNLTransitRoute implements AnalyticalModelTransitRoute{
 	
 	
 	
-	public CNLTransitRoute(ArrayList<CNLTransitTransferLink> transferLinks,ArrayList<CNLTransitDirectLink>dlink,Scenario scenario,TransitSchedule ts,
+	public CNLTransitRoute(List<CNLTransitTransferLink> transferLinks,List<CNLTransitDirectLink>dlink,Scenario scenario,TransitSchedule ts,
 			double routeWalkingDistance,String routeId) {
 		this.directLinks=dlink;
 		this.transferLinks=transferLinks;
@@ -329,13 +332,13 @@ public class CNLTransitRoute implements AnalyticalModelTransitRoute{
 //		}
 //		
 		
-		for(String s:this.FareEntryAndExit) {
-			String[] part=s.split("___");
-			String mode=part[2];
-			if(mode.equals("train")) {
-				this.routeFare+=farecalc.get(mode).getFares(null, null, Id.create(part[0], TransitStopFacility.class), Id.create(part[1], TransitStopFacility.class)).get(0);
+		for(FareLink f:this.FareEntryAndExit) {
+			
+			String mode=f.getMode();
+			if(f.getType().equals(FareLink.NetworkWideFare)) {
+				this.routeFare+=farecalc.get(mode).getFares(null, null, f.getBoardingStopFacility(), f.getAlightingStopFacility()).get(0);
 			}else {
-				this.routeFare+=farecalc.get(mode).getFares(Id.create(part[4], TransitRoute.class), Id.create(part[3], TransitLine.class), Id.create(part[0], TransitStopFacility.class), Id.create(part[1], TransitStopFacility.class)).get(0);
+				this.routeFare+=farecalc.get(mode).getFares(f.getTransitRoute(), f.getTransitLine(), f.getBoardingStopFacility(), f.getAlightingStopFacility()).get(0);
 			}
 		}
 		
@@ -463,8 +466,8 @@ public class CNLTransitRoute implements AnalyticalModelTransitRoute{
 				
 				if(StartStopIdTrain!=null) {//Train trip already started
 					EndStopIdTrain=dlink.getEndStopId();
-					if(k==this.directLinks.size()) {
-						this.FareEntryAndExit.add(StartStopIdTrain+"___"+EndStopIdTrain+"___"+"train");
+					if(k==this.directLinks.size()) {//StartStopIdTrain+"___"+EndStopIdTrain+"___"+"train"
+						this.FareEntryAndExit.add(new FareLink(FareLink.NetworkWideFare+FareLink.seperator+StartStopIdTrain+FareLink.seperator+EndStopIdTrain+FareLink.seperator+"train"));
 					}
 				}else {//Train trip started in this link
 					StartStopIdTrain=dlink.getStartStopId();
@@ -472,15 +475,15 @@ public class CNLTransitRoute implements AnalyticalModelTransitRoute{
 				}
 			}else{//not a train trip leg, so two possibilities, train trip just ended in the previous trip or completely new trip
 				if(StartStopIdTrain!=null) {//train trip just ended, the fare will be added.
-					this.FareEntryAndExit.add(StartStopIdTrain+"___"+EndStopIdTrain+"___"+"train");
+					this.FareEntryAndExit.add(new FareLink(FareLink.NetworkWideFare+FareLink.seperator+StartStopIdTrain+FareLink.seperator+EndStopIdTrain+FareLink.seperator+"train"));
 					StartStopIdTrain=null;
 					EndStopIdTrain=null;
 					//now bus fare of the current trip is added	
 					TransitRoute tr=ts.getTransitLines().get(Id.create(dlink.getLineId(),TransitLine.class)).getRoutes().get(Id.create(dlink.getRouteId(),TransitRoute.class));
-					this.FareEntryAndExit.add(dlink.getStartStopId()+"___"+dlink.getEndStopId()+"___"+tr.getTransportMode()+"___"+dlink.getLineId()+"___"+tr.getId());
+					this.FareEntryAndExit.add(new FareLink(FareLink.InVehicleFare+FareLink.seperator+dlink.getLineId()+FareLink.seperator+tr.getId()+FareLink.seperator+dlink.getStartStopId()+FareLink.seperator+dlink.getEndStopId()+FareLink.seperator+tr.getTransportMode()));
 				}else {//only bus fare is added
 					TransitRoute tr=ts.getTransitLines().get(Id.create(dlink.getLineId(),TransitLine.class)).getRoutes().get(Id.create(dlink.getRouteId(),TransitRoute.class));
-					this.FareEntryAndExit.add(dlink.getStartStopId()+"___"+dlink.getEndStopId()+"___"+tr.getTransportMode()+"___"+dlink.getLineId()+"___"+tr.getId());
+					this.FareEntryAndExit.add(new FareLink(FareLink.InVehicleFare+FareLink.seperator+dlink.getLineId()+FareLink.seperator+tr.getId()+FareLink.seperator+dlink.getStartStopId()+FareLink.seperator+dlink.getEndStopId()+FareLink.seperator+tr.getTransportMode()));
 				}
 			}
 		}
@@ -609,13 +612,44 @@ public class CNLTransitRoute implements AnalyticalModelTransitRoute{
 		return new ArrayList<Id<Link>>(physicalLinks);
 	}
 
-	public List<String> getFareEntryAndExit() {
+	public List<FareLink> getFareEntryAndExit() {
 		return FareEntryAndExit;
 	}
 
 	public routeInfoOut getInfo() {
 		return info;
 	}
+
+
+
+	@Override
+	public double calcRouteUtility(LinkedHashMap<String, Double> params, LinkedHashMap<String, Double> anaParams,
+			AnalyticalModelNetwork network, Map<String, FareCalculator> farecalc,
+			Map<String, Object> AdditionalDataContainer, Tuple<Double, Double> timeBean) {
+		
+		return this.calcRouteUtility(params, anaParams, network, farecalc, timeBean);
+	}
+
+
+
+	@Override
+	public double getFare(TransitSchedule ts, Map<String, FareCalculator> farecalc,
+			Map<String, Object> AdditionalDataContainer) {
+		// TODO Auto-generated method stub
+		return this.getFare(ts, farecalc);
+	}
+
+	@Override
+	public List<TransitTransferLink> getTransitTransferLinks() {
+		// TODO Auto-generated method stub
+		List<TransitTransferLink> tlLinks = new ArrayList<TransitTransferLink>();
+		this.transferLinks.stream().forEach((l)->{
+			tlLinks.add(l);
+		});
+		return tlLinks;
+	}
+	
+	
 	
 }	
 
