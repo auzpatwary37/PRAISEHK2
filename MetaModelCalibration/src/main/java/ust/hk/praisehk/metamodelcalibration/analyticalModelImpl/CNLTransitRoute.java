@@ -25,10 +25,10 @@ import org.matsim.pt.transitSchedule.api.TransitStopFacility;
 
 import dynamicTransitRouter.fareCalculators.FareCalculator;
 import dynamicTransitRouter.fareCalculators.MTRFareCalculator;
+import transitCalculatorsWithFare.FareLink;
 import ust.hk.praisehk.metamodelcalibration.analyticalModel.AnalyticalModelNetwork;
 import ust.hk.praisehk.metamodelcalibration.analyticalModel.AnalyticalModelODpair;
 import ust.hk.praisehk.metamodelcalibration.analyticalModel.AnalyticalModelTransitRoute;
-import ust.hk.praisehk.metamodelcalibration.analyticalModel.FareLink;
 import ust.hk.praisehk.metamodelcalibration.analyticalModel.TransitDirectLink;
 import ust.hk.praisehk.metamodelcalibration.analyticalModel.TransitLink;
 import ust.hk.praisehk.metamodelcalibration.analyticalModel.TransitTransferLink;
@@ -203,8 +203,7 @@ public class CNLTransitRoute implements AnalyticalModelTransitRoute{
 //	}
 	
 	
-	@Override
-	public double calcRouteUtility(LinkedHashMap<String, Double> params,LinkedHashMap<String, Double> anaParams,AnalyticalModelNetwork network,Map<String,FareCalculator>farecalc,
+	public double calcRouteUtility(LinkedHashMap<String, Double> params,LinkedHashMap<String, Double> anaParams,AnalyticalModelNetwork network,Map<String,FareCalculator>farecalc,Map<String,Object> AdditionalDataContainer,
 			Tuple<Double,Double> timeBean) {
 		routeInfoOut info=this.calcRouteTravelAndWaitingTime(network, timeBean, params, anaParams);
 		this.info=info;
@@ -215,7 +214,7 @@ public class CNLTransitRoute implements AnalyticalModelTransitRoute{
 		double ModeConstant=params.get(CNLSUEModel.ModeConstantPtname);
 		double MUMoney=params.get(CNLSUEModel.MarginalUtilityofMoneyName);
 		double DistanceBasedMoneyCostWalk=params.get(CNLSUEModel.DistanceBasedMoneyCostWalkName);
-		double fare=this.getFare(transitSchedule, farecalc);
+		double fare=this.getFare(transitSchedule, farecalc, AdditionalDataContainer);
 		double travelTime=info.getTravelTime();
 		double walkTime=this.getRouteWalkingDistance()/1.4;
 		double walkDist=this.getRouteWalkingDistance();
@@ -275,7 +274,7 @@ public class CNLTransitRoute implements AnalyticalModelTransitRoute{
 	
 	
 
-	@Override
+	
 	public double getFare(TransitSchedule ts, Map<String, FareCalculator> farecalc) {
 //		if(ts==null) {
 //			ts=this.transitSchedule;
@@ -472,6 +471,9 @@ public class CNLTransitRoute implements AnalyticalModelTransitRoute{
 				}else {//Train trip started in this link
 					StartStopIdTrain=dlink.getStartStopId();
 					EndStopIdTrain=dlink.getEndStopId();
+					if(k==this.directLinks.size()) {//StartStopIdTrain+"___"+EndStopIdTrain+"___"+"train"
+						this.FareEntryAndExit.add(new FareLink(FareLink.NetworkWideFare+FareLink.seperator+StartStopIdTrain+FareLink.seperator+EndStopIdTrain+FareLink.seperator+"train"));
+					}
 				}
 			}else{//not a train trip leg, so two possibilities, train trip just ended in the previous trip or completely new trip
 				if(StartStopIdTrain!=null) {//train trip just ended, the fare will be added.
@@ -618,16 +620,6 @@ public class CNLTransitRoute implements AnalyticalModelTransitRoute{
 
 	public routeInfoOut getInfo() {
 		return info;
-	}
-
-
-
-	@Override
-	public double calcRouteUtility(LinkedHashMap<String, Double> params, LinkedHashMap<String, Double> anaParams,
-			AnalyticalModelNetwork network, Map<String, FareCalculator> farecalc,
-			Map<String, Object> AdditionalDataContainer, Tuple<Double, Double> timeBean) {
-		
-		return this.calcRouteUtility(params, anaParams, network, farecalc, timeBean);
 	}
 
 

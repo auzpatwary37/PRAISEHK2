@@ -13,9 +13,10 @@ import org.w3c.dom.Element;
 import org.xml.sax.Attributes;
 
 import dynamicTransitRouter.TransitStop;
+import transitCalculatorsWithFare.FareLink;
 import ust.hk.praisehk.metamodelcalibration.analyticalModel.AnalyticalModel;
 import ust.hk.praisehk.metamodelcalibration.analyticalModel.AnalyticalModelNetwork;
-import ust.hk.praisehk.metamodelcalibration.analyticalModel.FareLink;
+
 import ust.hk.praisehk.metamodelcalibration.analyticalModel.SUEModelOutput;
 import ust.hk.praisehk.metamodelcalibration.analyticalModel.TransitLink;
 import ust.hk.praisehk.metamodelcalibration.analyticalModelImpl.CNLLink;

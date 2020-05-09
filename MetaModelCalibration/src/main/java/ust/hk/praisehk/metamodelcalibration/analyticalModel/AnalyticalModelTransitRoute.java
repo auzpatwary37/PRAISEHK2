@@ -26,18 +26,7 @@ import dynamicTransitRouter.fareCalculators.FareCalculator;
 
 public interface AnalyticalModelTransitRoute{
 	
-	/**
-	 * Deprecated, will be removed in future 
-	 * Use the calcRouteUtility(LinkedHashMap<String,Double> params,
-			LinkedHashMap<String,Double> AnaParam,AnalyticalModelNetwork network,Map<String,FareCalculator> farecalc,
-			Map<String,Object> AdditionalDataContainer, Tuple<Double,Double>timeBean) instead
-	 * calculates the route utility
-	 * @param params
-	 * @return
-	 */
-	@Deprecated
-	public double calcRouteUtility(LinkedHashMap<String,Double> params,
-			LinkedHashMap<String,Double> AnaParam,AnalyticalModelNetwork network,Map<String,FareCalculator> farecalc,Tuple<Double,Double>timeBean);
+	
 	
 	/**
 	 * calculates the route utility
@@ -46,14 +35,7 @@ public interface AnalyticalModelTransitRoute{
 	 */
 	public double calcRouteUtility(LinkedHashMap<String,Double> params,
 			LinkedHashMap<String,Double> AnaParam,AnalyticalModelNetwork network,Map<String,FareCalculator> farecalc,Map<String,Object> AdditionalDataContainer, Tuple<Double,Double>timeBean);
-	/**
-	 * Deprecated. Use the getFare(TransitSchedule ts,Map<String,FareCalculator> farecalc, Map<String,Object> AdditionalDataContainer) instead.
-	 * Calculates the route fare
-	 * @param fc
-	 * @return
-	 */
-	@Deprecated
-	public double getFare(TransitSchedule ts,Map<String,FareCalculator> farecalc);
+
 	
 	/**
 	 * Calculates the route fare
