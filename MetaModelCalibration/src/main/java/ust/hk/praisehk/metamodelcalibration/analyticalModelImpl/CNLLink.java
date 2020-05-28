@@ -1,12 +1,17 @@
 package ust.hk.praisehk.metamodelcalibration.analyticalModelImpl;
 
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.network.Link;
 import org.matsim.core.utils.collections.Tuple;
 
 import ust.hk.praisehk.metamodelcalibration.analyticalModel.AnalyticalModelLink;
+import ust.hk.praisehk.metamodelcalibration.analyticalModel.TransitLink;
 
 /**
  * 
@@ -21,6 +26,7 @@ public class CNLLink extends AnalyticalModelLink{
 	 */
 	
 	private ConcurrentHashMap<String, Double> TransitMapping=new ConcurrentHashMap<>();
+	private ConcurrentHashMap<String,Set<Id<TransitLink>>> transitDirectLinks = new ConcurrentHashMap<>();
 	
 	private double alpha=0.15;
 	private double beta=4;
@@ -102,19 +108,34 @@ public class CNLLink extends AnalyticalModelLink{
 	 * @param volume
 	 */
 	//TODO: make this method additive and add zero passenger count during the transit vehicle loading 
-	public void addTransitPassengerVolume(String lineId_routeId, double volume) {
+	public void addTransitPassengerVolume(String lineId_routeId, Id<TransitLink> linkId, double volume) {
 		this.linkTransitPassenger+=volume;
 		if(this.TransitMapping.containsKey(lineId_routeId)) {
 			this.TransitMapping.put(lineId_routeId, this.TransitMapping.get(lineId_routeId)+ volume);
+			this.transitDirectLinks.get(lineId_routeId).add(linkId);
 		}else {
 			this.TransitMapping.put(lineId_routeId, volume);
+			this.transitDirectLinks.put(lineId_routeId, Collections.synchronizedSet(new HashSet<>()));
+			this.transitDirectLinks.get(lineId_routeId).add(linkId);
 		}
+		
+		
 	}
+	
+	
 	public double getTransitPassengerVolume(String lineId_routeId) {
 		if(this.TransitMapping.containsKey(lineId_routeId)) {
 			return this.TransitMapping.get(lineId_routeId);
 		}else {
 			return 0;
+		}
+	}
+	
+	public Set<Id<TransitLink>> getTransitDirectLinks(String lineId_routeId) {
+		if(this.transitDirectLinks.containsKey(lineId_routeId)) {
+			return this.transitDirectLinks.get(lineId_routeId);
+		}else {
+			return new HashSet<>();
 		}
 	}
 }

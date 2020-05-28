@@ -1,6 +1,8 @@
 package ust.hk.praisehk.metamodelcalibration.analyticalModelImpl;
 
+import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.Set;
 
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.network.Link;
@@ -23,6 +25,7 @@ public class CNLTransitTransferLink extends TransitTransferLink {
 	private double currentOnboardPassenger=0;	
 	private final Id<TransitLink> trLinkId; 
 	private CNLTransitDirectLink nextdLink;
+	private Set<Id<TransitLink>> incidentLinkIds;
 	
 	public CNLTransitTransferLink(String startStopId, String endStopId, 
 			Id<Link> startLinkId, Id<Link> endLinkId,TransitSchedule ts,
@@ -64,8 +67,9 @@ public class CNLTransitTransferLink extends TransitTransferLink {
 			headway=this.nextdLink.getHeadway();
 			capacity=this.nextdLink.getCapacity();
 			double noOfVehicles=this.nextdLink.getFrequency();
-			currentOnboardPassenger=((CNLLink)network.getLinks().get(this.nextdLink.getLinkList().get(0)))
-				.getTransitPassengerVolume(this.nextdLink.getLineId()+"_"+this.nextdLink.getRouteId());
+			CNLLink l_gamma = ((CNLLink)network.getLinks().get(this.nextdLink.getLinkList().get(0)));
+			currentOnboardPassenger = l_gamma.getTransitPassengerVolume(this.nextdLink.getLineId()+"_"+this.nextdLink.getRouteId());
+			if(this.incidentLinkIds==null)this.incidentLinkIds = l_gamma.getTransitDirectLinks(this.nextdLink.getLineId()+"_"+this.nextdLink.getRouteId());
 			this.waitingTime=headway*anaParams.get(CNLSUEModel.TransferalphaName)+
 					headway*Math.pow((this.passangerCount+this.currentOnboardPassenger)/(capacity*noOfVehicles),anaParams.get(CNLSUEModel.TransferbetaName));
 			if(this.waitingTime==Double.NaN||this.waitingTime==Double.POSITIVE_INFINITY) {
@@ -90,6 +94,12 @@ public class CNLTransitTransferLink extends TransitTransferLink {
 	
 	public CNLTransitTransferLink cloneLink(CNLTransitTransferLink tl,CNLTransitDirectLink dlink) {
 		return new CNLTransitTransferLink(tl.getStartStopId(),tl.getEndStopId(),tl.getStartingLinkId(),tl.getEndingLinkId(),null,dlink);
+	}
+
+	
+
+	public Set<Id<TransitLink>> getIncidentLinkIds() {
+		return incidentLinkIds;
 	}
 
 
