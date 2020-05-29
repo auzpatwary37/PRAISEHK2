@@ -1375,7 +1375,7 @@ public class SUEModelContTime implements AnalyticalModel{
 					for(AnalyticalModelTransitRoute tr:odpair.getTrRoutes(timeBeanId)) {
 						if(this.Demand.get(timeBeanId).get(odpair.getODpairId())!=0) {
 						for(String key:entryAndExitCountMTR.keySet()) {
-							if(((CNLTransitRoute)tr).getFareEntryAndExit().contains(key)) {
+							if(((CNLTransitRoute)tr).getFareLinks().contains(key)) {
 								entryAndExitCountMTR.get(key).put(timeBeanId, entryAndExitCountMTR.get(key).get(timeBeanId)+odpair.getTrRouteFlow().get(timeBeanId).get(tr.getTrRouteId()));
 							}
 						}

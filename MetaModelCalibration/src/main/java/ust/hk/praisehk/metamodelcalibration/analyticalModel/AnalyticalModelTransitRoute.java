@@ -12,6 +12,7 @@ import org.matsim.core.utils.collections.Tuple;
 import org.matsim.pt.transitSchedule.api.TransitSchedule;
 
 import dynamicTransitRouter.fareCalculators.FareCalculator;
+import transitCalculatorsWithFare.FareLink;
 
 
 
@@ -79,4 +80,6 @@ public interface AnalyticalModelTransitRoute{
 	public List<TransitTransferLink> getTransitTransferLinks();
 	
 	public List<Id<Link>> getPhysicalLinks();
+	
+	public List<FareLink> getFareLinks();
 }

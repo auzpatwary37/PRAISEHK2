@@ -614,7 +614,8 @@ public class CNLTransitRoute implements AnalyticalModelTransitRoute{
 		return new ArrayList<Id<Link>>(physicalLinks);
 	}
 
-	public List<FareLink> getFareEntryAndExit() {
+	@Override
+	public List<FareLink> getFareLinks() {
 		return FareEntryAndExit;
 	}
 

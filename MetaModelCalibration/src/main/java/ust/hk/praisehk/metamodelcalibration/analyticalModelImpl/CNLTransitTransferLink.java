@@ -106,7 +106,7 @@ public class CNLTransitTransferLink extends TransitTransferLink {
 
 
 
-	protected CNLTransitDirectLink getNextdLink() {
+	public CNLTransitDirectLink getNextdLink() {
 		return nextdLink;
 	}
 }

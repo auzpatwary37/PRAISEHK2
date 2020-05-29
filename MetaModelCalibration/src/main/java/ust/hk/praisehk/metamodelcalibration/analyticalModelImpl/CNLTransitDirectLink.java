@@ -122,7 +122,7 @@ public class CNLTransitDirectLink extends TransitDirectLink{
 	protected Scenario getScenario() {
 		return scenario;
 	}
-	protected double getFrequency() {
+	public double getFrequency() {
 		return frequency;
 	}
 	@Override

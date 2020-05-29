@@ -582,7 +582,7 @@ public class CNLSUEModel implements AnalyticalModel{
 				for(String timeBeanId:this.timeBeans.keySet()) {
 					if(odpair.getTrRoutes(timeBeanId)!=null && this.Demand.get(timeBeanId).get(odpair.getODpairId())!=0) {
 						for(AnalyticalModelTransitRoute tr:odpair.getTrRoutes(timeBeanId)) {
-							for(FareLink fl:((CNLTransitRoute)tr).getFareEntryAndExit()) {
+							for(FareLink fl:((CNLTransitRoute)tr).getFareLinks()) {
 								Id<Measurement> mId=Id.create(fl.toString(), Measurement.class);
 								Measurement m=this.measurementsToUpdate.getMeasurements().get(mId);
 								if(m.getVolumes().containsKey(timeBeanId)) {
@@ -600,7 +600,7 @@ public class CNLSUEModel implements AnalyticalModel{
 				for(String timeBeanId:this.timeBeans.keySet()) {
 					if(odpair.getTrRoutes(timeBeanId)!=null && this.Demand.get(timeBeanId).get(odpair.getODpairId())!=0) {
 						for(AnalyticalModelTransitRoute tr:odpair.getTrRoutes(timeBeanId)) {
-							for(FareLink fl:((CNLTransitRoute)tr).getFareEntryAndExit()) {
+							for(FareLink fl:((CNLTransitRoute)tr).getFareLinks()) {
 								Id<Measurement> mId=Id.create(fl.toString(), Measurement.class);
 								Measurement m=null;
 								if((m=this.measurementsToUpdate.getMeasurements().get(mId))==null) {
