@@ -283,6 +283,68 @@ public enum MeasurementType {
 	},
 	
 	
+	maasSpecificFareLinkVolume
+	{
+
+		@Override
+		public void updateMeasurement(SUEModelOutput modelOut, AnalyticalModel sue, Object otherDataContainer,
+				Measurement m) {
+			FareLink fl;
+			if((fl = (FareLink)m.getAttribute(Measurement.FareLinkAttributeName))==null) {
+				System.out.println("No Fare Link present in the attributes. Creating from measurement Id");
+				m.setAttribute(Measurement.FareLinkAttributeName, new FareLink(m.getId().toString()));
+			}
+			if(m.getVolumes().size()==0) {
+				System.out.println("MeasurementId: "+m.getId().toString()+" Volume is empty!!! Updating volume for all time beans");
+				for(String s: m.getTimeBean().keySet()) {
+					if(modelOut.getFareLinkVolume().containsKey(s)) {
+						m.getVolumes().put(s, 0.);
+					}
+				}
+			}
+			String key =m.getAttribute(Measurement.FareLinkAttributeName).toString();
+			String maas = m.getAttribute(Measurement.MaaSPackageAttributeName).toString();
+			Map<String, Map<String, Map<String, Double>>>fareLinkVolume = modelOut.getMaaSSpecificFareLinkFlow();
+			
+			for(String s:m.getVolumes().keySet()) {
+				double volume=0;
+				try {
+					if(fareLinkVolume.get(s)==null) {
+						throw new IllegalArgumentException("linkVolumes does not contain volume information");
+					}
+					if(fareLinkVolume.get(s).get(maas)==null) {
+						throw new IllegalArgumentException("linkVolumes does not contain volume information");
+					}
+					if(fareLinkVolume.get(s).get(maas).get(key)==null) {
+						throw new IllegalArgumentException("linkVolumes does not contain volume information");
+					}
+					volume+=fareLinkVolume.get(s).get(maas).get(key);
+				}catch(Exception e) {
+					System.out.println("Illegal Argument Excepton. Could not update measurements. Volumes are missing for measurement Id: "+m.getId()+" timeBeanId: "
+							+s+" fareLinkId: "+key);
+				}
+				m.getVolumes().put(s, volume);
+				}
+				
+			}
+		
+
+		@Override
+		public void writeAttribute(Element melement, Measurement m) {
+			melement.setAttribute(Measurement.FareLinkAttributeName, m.getAttribute(Measurement.FareLinkAttributeName).toString());
+			melement.setAttribute(Measurement.MaaSPackageAttributeName, m.getAttribute(Measurement.MaaSPackageAttributeName).toString());
+			
+		}
+
+		@Override
+		public void parseAttribute(Attributes atr, Measurement m) {
+			m.setAttribute(Measurement.FareLinkAttributeName, new FareLink(atr.getValue(Measurement.FareLinkAttributeName)));
+			m.setAttribute(Measurement.MaaSPackageAttributeName, atr.getValue(Measurement.MaaSPackageAttributeName));
+		}
+		
+	},
+	
+	
 	
 	MaaSPacakgeUsage{
 

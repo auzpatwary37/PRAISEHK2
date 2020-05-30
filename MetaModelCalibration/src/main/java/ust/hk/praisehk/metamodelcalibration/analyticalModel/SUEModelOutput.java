@@ -18,6 +18,9 @@ public class SUEModelOutput {
 	
 	private Map<String,Double> MaaSPackageUsage;
 	
+	
+	private Map<String,Map<String,Map<String,Double>>> MaaSSpecificFareLinkFlow;
+	
 	//private Map<String,Map<Id<TransitStopFacility>,Double>> smartCardEntry;
 	
 	private Map<String,Map<String,Double>>FareLinkVolume;
@@ -64,6 +67,22 @@ public class SUEModelOutput {
 
 	public void setMaaSPackageUsage(Map<String, Double> maaSPackageUsage) {
 		MaaSPackageUsage = maaSPackageUsage;
+	}
+
+	/**
+	 * Follow timeId-MaaSPacakgeId-FareLink-volume Convention
+	 * @return
+	 */
+	public Map<String, Map<String, Map<String, Double>>> getMaaSSpecificFareLinkFlow() {
+		return MaaSSpecificFareLinkFlow;
+	}
+
+	/**
+	 * Follow timeId-MaaSPacakgeId-FareLink-volume Convention
+	 * @param maaSSpecificFareLinkFlow
+	 */
+	public void setMaaSSpecificFareLinkFlow(Map<String, Map<String, Map<String, Double>>> maaSSpecificFareLinkFlow) {
+		MaaSSpecificFareLinkFlow = maaSSpecificFareLinkFlow;
 	}
 	
 	
