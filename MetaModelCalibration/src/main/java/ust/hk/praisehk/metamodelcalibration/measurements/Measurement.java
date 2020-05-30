@@ -27,6 +27,7 @@ public class Measurement {
 	public static final String transitAlightingStopAttributeName="transit_alighting_stop";
 	public static final String transitModeAttributeName="transitMode";
 	public static final String FareLinkAttributeName=FareLink.FareLinkAttributeName;
+	public static final String MaaSPackageAttributeName = "MaaSPackage";
 	
 	private final Id<Measurement> id;
 	private Map<String,Object> attributes=new HashMap<>();

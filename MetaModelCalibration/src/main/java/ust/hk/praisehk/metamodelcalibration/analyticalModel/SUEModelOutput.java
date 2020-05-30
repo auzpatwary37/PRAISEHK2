@@ -16,6 +16,8 @@ public class SUEModelOutput {
 	
 	private Map<String,Map<Id<Link>,Double>> averagePtOccupancyOnLink;
 	
+	private Map<String,Double> MaaSPackageUsage;
+	
 	//private Map<String,Map<Id<TransitStopFacility>,Double>> smartCardEntry;
 	
 	private Map<String,Map<String,Double>>FareLinkVolume;
@@ -55,6 +57,15 @@ public class SUEModelOutput {
 	public Map<String, Map<String, Double>> getFareLinkVolume() {
 		return FareLinkVolume;
 	}
+
+	public Map<String, Double> getMaaSPackageUsage() {
+		return MaaSPackageUsage;
+	}
+
+	public void setMaaSPackageUsage(Map<String, Double> maaSPackageUsage) {
+		MaaSPackageUsage = maaSPackageUsage;
+	}
+	
 	
 	
 }

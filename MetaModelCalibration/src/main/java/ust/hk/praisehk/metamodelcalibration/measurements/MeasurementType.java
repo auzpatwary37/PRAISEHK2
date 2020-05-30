@@ -270,14 +270,37 @@ public enum MeasurementType {
 		
 
 		@Override
-		public void writeAttribute(Element melelement, Measurement m) {
-			m.setAttribute(Measurement.FareLinkAttributeName, m.getAttribute(Measurement.FareLinkAttributeName).toString());
+		public void writeAttribute(Element melement, Measurement m) {
+			melement.setAttribute(Measurement.FareLinkAttributeName, m.getAttribute(Measurement.FareLinkAttributeName).toString());
 			
 		}
 
 		@Override
 		public void parseAttribute(Attributes atr, Measurement m) {
 			m.setAttribute(Measurement.FareLinkAttributeName, new FareLink(atr.getValue(Measurement.FareLinkAttributeName)));
+		}
+		
+	},
+	
+	
+	
+	MaaSPacakgeUsage{
+
+		@Override
+		public void updateMeasurement(SUEModelOutput modelOut, AnalyticalModel sue, Object otherDataContainer,
+				Measurement m) {
+			m.getVolumes().put("All", modelOut.getMaaSPackageUsage().get(m.getAttribute(Measurement.MaaSPackageAttributeName)));
+			
+		}
+
+		@Override
+		public void writeAttribute(Element melement, Measurement m) {
+			melement.setAttribute(Measurement.MaaSPackageAttributeName, m.getAttribute(Measurement.MaaSPackageAttributeName).toString());
+		}
+
+		@Override
+		public void parseAttribute(Attributes atr, Measurement m) {
+			m.setAttribute(Measurement.MaaSPackageAttributeName, new FareLink(atr.getValue(Measurement.MaaSPackageAttributeName)));	
 		}
 		
 	};	
