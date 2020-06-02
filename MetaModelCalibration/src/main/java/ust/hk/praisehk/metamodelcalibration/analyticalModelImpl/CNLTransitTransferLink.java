@@ -72,9 +72,10 @@ public class CNLTransitTransferLink extends TransitTransferLink {
 			if(this.incidentLinkIds==null)this.incidentLinkIds = l_gamma.getTransitDirectLinks(this.nextdLink.getLineId()+"_"+this.nextdLink.getRouteId());
 			this.waitingTime=headway*anaParams.get(CNLSUEModel.TransferalphaName)+
 					headway*Math.pow((this.passangerCount+this.currentOnboardPassenger)/(capacity*noOfVehicles),anaParams.get(CNLSUEModel.TransferbetaName));
-			if(this.waitingTime==Double.NaN||this.waitingTime==Double.POSITIVE_INFINITY) {
-				return this.waitingTime=86400;
+			if(Double.isNaN(this.waitingTime)||this.waitingTime==Double.POSITIVE_INFINITY) {
+				return this.waitingTime=3600;
 			}
+			
 			return this.waitingTime;
 			
 		}else {

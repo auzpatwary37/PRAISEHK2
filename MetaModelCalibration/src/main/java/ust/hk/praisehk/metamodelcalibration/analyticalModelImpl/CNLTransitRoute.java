@@ -380,9 +380,14 @@ public class CNLTransitRoute implements AnalyticalModelTransitRoute{
 			time+=travelTimeDL;
 			linkReachTimeTL.put(this.transferLinks.get(i+1).getTrLinkId(), time);
 			double waitingTimeTL=this.transferLinks.get(i+1).getWaitingTime(anaParams, network);
+			if(Double.isNaN(waitingTime))
+				System.out.println("a");
 			waitingTime+=waitingTimeTL;
 			time+=waitingTimeTL;
+			
 		}
+		if(Double.isNaN(waitingTime))
+			System.out.println();
 		this.info=new routeInfoOut(travelTime,waitingTime,routeDistance,linkReachTimeDL,linkReachTimeTL);
 		return info;
 	}
