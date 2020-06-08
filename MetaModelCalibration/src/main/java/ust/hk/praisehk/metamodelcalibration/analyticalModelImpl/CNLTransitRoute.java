@@ -214,7 +214,7 @@ public class CNLTransitRoute implements AnalyticalModelTransitRoute{
 		double ModeConstant=params.get(CNLSUEModel.ModeConstantPtname);
 		double MUMoney=params.get(CNLSUEModel.MarginalUtilityofMoneyName);
 		double DistanceBasedMoneyCostWalk=params.get(CNLSUEModel.DistanceBasedMoneyCostWalkName);
-		double fare=this.getFare(transitSchedule, farecalc, AdditionalDataContainer);
+		double fare=-1*this.getFare(transitSchedule, farecalc, AdditionalDataContainer);
 		double travelTime=info.getTravelTime();
 		double walkTime=this.getRouteWalkingDistance()/1.4;
 		double walkDist=this.getRouteWalkingDistance();
