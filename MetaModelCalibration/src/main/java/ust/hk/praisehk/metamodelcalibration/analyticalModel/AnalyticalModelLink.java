@@ -6,6 +6,7 @@ import java.util.Set;
 import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.network.Link;
+import org.matsim.api.core.v01.network.Network;
 import org.matsim.api.core.v01.network.Node;
 import org.matsim.core.utils.collections.Tuple;
 import org.matsim.utils.objectattributes.attributable.Attributes;
@@ -39,10 +40,19 @@ public abstract class AnalyticalModelLink implements Link{
 	
 	/**
 	 * Constructor
+	 * @param network 
 	 * @param link: The wrapped Link
 	 */
-	public AnalyticalModelLink(Link link) {
-		this.link=link;
+	public AnalyticalModelLink(Link link, Network network) {
+		Node fromNode = network.getNodes().get(link.getFromNode().getId());
+		Node toNode = network.getNodes().get(link.getToNode().getId());
+		this.link=network.getFactory().createLink(link.getId(), fromNode, toNode);
+		this.link.setCapacity(link.getCapacity());
+		this.link.setAllowedModes(link.getAllowedModes());
+		this.link.setFreespeed(link.getFreespeed());
+		this.link.setLength(link.getLength());
+		this.link.setNumberOfLanes(link.getNumberOfLanes());
+		
 	}
 	
 	

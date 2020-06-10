@@ -9,6 +9,7 @@ import org.matsim.api.core.v01.network.Network;
 import org.matsim.api.core.v01.network.NetworkFactory;
 import org.matsim.api.core.v01.network.Node;
 import org.matsim.core.config.ConfigUtils;
+import org.matsim.core.network.NetworkUtils;
 import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.pt.transitSchedule.api.TransitSchedule;
 import org.matsim.utils.objectattributes.attributable.Attributes;
@@ -34,7 +35,7 @@ public abstract class AnalyticalModelNetwork implements Network{
 	 * @return new created node
 	 */
 	public static Node cloneNode(Node node,NetworkFactory netfac){
-		//NetworkFactory netfac=ScenarioUtils.createScenario(ConfigUtils.createConfig()).getNetwork().getFactory();
+		netfac = NetworkUtils.createNetwork().getFactory();
 		Node outNode=netfac.createNode(node.getId(), node.getCoord());
 		return outNode;
 	}

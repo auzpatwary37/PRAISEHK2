@@ -32,7 +32,7 @@ public class CNLNetwork extends AnalyticalModelNetwork{
 			this.network.addNode(cloneNode(network.getNodes().get(NodeId),network.getFactory()));
 		}
 		for(Id<Link> linkId:network.getLinks().keySet()){
-			this.network.addLink(new CNLLink(network.getLinks().get(linkId)));
+			this.network.addLink(new CNLLink(network.getLinks().get(linkId),this.network));
 		}
 		
 	}
@@ -44,7 +44,7 @@ public class CNLNetwork extends AnalyticalModelNetwork{
 			this.network.addNode(cloneNode(network.getNodes().get(NodeId),network.getFactory()));
 		}
 		for(Id<Link> linkId:network.getLinks().keySet()){
-			AnalyticalModelLink link=new CNLLink(network.getLinks().get(linkId));
+			AnalyticalModelLink link=new CNLLink(network.getLinks().get(linkId),this.network);
 			if(sg!=null) {
 				link.setGcRatio(sg.getGCratio(network.getLinks().get(linkId))[0]);
 			}
