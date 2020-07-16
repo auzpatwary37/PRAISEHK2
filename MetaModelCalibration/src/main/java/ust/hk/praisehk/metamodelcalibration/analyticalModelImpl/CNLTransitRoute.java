@@ -76,7 +76,7 @@ public class CNLTransitRoute implements AnalyticalModelTransitRoute{
 		this.transitSchedule=ts;
 		
 		try {
-		if(!(ptlegList.get(0).getMode().equals("transit_walk") && ptlegList.get(ptlegList.size()-1).getMode().equals("transit_walk"))) {
+		if((!(ptlegList.get(0).getMode().equals("transit_walk") && ptlegList.get(ptlegList.size()-1).getMode().equals("transit_walk")))&&(!(ptlegList.get(0).getMode().equals("walk") && ptlegList.get(ptlegList.size()-1).getMode().equals("walk")))) {
 			logger.error("Invalid trip legs, The trip must have at least two walk legs at the start and end");
 			throw new IllegalArgumentException("Invalid input for creating transit route");
 		}else if (ptactivityList.size()!=ptlegList.size()+1) {
@@ -106,7 +106,7 @@ public class CNLTransitRoute implements AnalyticalModelTransitRoute{
 			Id<Link> startLinkId=l.getRoute().getStartLinkId();
 			Id<Link> endLinkId=l.getRoute().getEndLinkId();
 			//System.out.println("testing");
-			if(l.getMode().equals("transit_walk")) {
+			if(l.getMode().equals("transit_walk")||l.getMode().equals("walk")) {
 				transferLinkCount++;
 				this.routeWalkingDistance+=l.getRoute().getDistance();
 				CNLTransitTransferLink t;
