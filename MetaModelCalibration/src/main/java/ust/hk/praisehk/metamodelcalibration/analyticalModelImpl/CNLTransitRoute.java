@@ -53,7 +53,7 @@ public class CNLTransitRoute implements AnalyticalModelTransitRoute{
 	
 	private TransitSchedule transitSchedule;
 	private Scenario scenario;
-	private final Id<AnalyticalModelTransitRoute> trRouteId;
+	private Id<AnalyticalModelTransitRoute> trRouteId;
 	private double routeTravelTime=0;
 	private double routeWalkingDistance=0;
 	private double routeWaitingTime=0;
@@ -64,6 +64,8 @@ public class CNLTransitRoute implements AnalyticalModelTransitRoute{
 	private Map<Id<TransitLink>, TransitLink> trLinks=new HashMap<>();
 	private Map<String,Double> routeCapacity=new HashMap<>();
 	private routeInfoOut info;
+	private final Id<AnalyticalModelTransitRoute> oldTrRouteId;
+	public static final String routeIdSubscript = "_tr_";
 	/**
 	 * Constructor
 	 * these two lists holds all the pt legs and pt activity sequentially for one single transit trip
@@ -142,6 +144,7 @@ public class CNLTransitRoute implements AnalyticalModelTransitRoute{
 			idstring+=this.directLinks.get(i).getTrLinkId().toString()+this.transferLinks.get(i+1).getTrLinkId().toString();
 		}
 		this.trRouteId=Id.create(idstring,AnalyticalModelTransitRoute.class);
+		this.oldTrRouteId=Id.create(idstring,AnalyticalModelTransitRoute.class);
 		
 		this.trLinks.put(this.transferLinks.get(0).getTrLinkId(), this.transferLinks.get(0));
 		for(int i=0;i<this.directLinks.size();i++) {
@@ -160,7 +163,7 @@ public class CNLTransitRoute implements AnalyticalModelTransitRoute{
 		this.transitSchedule=ts;
 		this.routeWalkingDistance=routeWalkingDistance;
 		this.trRouteId=Id.create(routeId, AnalyticalModelTransitRoute.class);
-
+		this.oldTrRouteId=Id.create(routeId,AnalyticalModelTransitRoute.class);
 		this.trLinks.put(this.transferLinks.get(0).getTrLinkId(), this.transferLinks.get(0));
 		for(int i=0;i<this.directLinks.size();i++) {
 			this.trLinks.put(this.directLinks.get(i).getTrLinkId(), this.directLinks.get(i));
@@ -645,6 +648,20 @@ public class CNLTransitRoute implements AnalyticalModelTransitRoute{
 			tlLinks.add(l);
 		});
 		return tlLinks;
+	}
+
+
+
+	@Override
+	public void updateToOdBasedId(Id<AnalyticalModelODpair> odId, int routeNumber) {
+		this.trRouteId = Id.create(odId.toString()+routeIdSubscript+routeNumber,AnalyticalModelTransitRoute.class);
+	}
+
+
+
+	@Override
+	public Id<AnalyticalModelTransitRoute> getOldTrRouteId() {
+		return this.oldTrRouteId;
 	}
 	
 	

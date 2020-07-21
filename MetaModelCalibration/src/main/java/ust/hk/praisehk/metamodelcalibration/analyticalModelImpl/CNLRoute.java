@@ -19,13 +19,14 @@ import ust.hk.praisehk.metamodelcalibration.analyticalModel.AnalyticalModelRoute
 
 public class CNLRoute implements AnalyticalModelRoute{
 
-	private final Id<AnalyticalModelRoute> routeId;
+	private Id<AnalyticalModelRoute> routeId;
 	private double travelTime=0;
 	private double distanceTravelled=0;
 	private ArrayList<Id<Link>>links=new ArrayList<>();
 	private double RouteUtility=0;
 	private Map<Id<Link>,Double> linkReachTime=new HashMap<>();
-	
+	private final Id<AnalyticalModelRoute> oldRouteId;
+	public static final String routeIdSubscript = "_r_";
 	
 	public CNLRoute(Route r) {
 		String[] part=r.getRouteDescription().split(" ");
@@ -34,6 +35,7 @@ public class CNLRoute implements AnalyticalModelRoute{
 			}
 		this.distanceTravelled=r.getDistance();
 		this.routeId=Id.create(r.getRouteDescription(), AnalyticalModelRoute.class);
+		this.oldRouteId = Id.create(r.getRouteDescription(), AnalyticalModelRoute.class);
 	}
 	
 	
@@ -213,6 +215,22 @@ public class CNLRoute implements AnalyticalModelRoute{
 	public Map<Id<Link>, Double> getLinkReachTime() {
 		return this.linkReachTime;
 	}
+
+
+
+	@Override
+	public void updateToOdBasedId(Id<AnalyticalModelODpair> odId, int routeNumber) {
+		this.routeId = Id.create(odId.toString()+routeIdSubscript+routeNumber, AnalyticalModelRoute.class);
+	}
+
+
+
+	@Override
+	public Id<AnalyticalModelRoute> getOldRouteId() {
+		
+		return this.oldRouteId;
+	}
+	
 	
 	
 }

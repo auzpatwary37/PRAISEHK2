@@ -22,7 +22,7 @@ public interface AnalyticalModelRoute{
 	 * This gives the travel time of the route 
 	 * @return
 	 */
-	public abstract double getTravelTime(AnalyticalModelNetwork network,Tuple<Double,Double>timeBean,LinkedHashMap<String,Double>params,LinkedHashMap<String,Double>anaParams);
+	public double getTravelTime(AnalyticalModelNetwork network,Tuple<Double,Double>timeBean,LinkedHashMap<String,Double>params,LinkedHashMap<String,Double>anaParams);
 	
 	
 //	public abstract double getTravelTime(Map<String,AnalyticalModelNetwork> network,Map<String,Tuple<Double,Double>> timeBean,String timeBeanId,
@@ -33,7 +33,7 @@ public interface AnalyticalModelRoute{
 	 * For distance based money cost
 	 * @return
 	 */
-	public abstract double getRouteDistance();
+	public double getRouteDistance();
 	
 	/**
 	 * This calculates the route utility of the specific routes
@@ -41,14 +41,14 @@ public interface AnalyticalModelRoute{
 	 * @param parmas
 	 * @return
 	 */
-	public abstract double calcRouteUtility(LinkedHashMap<String,Double> parmas,LinkedHashMap<String,Double> anaParam,AnalyticalModelNetwork network,Tuple<Double,Double>timeBean);
+	public double calcRouteUtility(LinkedHashMap<String,Double> parmas,LinkedHashMap<String,Double> anaParam,AnalyticalModelNetwork network,Tuple<Double,Double>timeBean);
 	
 	/**
 	 * This is for link toll or other moneytery cost
 	 * @return
 	 */
-	public abstract double getOtherMoneyCost();
-	public abstract String getRouteDescription();
+	public double getOtherMoneyCost();
+	public String getRouteDescription();
 	public Id<AnalyticalModelRoute> getRouteId();
 	public ArrayList<Id<Link>> getLinkIds();
 	public Map<Id<Link>, Double> getLinkReachTime(); 
@@ -64,6 +64,8 @@ public interface AnalyticalModelRoute{
 		return null;
 	}
 
+	public abstract void updateToOdBasedId(Id<AnalyticalModelODpair> odId, int routeNumber);
+	public Id<AnalyticalModelRoute> getOldRouteId();
 
 //	double calcRouteUtility(LinkedHashMap<String, Double> parmas, LinkedHashMap<String, Double> anaParmas,
 //			Map<String, AnalyticalModelNetwork> networks, Map<String, Tuple<Double, Double>> timeBean,

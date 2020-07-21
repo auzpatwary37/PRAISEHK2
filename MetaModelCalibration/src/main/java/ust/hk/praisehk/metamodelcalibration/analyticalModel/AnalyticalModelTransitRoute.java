@@ -82,4 +82,7 @@ public interface AnalyticalModelTransitRoute{
 	public List<Id<Link>> getPhysicalLinks();
 	
 	public List<FareLink> getFareLinks();
+	
+	public void updateToOdBasedId(Id<AnalyticalModelODpair> odId, int routeNumber);
+	public Id<AnalyticalModelTransitRoute> getOldTrRouteId();
 }
