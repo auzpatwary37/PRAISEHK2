@@ -13,6 +13,7 @@ import org.matsim.core.network.NetworkUtils;
 import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.pt.transitSchedule.api.TransitSchedule;
 import org.matsim.utils.objectattributes.attributable.Attributes;
+import org.matsim.vehicles.VehicleType;
 
 
 
@@ -68,8 +69,10 @@ public abstract class AnalyticalModelNetwork implements Network{
 	 */
 	public abstract void clearLinkTransitPassangerVolume();
 	
+	public abstract Map<Id<Link>,Map<Id<VehicleType>,Double>> generateLinkVolumeProfile();
 	
-	public abstract void overlayTransitVehicles(TransitSchedule ts, Scenario scenario);
+	
+	public abstract void clearVehicleSpecificVolumeExceptTransit();
 	
 	/**
 	 * ---------------------------wrapped Class Functions--------------------------------------------

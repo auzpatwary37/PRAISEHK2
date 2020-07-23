@@ -22,6 +22,8 @@ import org.matsim.api.core.v01.network.Network;
 import org.matsim.api.core.v01.population.Population;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
+import org.matsim.core.network.NetworkUtils;
+import org.matsim.core.scoring.functions.ScoringParameters;
 import org.matsim.core.utils.collections.Tuple;
 import org.matsim.pt.transitSchedule.api.Departure;
 import org.matsim.pt.transitSchedule.api.TransitLine;
@@ -53,7 +55,12 @@ import ust.hk.praisehk.metamodelcalibration.measurements.Measurement;
 import ust.hk.praisehk.metamodelcalibration.measurements.MeasurementType;
 import ust.hk.praisehk.metamodelcalibration.measurements.Measurements;
 
-
+/**
+ * This model now should have the ability to handle sub population 
+ * No need for a extended class with sub population feature 
+ * @author ashraf
+ *
+ */
 public class CNLSUEModel implements AnalyticalModel{
 	/**
 	 * This is a simple and upgraded version of the SUE. 
@@ -98,7 +105,7 @@ public class CNLSUEModel implements AnalyticalModel{
 		
 		//MATSim Input
 		private Map<String, AnalyticalModelNetwork> networks=new ConcurrentHashMap<>();
-		private TransitSchedule ts;
+		protected TransitSchedule ts;
 		private Scenario scenario;
 		private Population population;
 		protected Map<String,FareCalculator> fareCalculator=new HashMap<>();
@@ -183,25 +190,56 @@ public class CNLSUEModel implements AnalyticalModel{
 		this.loadAnalyticalModelInternalPamamsLimit();
 		
 		//Loads the External default Parameters
-		if(config==null) {
-			config=ConfigUtils.createConfig();
+//		if(config==null) {
+//			config=ConfigUtils.createConfig();
+//		}
+//		
+//
+//		this.Params.put(CNLSUEModel.MarginalUtilityofTravelCarName,config.planCalcScore().getOrCreateModeParams("car").getMarginalUtilityOfTraveling());
+//		this.Params.put(CNLSUEModel.MarginalUtilityofDistanceCarName,config.planCalcScore().getOrCreateModeParams("car").getMarginalUtilityOfDistance());
+//		this.Params.put(CNLSUEModel.MarginalUtilityofMoneyName,config.planCalcScore().getMarginalUtilityOfMoney());
+//		this.Params.put(CNLSUEModel.DistanceBasedMoneyCostCarName,config.planCalcScore().getOrCreateModeParams("car").getMonetaryDistanceRate());
+//		this.Params.put(CNLSUEModel.MarginalUtilityofTravelptName, config.planCalcScore().getOrCreateModeParams("pt").getMarginalUtilityOfTraveling());
+//		this.Params.put(CNLSUEModel.MarginalUtilityOfDistancePtName, config.planCalcScore().getOrCreateModeParams("pt").getMarginalUtilityOfDistance());
+//		this.Params.put(CNLSUEModel.MarginalUtilityofWaitingName,config.planCalcScore().getMarginalUtlOfWaitingPt_utils_hr());
+//		this.Params.put(CNLSUEModel.UtilityOfLineSwitchName,config.planCalcScore().getUtilityOfLineSwitch());
+//		this.Params.put(CNLSUEModel.MarginalUtilityOfWalkingName, config.planCalcScore().getOrCreateModeParams("walk").getMarginalUtilityOfTraveling());
+//		this.Params.put(CNLSUEModel.DistanceBasedMoneyCostWalkName, config.planCalcScore().getOrCreateModeParams("walk").getMonetaryDistanceRate());
+//		this.Params.put(CNLSUEModel.ModeConstantPtname,config.planCalcScore().getOrCreateModeParams("pt").getConstant());
+//		this.Params.put(CNLSUEModel.ModeConstantCarName,config.planCalcScore().getOrCreateModeParams("car").getConstant());
+//		this.Params.put(CNLSUEModel.MarginalUtilityofPerformName, config.planCalcScore().getPerforming_utils_hr());
+//		this.Params.put(CNLSUEModel.CapacityMultiplierName, 1.0);
+	}
+	
+	private LinkedHashMap<String,Double> handleBasicParams(LinkedHashMap<String,Double> params, String subPopulation, Config config){
+		LinkedHashMap<String,Double> newParams = new LinkedHashMap<>();
+		// Handle the original params first
+		for(String s:params.keySet()) {
+			if(subPopulation!=null && (s.contains(subPopulation)||s.contains("All"))) {
+				newParams.put(s.split(" ")[1],params.get(s));
+			}else if (subPopulation == null) {
+				newParams.put(s, params.get(s));
+			}
 		}
+		ScoringParameters scParam = new ScoringParameters.Builder(config.planCalcScore(), config.planCalcScore().getScoringParameters(subPopulation), config.scenario()).build();
 		
-
-		this.Params.put(CNLSUEModel.MarginalUtilityofTravelCarName,config.planCalcScore().getOrCreateModeParams("car").getMarginalUtilityOfTraveling());
-		this.Params.put(CNLSUEModel.MarginalUtilityofDistanceCarName,config.planCalcScore().getOrCreateModeParams("car").getMarginalUtilityOfDistance());
-		this.Params.put(CNLSUEModel.MarginalUtilityofMoneyName,config.planCalcScore().getMarginalUtilityOfMoney());
-		this.Params.put(CNLSUEModel.DistanceBasedMoneyCostCarName,config.planCalcScore().getOrCreateModeParams("car").getMonetaryDistanceRate());
-		this.Params.put(CNLSUEModel.MarginalUtilityofTravelptName, config.planCalcScore().getOrCreateModeParams("pt").getMarginalUtilityOfTraveling());
-		this.Params.put(CNLSUEModel.MarginalUtilityOfDistancePtName, config.planCalcScore().getOrCreateModeParams("pt").getMarginalUtilityOfDistance());
-		this.Params.put(CNLSUEModel.MarginalUtilityofWaitingName,config.planCalcScore().getMarginalUtlOfWaitingPt_utils_hr());
-		this.Params.put(CNLSUEModel.UtilityOfLineSwitchName,config.planCalcScore().getUtilityOfLineSwitch());
-		this.Params.put(CNLSUEModel.MarginalUtilityOfWalkingName, config.planCalcScore().getOrCreateModeParams("walk").getMarginalUtilityOfTraveling());
-		this.Params.put(CNLSUEModel.DistanceBasedMoneyCostWalkName, config.planCalcScore().getOrCreateModeParams("walk").getMonetaryDistanceRate());
-		this.Params.put(CNLSUEModel.ModeConstantPtname,config.planCalcScore().getOrCreateModeParams("pt").getConstant());
-		this.Params.put(CNLSUEModel.ModeConstantCarName,config.planCalcScore().getOrCreateModeParams("car").getConstant());
-		this.Params.put(CNLSUEModel.MarginalUtilityofPerformName, config.planCalcScore().getPerforming_utils_hr());
-		this.Params.put(CNLSUEModel.CapacityMultiplierName, 1.0);
+		newParams.compute(CNLSUEModel.MarginalUtilityofTravelCarName,(k,v)->v==null?scParam.modeParams.get("car").marginalUtilityOfTraveling_s*3600:v);
+		newParams.compute(CNLSUEModel.MarginalUtilityofDistanceCarName, (k,v)->v==null?scParam.modeParams.get("car").marginalUtilityOfDistance_m:v);
+		newParams.compute(CNLSUEModel.MarginalUtilityofMoneyName, (k,v)->v==null?scParam.marginalUtilityOfMoney:v);
+		newParams.compute(CNLSUEModel.DistanceBasedMoneyCostCarName, (k,v)->v==null?scParam.modeParams.get("car").monetaryDistanceCostRate:v);
+		newParams.compute(CNLSUEModel.MarginalUtilityofTravelptName, (k,v)->v==null?scParam.modeParams.get("pt").marginalUtilityOfTraveling_s*3600:v);
+		newParams.compute(CNLSUEModel.MarginalUtilityOfDistancePtName, (k,v)->v==null?scParam.modeParams.get("pt").marginalUtilityOfDistance_m:v);
+		newParams.compute(CNLSUEModel.MarginalUtilityofWaitingName, (k,v)->v==null?scParam.marginalUtilityOfWaitingPt_s*3600:v);
+		newParams.compute(CNLSUEModel.UtilityOfLineSwitchName, (k,v)->v==null?scParam.utilityOfLineSwitch:v);
+		newParams.compute(CNLSUEModel.MarginalUtilityOfWalkingName, (k,v)->v==null?scParam.modeParams.get("walk").marginalUtilityOfTraveling_s*3600:v);
+		newParams.compute(CNLSUEModel.DistanceBasedMoneyCostWalkName, (k,v)->v==null?scParam.modeParams.get("walk").monetaryDistanceCostRate:v);
+		newParams.compute(CNLSUEModel.ModeConstantCarName, (k,v)->v==null?scParam.modeParams.get("car").constant:v);
+		newParams.compute(CNLSUEModel.ModeConstantPtname, (k,v)->v==null?scParam.modeParams.get("pt").constant:v);
+		newParams.compute(CNLSUEModel.MarginalUtilityofPerformName, (k,v)->v==null?scParam.marginalUtilityOfPerforming_s*3600:v);
+		
+		newParams.compute(CNLSUEModel.CapacityMultiplierName, (k,v)->v==null?config.qsim().getFlowCapFactor():v);
+		
+		return newParams;
 	}
 	
 	public void setDefaultParameters(LinkedHashMap<String,Double> params) {
@@ -257,10 +295,12 @@ public class CNLSUEModel implements AnalyticalModel{
 	@Override
 	public void generateRoutesAndOD(Population population,Network network,TransitSchedule transitSchedule,
 			Scenario scenario,Map<String,FareCalculator> fareCalculator) {
-		//this.setLastPopulation(population);
+		this.setLastPopulation(population);
+		this.scenario = scenario;
 		//System.out.println("");
 		this.setOdPairs(new CNLODpairs(network,population,transitSchedule,scenario,this.timeBeans));
-		this.getOdPairs().generateODpairset();
+		Network odNetwork=NetworkUtils.readNetwork("data/tpusbNetwork.xml");
+		this.getOdPairs().generateODpairsetSubPop(odNetwork);
 		this.getOdPairs().generateRouteandLinkIncidence(0.);
 		SignalFlowReductionGenerator sg=new SignalFlowReductionGenerator(scenario);
 		for(String s:this.timeBeans.keySet()) {
@@ -273,17 +313,22 @@ public class CNLSUEModel implements AnalyticalModel{
 		}
 		this.fareCalculator=fareCalculator;
 		
+		this.ts = transitSchedule;
+
 		
-		this.carDemand.size();
-		
-		this.setTs(transitSchedule);
+	
 		for(String timeBeanId:this.timeBeans.keySet()) {
 			this.getConsecutiveSUEErrorIncrease().put(timeBeanId, 0.);
 			this.getDemand().put(timeBeanId, new HashMap<>(this.getOdPairs().getdemand(timeBeanId)));
 			for(Id<AnalyticalModelODpair> odId:this.getDemand().get(timeBeanId).keySet()) {
 				double totalDemand=this.getDemand().get(timeBeanId).get(odId);
 				this.getCarDemand().get(timeBeanId).put(odId, 0.5*totalDemand);
+				AnalyticalModelODpair odpair=this.getOdPairs().getODpairset().get(odId);
+				if(odpair.getSubPopulation()!=null && odpair.getSubPopulation().contains("GV")) {
+					this.getCarDemand().get(timeBeanId).put(odId, totalDemand);
+				}
 			}
+			
 			logger.info("Startig from 0.5 auto and transit ratio");
 			if(this.getDemand().get(timeBeanId).size()!=this.carDemand.get(timeBeanId).size()) {
 				logger.error("carDemand and total demand do not have same no of OD pair. This should not happen. Please check");
@@ -681,7 +726,7 @@ public class CNLSUEModel implements AnalyticalModel{
 		HashMap<Id<AnalyticalModelRoute>,Double> routeFlows=new HashMap<>();
 		HashMap<Id<Link>,Double> linkFlows=new HashMap<>();
 		
-		
+		this.handleBasicParams(params, odpair.getSubPopulation(), this.scenario.getConfig());
 		//double totalUtility=0;
 		
 		//Calculating route utility for all car routes inside one OD pair.
@@ -784,6 +829,8 @@ public class CNLSUEModel implements AnalyticalModel{
 		HashMap<Id<TransitLink>,Double> linkFlows=new HashMap<>();
 		
 		HashMap<Id<AnalyticalModelTransitRoute>,Double> utility=new HashMap<>();
+		
+		this.handleBasicParams(params, odpair.getSubPopulation(), this.scenario.getConfig());
 		
 		if(routes!=null && routes.size()!=0) {
 		for(AnalyticalModelTransitRoute r:routes){
@@ -1276,6 +1323,17 @@ public class CNLSUEModel implements AnalyticalModel{
 	protected void performModalSplit(LinkedHashMap<String,Double>params,LinkedHashMap<String,Double>anaParams,String timeBeanId) {
 		double modeMiu=anaParams.get(CNLSUEModel.ModeMiuName);
 		for(AnalyticalModelODpair odPair:this.getOdPairs().getODpairset().values()){
+			//For GV car proportion is always 1
+			if(odPair.getSubPopulation()!=null && odPair.getSubPopulation().contains("GV")) {
+				double carDemand=this.getDemand().get(timeBeanId).get(odPair.getODpairId());
+				this.getCarDemand().get(timeBeanId).put(odPair.getODpairId(),carDemand);
+				continue;
+			// if a phantom trip, car and pt proportion is decided from the simulation and will not be changed
+			}else if(odPair.getSubPopulation()!=null && odPair.getSubPopulation().contains("trip")) {
+				double carDemand=this.getDemand().get(timeBeanId).get(odPair.getODpairId())*odPair.getCarModalSplit();
+				this.getCarDemand().get(timeBeanId).put(odPair.getODpairId(),carDemand);
+				continue;
+			}
 			double demand=this.getDemand().get(timeBeanId).get(odPair.getODpairId());
 			if(demand!=0) { 
 			double carUtility=odPair.getExpectedMaximumCarUtility(params, anaParams, timeBeanId);

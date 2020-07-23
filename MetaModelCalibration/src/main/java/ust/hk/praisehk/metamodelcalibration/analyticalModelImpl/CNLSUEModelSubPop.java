@@ -70,12 +70,12 @@ public class CNLSUEModelSubPop extends CNLSUEModel{
 					transitSchedule,scenario.getTransitVehicles(),s);
 			this.getTransitLinks().put(s,this.getOdPairs().getTransitLinks(s));
 		}
-		this.setFareCalculator(fareCalculator);
+		this.fareCalculator = fareCalculator;
+		
+		this.ts = transitSchedule;
 		
 		
 		
-		
-		this.setTs(transitSchedule);
 		for(String timeBeanId:this.getTimeBeans().keySet()) {
 			this.getConsecutiveSUEErrorIncrease().put(timeBeanId, 0.);
 			this.getDemand().put(timeBeanId, new HashMap<>(this.getOdPairs().getdemand(timeBeanId)));

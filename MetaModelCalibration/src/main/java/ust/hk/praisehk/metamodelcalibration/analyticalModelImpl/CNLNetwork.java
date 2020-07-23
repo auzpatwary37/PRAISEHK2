@@ -1,5 +1,6 @@
 package ust.hk.praisehk.metamodelcalibration.analyticalModelImpl;
 
+import java.util.HashMap;
 import java.util.Map;
 
 import org.matsim.api.core.v01.Id;
@@ -8,6 +9,7 @@ import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.network.Network;
 import org.matsim.api.core.v01.network.Node;
 import org.matsim.pt.transitSchedule.api.TransitSchedule;
+import org.matsim.vehicles.VehicleType;
 
 import ust.hk.praisehk.metamodelcalibration.analyticalModel.AnalyticalModelLink;
 import ust.hk.praisehk.metamodelcalibration.analyticalModel.AnalyticalModelNetwork;
@@ -112,21 +114,23 @@ public class CNLNetwork extends AnalyticalModelNetwork{
 		// TODO Auto-generated method stub
 		throw new IllegalArgumentException("Not active function!!!");
 	}
-
-
 	
-
-
-	
-	/**
-	 * 
-	 * This method overlays the transit vehicles on the links of the network
-	 * @param ts
-	 * @param scenario
-	 */
 	@Override
-	public void overlayTransitVehicles(TransitSchedule ts, Scenario scenario) {
+	public void clearVehicleSpecificVolumeExceptTransit() {
+	
+		for(CNLLink link:this.getLinks().values()) {
+			link.resetVehicleSpecificVolumeExceptTransit();
+		}
 		
+	}
+
+	@Override
+	public Map<Id<Link>, Map<Id<VehicleType>, Double>> generateLinkVolumeProfile() {
+		Map<Id<Link>,Map<Id<VehicleType>,Double>> profileMap = new HashMap<>();
+		for(CNLLink link:this.getLinks().values()) {
+			profileMap.put(link.getId(),link.getVehicleSpecificVolume());
+		}
+		return profileMap;
 	}
 
 }

@@ -1,6 +1,9 @@
 package ust.hk.praisehk.metamodelcalibration.analyticalModel;
 
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Set;
 
 import org.matsim.api.core.v01.Coord;
@@ -10,6 +13,7 @@ import org.matsim.api.core.v01.network.Network;
 import org.matsim.api.core.v01.network.Node;
 import org.matsim.core.utils.collections.Tuple;
 import org.matsim.utils.objectattributes.attributable.Attributes;
+import org.matsim.vehicles.VehicleType;
 
 /**
  *
@@ -37,6 +41,8 @@ public abstract class AnalyticalModelLink implements Link{
 	protected double linkTravelTime=0;
 	
 	private double gcRatio=1;
+	protected Map<Id<VehicleType>,Double> vehicleSpecificVolume=new HashMap<>(); 
+	protected Set<Id<VehicleType>> transitVehicles=new HashSet<>();
 	
 	/**
 	 * Constructor
@@ -239,7 +245,30 @@ public abstract class AnalyticalModelLink implements Link{
 		this.gcRatio = gcRatio;
 	}
 
+	public synchronized void addVehicleSpecificVolume(double volume, Id<VehicleType> vt, boolean ifTransitVehicle) {
+		if(ifTransitVehicle) {
+			this.transitVehicles.add(vt);
+		}
+		if(!this.vehicleSpecificVolume.containsKey(vt)) {
+			this.vehicleSpecificVolume.put(vt, volume);
+		}else {
+			this.vehicleSpecificVolume.put(vt, this.vehicleSpecificVolume.get(vt)+volume);
+		}
+	}
 	
+	public void resetVehicleSpecificVolumeExceptTransit() {
+		for(Id<VehicleType> vt:this.vehicleSpecificVolume.keySet()) {
+			if(!this.transitVehicles.contains(vt)) {
+				this.vehicleSpecificVolume.put(vt, 0.);
+			}
+		}
+	}
+	
+	
+	
+	public Map<Id<VehicleType>, Double> getVehicleSpecificVolume() {
+		return vehicleSpecificVolume;
+	}
 	
 	
 }

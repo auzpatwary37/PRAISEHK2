@@ -11,6 +11,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 
 import org.matsim.api.core.v01.Id;
@@ -59,7 +60,7 @@ public class Measurements {
 		mlist.add(m);
 	}
 	
-	protected void addMeasurement(Measurement m) {
+	public void addMeasurement(Measurement m) {
 		this.measurements.put(m.getId(), m);
 		if(!this.measurementsByType.containsKey(m.getMeasurementType())) {
 			this.measurementsByType.put(m.getMeasurementType(), new ArrayList<>());
@@ -113,6 +114,21 @@ public class Measurements {
 		}
 		
 		return linkSet;
+	}
+	
+	public void addRedundantTimeBean(Map<String,Tuple<Double,Double>> timeBeans) {
+		boolean isConsistant=true;
+		for(String timeId:this.timeBean.keySet()) {
+			if(!timeBean.containsKey(timeId)) {
+				isConsistant=false;
+				throw new IllegalArgumentException("TimeBeanIds are inconsistant. Addition of time bean is not possible.");
+			}
+		}
+		for(Entry<String, Tuple<Double, Double>> timeBeans1:timeBeans.entrySet()) {
+			if(!this.timeBean.containsKey(timeBeans1.getKey())) {
+				this.timeBean.put(timeBeans1.getKey(), timeBeans1.getValue());
+			}
+		}
 	}
 	
 	public void writeCSVMeasurements(String fileLoc) {

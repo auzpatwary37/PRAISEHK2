@@ -43,6 +43,7 @@ public class AnalyticalModelODpair {
 	private final Network network;
 	private double agentCARCounter=0;
 	private double agentTrCounter=0;
+	private double averagePCU=1;
 	private double ExpectedMaximumCarUtility;
 	private double ExpectedMaximumTransitUtility;
 	private List<Id<Person>> personIdList=new ArrayList<>();
@@ -77,7 +78,9 @@ public class AnalyticalModelODpair {
 	private final Map<String, Tuple<Double,Double>>timeBean;
 	private Map<String, ArrayList<AnalyticalModelTransitRoute>> timeBasedTransitRoutes=new HashMap<>();
 	private String subPopulation;
-	private double PCU=1;
+
+	private Map<String,Map<Id<VehicleType>,Double>> vehicleSpecificDemand=new HashMap<>();
+	
 	private int minRoute=5;
 	private Map<Id<AnalyticalModelRoute>,Double> autoPathSize;
 	private Map<String,Map<Id<AnalyticalModelTransitRoute>,Double>>trPathSize;
@@ -95,6 +98,9 @@ public class AnalyticalModelODpair {
 	 */
 	public double getCarModalSplit() {
 		return (double)this.agentCARCounter/(this.agentTrCounter+this.agentCARCounter);
+	}
+	public Map<String, Map<Id<VehicleType>, Double>> getVehicleSpecificDemand() {
+		return vehicleSpecificDemand;
 	}
 	
 	/**
@@ -145,7 +151,10 @@ public class AnalyticalModelODpair {
 		this.onode=onode;
 		this.dnode=dnode;
 		this.expansionFactor=1;
-		for(String s:timeBean2.keySet()){this.demand.put(s,0.);}
+		for(String s:timeBean2.keySet()){
+			this.demand.put(s,0.);
+			this.vehicleSpecificDemand.put(s, new HashMap<>());
+			}
 		ODpairId=Id.create(onode.getId().toString()+"_"+dnode.getId().toString(), AnalyticalModelODpair.class);
 		this.timeBean=timeBean2;
 		for(String timeBeanId:this.timeBean.keySet()) {
@@ -168,7 +177,9 @@ public class AnalyticalModelODpair {
 		this.onode=onode;
 		this.dnode=dnode;
 		this.expansionFactor=1;
-		for(String s:timeBean2.keySet()){this.demand.put(s,0.);}
+		for(String s:timeBean2.keySet()){
+			this.demand.put(s,0.);
+			this.vehicleSpecificDemand.put(s, new HashMap<>());}
 		ODpairId=Id.create(onode.getId().toString()+"_"+dnode.getId().toString()+"_"+subPopulation, AnalyticalModelODpair.class);
 		this.timeBean=timeBean2;
 		for(String timeBeanId:this.timeBean.keySet()) {
@@ -187,7 +198,11 @@ public class AnalyticalModelODpair {
 		
 	}
 	
-	
+	public void updateAveragePCU(double pcu) {
+		double totalPCU=this.averagePCU*(this.agentCARCounter-1)+pcu;
+		this.averagePCU=totalPCU/this.agentCARCounter;
+		
+	}
 	
 	public String getSubPopulation() {
 		return subPopulation;
@@ -307,8 +322,18 @@ public class AnalyticalModelODpair {
 //			}
 			//this.median.put(timeId, this.startTimeSum.get(timeId)/(this.demand.get(timeId)+1));
 			
-			demand.put(timeId, demand.get(timeId)+trip.getCarPCU());//TODO: how to fix it??
-			this.agentCARCounter+=trip.getCarPCU();
+			//demand.put(timeId, demand.get(timeId)+trip.getCarPCU());//TODO: how to fix it??
+			demand.put(timeId, demand.get(timeId)+1);//TODO: how to fix it??
+			//Add the demand to the vehicleType demand 
+			if(this.vehicleSpecificDemand.get(timeId).containsKey(trip.getVehicleType())) {
+				this.vehicleSpecificDemand.get(timeId).put(trip.getVehicleType(),this.vehicleSpecificDemand.get(timeId).get(trip.getVehicleType())+1);
+			}else {
+				this.vehicleSpecificDemand.get(timeId).put(trip.getVehicleType(),1.);
+			}
+			
+			this.agentCARCounter+=1;
+			this.updateAveragePCU(trip.getCarPCU());
+			
 			
 			
 			if(!routeset.containsKey(trip.getRoute().getRouteId())){//A new route 
@@ -326,7 +351,8 @@ public class AnalyticalModelODpair {
 //				System.out.println();
 //			}
 			this.startTimes.get(timeId).add(trip.getStartTime());
-			demand.put(timeId, demand.get(timeId)+trip.getCarPCU());
+			//demand.put(timeId, demand.get(timeId)+trip.getCarPCU());
+			demand.put(timeId, demand.get(timeId)+1);
 			this.agentTrCounter++;
 			if(!this.Transitroutes.containsKey(trip.getTrRoute().getTrRouteId())) {
 				this.Transitroutes.put(trip.getTrRoute().getTrRouteId(),trip.getTrRoute());
@@ -352,7 +378,50 @@ public class AnalyticalModelODpair {
 //		}
 //	}
 	
+	public void addRoute(Trip trip) {
+		String timeId=null;
+		Integer i=0;
+		if(trip.getStartTime()>24*3600) {
+			trip.setStartTime(trip.getStartTime()-24*3600);
+		}
+		for(String t:this.timeBean.keySet()) {
+			if(trip.getStartTime()>=this.timeBean.get(t).getFirst() && trip.getStartTime()<this.timeBean.get(t).getSecond()) {
+				timeId=t;
+			}
+			
+		}
+		if(trip.getRoute()!=null && timeId!=null){
+			demand.put(timeId, demand.get(timeId)+1);//TODO: how to fix it??
+			this.agentCARCounter+=1;
+			this.updateAveragePCU(trip.getCarPCU());
 
+			if(!routeset.containsKey(trip.getRoute().getRouteId())){//A new route 
+				routeset.put(trip.getRoute().getRouteId(),1);
+				this.RoutesWithDescription.put(trip.getRoute().getRouteId(),trip.getRoute());
+				//this.RoutesWithDescription.get(trip.getRoute().getRouteDescription()).addPerson(trip.getPersonId());
+				//this.no_of_occurance.put(trip.getRouteId(), 1);
+
+			}else{ //not a new route
+				this.routeset.put(trip.getRoute().getRouteId(), routeset.get(trip.getRoute().getRouteId())+1);
+				//this.RoutesWithDescription.get(trip.getRoute().getRouteDescription()).addPerson(trip.getPersonId());
+			}
+		}else if(trip.getTrRoute()!=null && timeId!=null) {
+			//			if(demand.get(timeId)==null) {
+			//				System.out.println();
+			//			}
+			this.startTimes.get(timeId).add(trip.getStartTime());
+			demand.put(timeId, demand.get(timeId)+trip.getCarPCU());
+			this.agentTrCounter++;
+			if(!this.Transitroutes.containsKey(trip.getTrRoute().getTrRouteId())) {
+				this.Transitroutes.put(trip.getTrRoute().getTrRouteId(),trip.getTrRoute());
+				this.transitRouteCounter.put(trip.getTrRoute().getTrRouteId(), 1);
+			}else {
+				this.transitRouteCounter.put(trip.getTrRoute().getTrRouteId(),this.transitRouteCounter.get(trip.getTrRoute().getTrRouteId())+ 1);
+			}
+		}else {
+			this.personIdList.add(trip.getPersonId());
+		}
+	}
 	
 	public Double getMedian(String timeId) {
 		return median.get(timeId);
@@ -439,7 +508,7 @@ public class AnalyticalModelODpair {
 		if(this.agentTrCounter!=0) {
 			finalTrRoutes=new ArrayList<>();
 			for(Entry<Id<AnalyticalModelTransitRoute>, Integer> e:this.transitRouteCounter.entrySet()) {
-				if(((double)e.getValue()/(double)this.agentTrCounter*100)>routePercentage||this.transitRouteCounter.size()<=this.minRoute) {
+				if(((double)e.getValue()/(double)this.agentTrCounter*100)>routePercentage||this.transitRouteCounter.size()<=this.minRoute) {//maybe this should be and instead of or??
 					this.finalTrRoutes.add(this.Transitroutes.get(e.getKey()));
 					for(String timeBeanId:this.timeBean.keySet()) {
 						AnalyticalModelTransitRoute tr=this.Transitroutes.get(e.getKey());
@@ -638,7 +707,9 @@ public class AnalyticalModelODpair {
 		
 	}
 	
-	
+	public double getAveragePCU() {
+		return averagePCU;
+	}
 	
 	public double getOriginParkingCharge() {
 		return originParkingCharge;
@@ -725,7 +796,7 @@ public class AnalyticalModelODpair {
 		Map<String,Map<Id<AnalyticalModelTransitRoute>,Double>>trPathSize=new HashMap<>();
 		for(String timeBeanId:this.timeBean.keySet()) {
 			trPathSize.put(timeBeanId, new HashMap<>());
-			if(this.getTrRoutes()!=null) {
+			if(this.getTrRoutes(timeBeanId)!=null) {
 			for(AnalyticalModelTransitRoute anaTr:this.getTrRoutes(timeBeanId)) {
 				double ps=0;
 				double routeDistance=anaTr.getRouteDistance(network);
@@ -749,6 +820,29 @@ public class AnalyticalModelODpair {
 
 	public Map<String, Map<Id<AnalyticalModelTransitRoute>, Double>> getTrPathSize() {
 		return trPathSize;
+	}
+	// apply this just after creation of the od pair. DO NOT APPLY THIS AFTER ROUTE GENERATION 
+	public void generateOdSpecificRouteKeys() {
+		Map<Id<AnalyticalModelRoute>,AnalyticalModelRoute> newRoutesWithDescription = new HashMap<>();
+		int routeNo = 0;
+		for(Entry<Id<AnalyticalModelRoute>, AnalyticalModelRoute> r:this.RoutesWithDescription.entrySet()) {
+			r.getValue().updateToOdBasedId(this.ODpairId, routeNo);
+			newRoutesWithDescription.put(r.getValue().getRouteId(), r.getValue());
+			this.routeset.put(r.getValue().getRouteId(), this.routeset.get(r.getKey()));
+			this.routeset.remove(r.getKey());
+			routeNo++;
+		}
+		this.RoutesWithDescription = newRoutesWithDescription;
+		Map<Id<AnalyticalModelTransitRoute>,AnalyticalModelTransitRoute> newTrRoutesWithDescription = new HashMap<>();
+		routeNo = 0;
+		for(Entry<Id<AnalyticalModelTransitRoute>, AnalyticalModelTransitRoute> tr:this.Transitroutes.entrySet()) {
+			tr.getValue().updateToOdBasedId(this.ODpairId, routeNo);
+			newTrRoutesWithDescription.put(tr.getValue().getTrRouteId(),tr.getValue());
+			this.transitRouteCounter.put(tr.getValue().getTrRouteId(), this.transitRouteCounter.get(tr.getKey()));
+			this.transitRouteCounter.remove(tr.getKey());
+			routeNo++;
+		}
+		this.Transitroutes = newTrRoutesWithDescription;
 	}
 	
 	

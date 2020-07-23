@@ -3,8 +3,10 @@ package ust.hk.praisehk.metamodelcalibration.analyticalModel;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.Scenario;
@@ -216,6 +218,7 @@ public abstract class AnalyticalModelODpairs {
 		/**
 		 * Experimental Parallel
 		 */
+		Map<Id<AnalyticalModelODpair>,Set<AnalyticalModelODpair>> pureODMap=new HashMap<>();
 		boolean multiThread=true;
 		if(multiThread==true) {
 			ArrayList<tripsCreatorFromPlan> threadrun=new ArrayList<>();
@@ -244,7 +247,7 @@ public abstract class AnalyticalModelODpairs {
 		}else {
 			for (Person person:population.getPersons().values()){
 				TripChain tripchain=this.getNewTripChain(person.getSelectedPlan());
-				String s=person.getAttributes().getAsMap().get("SUBPOP_ATTRIB_NAME").toString();
+				String s=PopulationUtils.getSubpopulation(person);
 				for(Trip t:(ArrayList<Trip>)tripchain.getTrips()) {
 					t.setSubPopulationName(s);
 				}
@@ -259,20 +262,68 @@ public abstract class AnalyticalModelODpairs {
 				pcu=v.getType().getPcuEquivalents();
 			}
 			trip.setCarPCU(pcu);
+			trip.setVehicleType(v.getType().getId());
 			if(trip.getRoute()!=null ||trip.getTrRoute()!=null) {
 				Id<AnalyticalModelODpair> ODId=trip.generateODpairId(odNetwork);
+				Id<AnalyticalModelODpair> pureODId=trip.generateODpairIdWithoutSubPop(odNetwork);
 				if (ODpairset.containsKey(ODId)){
 					ODpairset.get(ODId).addtrip(trip);
 				}else{
 					AnalyticalModelODpair odpair=this.getNewODPair(trip.getOriginNode(),trip.getDestinationNode(),this.network,this.timeBean,trip.getSubPopulationName());
 					odpair.addtrip(trip);
 					ODpairset.put(trip.generateODpairId(odNetwork), odpair);
+					if(pureODMap.containsKey(pureODId)) {
+						pureODMap.get(pureODId).add(odpair);
+					}else {
+						pureODMap.put(pureODId,new HashSet<>());
+						pureODMap.get(pureODId).add(odpair);
+					}
+				}
+				for(AnalyticalModelODpair od:pureODMap.get(pureODId)) {
+					od.addRoute(trip);
 				}
 			}else {
 				tripsWithoutRoute++;
 			}
 		}
 		System.out.println("no of trips withoutRoutes = "+tripsWithoutRoute);
+	}
+	/**
+	 * Apply this just after creation of the od pair.
+	 * Before route generation 
+	 * DO NOT APPLY THIS AFTER ROUTE GENERATION
+	 */
+	public void generateOdSpecificRouteKeys() {
+		for(AnalyticalModelODpair odpair:this.ODpairset.values()) {
+			odpair.generateOdSpecificRouteKeys();
+		}
+	}
+	
+	
+
+	/**
+	 * This function will do path sharing between the same od pair sub population 
+	 */
+	public void sharePathbetweenSubPop() {
+		Map<String,Set<AnalyticalModelRoute>>routes=new HashMap<>();
+		Map<String,Set<AnalyticalModelTransitRoute>>trroutes=new HashMap<>();
+		
+		
+		for(AnalyticalModelODpair od:this.ODpairset.values()) {
+			String[] baseString = od.getODpairId().toString().split("_");
+			String odid=baseString[0]+"_"+baseString[1];
+			if(!routes.containsKey(odid)) {
+				routes.put(odid, new HashSet<>());
+				
+			}
+			
+			if(!trroutes.containsKey(odid)) {
+				trroutes.put(odid, new HashSet<>());
+				
+			}
+			
+			  
+		}
 	}
 	
 }
@@ -320,6 +371,7 @@ class tripsCreatorFromPlan implements Runnable {
 	public ArrayList<Trip> getTrips(){
 		return this.trips;
 	}
+	
 	
 	
 }

@@ -7,6 +7,7 @@ import org.matsim.api.core.v01.network.Network;
 import org.matsim.api.core.v01.network.Node;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.core.network.NetworkUtils;
+import org.matsim.vehicles.VehicleType;
 
 
 
@@ -41,6 +42,7 @@ public class Trip {
 	private String subPopulationName=null;
 	private static final Logger logger=Logger.getLogger(Trip.class);
 	private double CarPCU=1;
+	private Id<VehicleType> vt=null;
 	/**
 	 * 
 	 * @param line - containing all the data probably from a file (.csv)
@@ -96,7 +98,13 @@ public class Trip {
 
 	}
 	
-	
+	public Id<AnalyticalModelODpair> generateODpairIdWithoutSubPop(Network network) {
+		this.originNode=NetworkUtils.getNearestNode(network, activity1coord);
+		this.destinationNode=NetworkUtils.getNearestNode(network, activity2coord);
+		ODpairId=Id.create(this.getOriginNode().getId().toString()+"_"+this.getDestinationNode().getId().toString(),AnalyticalModelODpair.class);
+		return ODpairId;
+
+	}
 	/**
 	 * ----------------------------------Getter and Setter---------------------------------------
 	 * 
@@ -211,4 +219,14 @@ public class Trip {
 	public void setSubPopulationName(String subPopulationName) {
 		this.subPopulationName = subPopulationName;
 	}
+
+	public Id<VehicleType> getVehicleType() {
+		return vt;
+	}
+
+	public void setVehicleType(Id<VehicleType> vt) {
+		this.vt = vt;
+	}
+	
+	
 }
