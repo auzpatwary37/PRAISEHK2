@@ -911,7 +911,7 @@ public class CNLSUEModel implements AnalyticalModel{
 	}
 	
 	
-	static boolean routeContain(List<AnalyticalModelTransitRoute> routesFromOd,AnalyticalModelTransitRoute route) {
+	public static boolean routeContain(List<AnalyticalModelTransitRoute> routesFromOd,AnalyticalModelTransitRoute route) {
 		
 		for(AnalyticalModelTransitRoute r:routesFromOd) {
 			if(r.getTrRouteId().equals(route.getTrRouteId())) {
