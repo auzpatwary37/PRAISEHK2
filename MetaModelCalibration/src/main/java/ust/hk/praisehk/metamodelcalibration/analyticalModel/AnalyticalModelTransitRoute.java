@@ -35,7 +35,7 @@ public interface AnalyticalModelTransitRoute{
 	 * @return
 	 */
 	public double calcRouteUtility(LinkedHashMap<String,Double> params,
-			LinkedHashMap<String,Double> AnaParam,AnalyticalModelNetwork network,Map<String,FareCalculator> farecalc,Map<String,Object> AdditionalDataContainer, Tuple<Double,Double>timeBean);
+			LinkedHashMap<String,Double> AnaParam,AnalyticalModelNetwork network,Map<Id<TransitLink>,TransitLink>transitLinks, Map<String,FareCalculator> farecalc,Map<String,Object> AdditionalDataContainer, Tuple<Double,Double>timeBean);
 
 	
 	/**
@@ -50,7 +50,7 @@ public interface AnalyticalModelTransitRoute{
 	 * @param network
 	 * @return
 	 */
-	public double calcRouteTravelTime(AnalyticalModelNetwork network,Tuple<Double,Double>timeBean,LinkedHashMap<String,Double>params,LinkedHashMap<String,Double>anaParams);
+	public double calcRouteTravelTime(AnalyticalModelNetwork network,Map<Id<TransitLink>,TransitLink>transitLinks, Tuple<Double,Double>timeBean,LinkedHashMap<String,Double>params,LinkedHashMap<String,Double>anaParams);
 	/**
 	 * returns the route total walking distance 
 	 * @return
@@ -60,7 +60,7 @@ public interface AnalyticalModelTransitRoute{
 	 * Calculates and returns the route waiting time
 	 * @return
 	 */
-	public double getRouteWaitingTime(LinkedHashMap<String,Double> anaParams,AnalyticalModelNetwork network);
+	public double getRouteWaitingTime(LinkedHashMap<String,Double> anaParams,AnalyticalModelNetwork network, Map<Id<TransitLink>,TransitLink>transitLinks);
 
 	public Id<AnalyticalModelTransitRoute> getTrRouteId();
 	
@@ -74,6 +74,10 @@ public interface AnalyticalModelTransitRoute{
 	
 	public double getRouteDistance(Network network);
 	
+	/**
+	 * Use this with proper caution. This do not hold proper information about the link volumes as the link volume is only updated exogenously. 
+	 * @return
+	 */
 	public Map<Id<TransitLink>, TransitLink> getTransitLinks();
 	
 	public List<TransitDirectLink> getTransitDirectLinks();

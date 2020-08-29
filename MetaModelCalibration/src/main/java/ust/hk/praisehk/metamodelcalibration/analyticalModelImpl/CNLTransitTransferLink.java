@@ -69,13 +69,13 @@ public class CNLTransitTransferLink extends TransitTransferLink {
 			double noOfVehicles=this.nextdLink.getFrequency();
 			CNLLink l_gamma = ((CNLLink)network.getLinks().get(this.nextdLink.getLinkList().get(0)));
 			currentOnboardPassenger = l_gamma.getTransitPassengerVolume(this.nextdLink.getLineId()+"_"+this.nextdLink.getRouteId());
-			if(this.incidentLinkIds==null)this.incidentLinkIds = l_gamma.getTransitDirectLinks(this.nextdLink.getLineId()+"_"+this.nextdLink.getRouteId());
+			if(this.incidentLinkIds==null || this.incidentLinkIds.size()==0)this.incidentLinkIds = l_gamma.getTransitDirectLinks(this.nextdLink.getLineId()+"_"+this.nextdLink.getRouteId());
 			this.waitingTime=headway*anaParams.get(CNLSUEModel.TransferalphaName)+
-					headway*Math.pow((this.passangerCount+this.currentOnboardPassenger)/(capacity*noOfVehicles),anaParams.get(CNLSUEModel.TransferbetaName));
+					headway*Math.pow((this.currentOnboardPassenger)/(capacity*noOfVehicles),anaParams.get(CNLSUEModel.TransferbetaName));
+			//can add this term : this.passangerCount+ to the current onborad passenger but I think it is overcounting. 
 			if(Double.isNaN(this.waitingTime)||this.waitingTime==Double.POSITIVE_INFINITY) {
 				return this.waitingTime=3600;
-			}
-			
+			}			
 			return this.waitingTime;
 			
 		}else {

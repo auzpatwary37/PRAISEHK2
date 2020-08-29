@@ -60,7 +60,7 @@ public class AnalyticalModelODpair {
 	private LinkedHashMap<Id<AnalyticalModelRoute>, Integer> routeset=new LinkedHashMap<>();
 	private Map<Id<AnalyticalModelRoute>,AnalyticalModelRoute> RoutesWithDescription=new HashMap<>();
 	private ArrayList<AnalyticalModelRoute> finalRoutes;
-	private Map<Id<Link>,ArrayList<AnalyticalModelRoute>> linkIncidence=null;
+	private Map<Id<Link>,List<AnalyticalModelRoute>> linkIncidence=null;
 	private Map<Id<TransitLink>,ArrayList<AnalyticalModelTransitRoute>> trLinkIncidence=null;
 	private Map<Id<Link>,ArrayList<AnalyticalModelTransitRoute>> trPhysiscalLinkIncidence=null;
 	private double routePercentage=5.0;
@@ -690,7 +690,7 @@ public class AnalyticalModelODpair {
 	}
 	
 
-	public Map<Id<Link>,ArrayList<AnalyticalModelRoute>> getLinkIncidence(){
+	public Map<Id<Link>,List<AnalyticalModelRoute>> getLinkIncidence(){
 		if(this.linkIncidence==null) {
 			this.generateLinkIncidence();
 		}

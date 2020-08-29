@@ -206,9 +206,9 @@ public class CNLTransitRoute implements AnalyticalModelTransitRoute{
 //	}
 	
 	
-	public double calcRouteUtility(LinkedHashMap<String, Double> params,LinkedHashMap<String, Double> anaParams,AnalyticalModelNetwork network,Map<String,FareCalculator>farecalc,Map<String,Object> AdditionalDataContainer,
+	public double calcRouteUtility(LinkedHashMap<String, Double> params,LinkedHashMap<String, Double> anaParams,AnalyticalModelNetwork network,Map<Id<TransitLink>,TransitLink>transitLinks,Map<String,FareCalculator>farecalc,Map<String,Object> AdditionalDataContainer,
 			Tuple<Double,Double> timeBean) {
-		routeInfoOut info=this.calcRouteTravelAndWaitingTime(network, timeBean, params, anaParams);
+		routeInfoOut info=this.calcRouteTravelAndWaitingTime(network,transitLinks, timeBean, params, anaParams);
 		this.info=info;
 		double MUTravelTime=params.get(CNLSUEModel.MarginalUtilityofTravelptName)/3600.0-params.get(CNLSUEModel.MarginalUtilityofPerformName)/3600.0;
 		double MUDistance=params.get(CNLSUEModel.MarginalUtilityOfDistancePtName);
@@ -241,9 +241,9 @@ public class CNLTransitRoute implements AnalyticalModelTransitRoute{
 	}
 	
 	
-	public double calcRouteUtility(LinkedHashMap<String, Double> params,LinkedHashMap<String, Double> anaParams,Map<String,AnalyticalModelNetwork> network,Map<String,FareCalculator>farecalc,
+	public double calcRouteUtility(LinkedHashMap<String, Double> params,LinkedHashMap<String, Double> anaParams,Map<String,AnalyticalModelNetwork> network,Map<Id<TransitLink>,TransitLink>transitLinks, Map<String,FareCalculator>farecalc,
 			Map<String,Tuple<Double,Double>> timeBean,AnalyticalModelODpair odpair,String timeBeanId,String nextTimeBeanId) {
-		routeInfoOut info=this.calcRouteTravelAndWaitingTime(network, timeBean, params, anaParams,odpair,timeBeanId,nextTimeBeanId);
+		routeInfoOut info=this.calcRouteTravelAndWaitingTime(network,transitLinks, timeBean, params, anaParams,odpair,timeBeanId,nextTimeBeanId);
 		this.info=info;
 		double MUTravelTime=params.get(CNLSUEModel.MarginalUtilityofTravelptName)/3600.0-params.get(CNLSUEModel.MarginalUtilityofPerformName)/3600.0;
 		double MUDistance=params.get(CNLSUEModel.MarginalUtilityOfDistancePtName);
@@ -349,7 +349,7 @@ public class CNLTransitRoute implements AnalyticalModelTransitRoute{
 	}
 
 	@Override
-	public double calcRouteTravelTime(AnalyticalModelNetwork network,Tuple<Double,Double>timeBean,LinkedHashMap<String,Double>params,LinkedHashMap<String,Double>anaParams) {
+	public double calcRouteTravelTime(AnalyticalModelNetwork network,Map<Id<TransitLink>,TransitLink>transitLinks, Tuple<Double,Double>timeBean,LinkedHashMap<String,Double>params,LinkedHashMap<String,Double>anaParams) {
 		double routeTravelTime=0;
 		for(CNLTransitDirectLink dlink:this.directLinks) {
 			routeTravelTime+=dlink.getLinkTravelTime(network,timeBean,params,anaParams);
@@ -361,7 +361,7 @@ public class CNLTransitRoute implements AnalyticalModelTransitRoute{
 //		
 //	}
 	
-	public routeInfoOut calcRouteTravelAndWaitingTime(AnalyticalModelNetwork network,Tuple<Double,Double>timeBean,LinkedHashMap<String,Double>params,LinkedHashMap<String,Double>anaParams) {
+	public routeInfoOut calcRouteTravelAndWaitingTime(AnalyticalModelNetwork network,Map<Id<TransitLink>,TransitLink>transitLinks, Tuple<Double,Double>timeBean,LinkedHashMap<String,Double>params,LinkedHashMap<String,Double>anaParams) {
 		double time=0;
 		double waitingTime=0;
 		double travelTime=0;
@@ -370,7 +370,7 @@ public class CNLTransitRoute implements AnalyticalModelTransitRoute{
 		Map<Id<TransitLink>,Double> linkReachTimeDL=new HashMap<>();
 		Map<Id<TransitLink>,Double> linkReachTimeTL=new HashMap<>();
 		linkReachTimeTL.put(this.transferLinks.get(0).getTrLinkId(),time);
-		double neededwaitingTime=this.transferLinks.get(0).getWaitingTime(anaParams, network);
+		double neededwaitingTime=((CNLTransitTransferLink)transitLinks.get(this.transferLinks.get(0).getTrLinkId())).getWaitingTime(anaParams, network);
 		waitingTime+=neededwaitingTime;
 		time+=neededwaitingTime;
 			
@@ -382,7 +382,7 @@ public class CNLTransitRoute implements AnalyticalModelTransitRoute{
 			travelTime+=travelTimeDL;
 			time+=travelTimeDL;
 			linkReachTimeTL.put(this.transferLinks.get(i+1).getTrLinkId(), time);
-			double waitingTimeTL=this.transferLinks.get(i+1).getWaitingTime(anaParams, network);
+			double waitingTimeTL=((CNLTransitTransferLink)transitLinks.get(this.transferLinks.get(i+1).getTrLinkId())).getWaitingTime(anaParams, network);
 			if(Double.isNaN(waitingTime))
 				System.out.println("a");
 			waitingTime+=waitingTimeTL;
@@ -395,7 +395,7 @@ public class CNLTransitRoute implements AnalyticalModelTransitRoute{
 		return info;
 	}
 	
-	public routeInfoOut calcRouteTravelAndWaitingTime(Map<String,AnalyticalModelNetwork> network,
+	public routeInfoOut calcRouteTravelAndWaitingTime(Map<String,AnalyticalModelNetwork> network,Map<Id<TransitLink>,TransitLink>transitLinks,
 			Map<String,Tuple<Double,Double>>timeBean,LinkedHashMap<String,Double>params,
 			LinkedHashMap<String,Double>anaParams,AnalyticalModelODpair odpair,String timeBeanId, String nextTimeBeanId) {
 		double time=0;
@@ -406,7 +406,7 @@ public class CNLTransitRoute implements AnalyticalModelTransitRoute{
 		Map<Id<TransitLink>,Double> linkReachTimeDL=new HashMap<>();
 		Map<Id<TransitLink>,Double> linkReachTimeTL=new HashMap<>();
 		linkReachTimeTL.put(this.transferLinks.get(0).getTrLinkId(),time);
-		double neededwaitingTime=this.transferLinks.get(0).getWaitingTime(anaParams, network.get(timeBeanId));
+		double neededwaitingTime=((CNLTransitTransferLink)transitLinks.get(this.transferLinks.get(0).getTrLinkId())).getWaitingTime(anaParams, network.get(timeBeanId));
 		waitingTime+=neededwaitingTime;
 		time+=neededwaitingTime;
 			
@@ -420,8 +420,8 @@ public class CNLTransitRoute implements AnalyticalModelTransitRoute{
 			travelTime+=avgtt;
 			time+=avgtt;
 			linkReachTimeTL.put(this.transferLinks.get(i+1).getTrLinkId(), time);
-			double waitingTimeTL1=this.transferLinks.get(i+1).getWaitingTime(anaParams, network.get(timeBeanId));
-			double waitingTimeTL2=this.transferLinks.get(i+1).getWaitingTime(anaParams, network.get(nextTimeBeanId));
+			double waitingTimeTL1=((CNLTransitTransferLink)transitLinks.get(this.transferLinks.get(i+1).getTrLinkId())).getWaitingTime(anaParams, network.get(timeBeanId));
+			double waitingTimeTL2=((CNLTransitTransferLink)transitLinks.get(this.transferLinks.get(i+1).getTrLinkId())).getWaitingTime(anaParams, network.get(nextTimeBeanId));
 			double p2=odpair.getDepartureTimeDistributions().get(timeBeanId).cumulativeProbability(timeBean.get(timeBeanId).getSecond()-time);
 			double avgWaitTime=waitingTimeTL1*p2+waitingTimeTL2*(1-p2);
 			waitingTime+=avgWaitTime;
@@ -449,10 +449,10 @@ public class CNLTransitRoute implements AnalyticalModelTransitRoute{
 	}
 
 	@Override
-	public double getRouteWaitingTime(LinkedHashMap<String,Double> anaParams,AnalyticalModelNetwork network) {
+	public double getRouteWaitingTime(LinkedHashMap<String,Double> anaParams,AnalyticalModelNetwork network,Map<Id<TransitLink>,TransitLink>transitLinks) {
 		double routeWaitingTime=0;
 		for(CNLTransitTransferLink tlink:this.transferLinks) {
-			routeWaitingTime+=tlink.getWaitingTime(anaParams,network);
+			routeWaitingTime+=((CNLTransitTransferLink)transitLinks.get(tlink.getTrLinkId())).getWaitingTime(anaParams,network);
 		}
 		return routeWaitingTime;
 	}

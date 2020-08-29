@@ -837,7 +837,7 @@ public class CNLSUEModel implements AnalyticalModel{
 			double u=0;
 			if(counter>1) {
 				u=r.calcRouteUtility(params, anaParams,
-					this.getNetworks().get(timeBeanId),this.fareCalculator,null,this.timeBeans.get(timeBeanId));
+					this.getNetworks().get(timeBeanId),this.transitLinks.get(timeBeanId),this.fareCalculator,null,this.timeBeans.get(timeBeanId));
 				u+=Math.log(odpair.getTrPathSize().get(timeBeanId).get(r.getTrRouteId()));//adding the path size term
 				
 				if(u==Double.NaN) {

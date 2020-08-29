@@ -581,7 +581,7 @@ public class SUEModelContTime implements AnalyticalModel{
 				double u=0;
 				if(counter>1) {
 					u=r.calcRouteUtility(params, anaParams,
-						this.networks,this.fareCalculator,this.timeBeans,odpair,timeBeanId,this.getNextTimeBean(timeBeanId));
+						this.networks,this.transitLinks.get(timeBeanId),this.fareCalculator,this.timeBeans,odpair,timeBeanId,this.getNextTimeBean(timeBeanId));
 					u+=Math.log(odpair.getTrPathSize().get(timeBeanId).get(r.getTrRouteId()));//adding the path size term
 					
 					if(u==Double.NaN) {
@@ -590,7 +590,7 @@ public class SUEModelContTime implements AnalyticalModel{
 					}
 				}else {
 					u=r.calcRouteUtility(params, anaParams,
-							this.networks,this.fareCalculator,this.timeBeans,odpair,timeBeanId,this.getNextTimeBean(timeBeanId));
+							this.networks,this.transitLinks.get(timeBeanId),this.fareCalculator,this.timeBeans,odpair,timeBeanId,this.getNextTimeBean(timeBeanId));
 					u=0;
 				}
 				if(u>300) {

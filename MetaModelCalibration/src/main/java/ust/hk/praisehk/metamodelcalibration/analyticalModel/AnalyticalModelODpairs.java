@@ -155,10 +155,7 @@ public abstract class AnalyticalModelODpairs {
 		return population;
 	}
 	
-	public Map<Id<Link>,ArrayList<AnalyticalModelRoute>> getLinkIncidence(String ODpairId){
-		this.ODpairset.get(ODpairId).generateLinkIncidence();
-		return this.ODpairset.get(ODpairId).getLinkIncidence();
-	}
+
 	public Map<Id<AnalyticalModelODpair>, AnalyticalModelODpair> getODpairset() {
 		return ODpairset;
 	}
