@@ -67,6 +67,13 @@ public class Measurements {
 		}
 		this.measurementsByType.get(m.getMeasurementType()).add(m);
 	}
+	
+	public void removeMeasurementsByType(MeasurementType type) {
+		for(Measurement m:this.measurementsByType.get(type)) {
+			this.measurements.remove(m.getId());
+		}
+		this.measurementsByType.remove(type);
+	}
 
 	public Map<String, Tuple<Double, Double>> getTimeBean() {
 		return timeBean;
