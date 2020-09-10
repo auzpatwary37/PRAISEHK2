@@ -309,7 +309,7 @@ public class CalibratorImpl implements Calibrator {
 				trialParam=this.drawRandomPoint(this.pReader.getInitialParamLimit());
 			}else {
 				AnalyticalModelOptimizer anaOptimizer=new AnalyticalModelOptimizerImpl(sue, this.calibrationMeasurements, this.metaModels, this.currentParam, this.TrRadius, this.pReader.getInitialParamLimit(),this.ObjectiveType ,metaModelType,this.pReader, this.iterationNo,this.fileLoc);
-				anaOptimizer.setOptimizerType(AnalyticalModelOptimizer.MATLABOptimizerName);
+				anaOptimizer.setOptimizerType(AnalyticalModelOptimizer.TROptimizerName);
 				this.trialParam=anaOptimizer.performOptimization();
 			}
 			

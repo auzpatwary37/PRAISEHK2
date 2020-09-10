@@ -299,8 +299,9 @@ public class CNLSUEModel implements AnalyticalModel{
 		this.scenario = scenario;
 		//System.out.println("");
 		this.setOdPairs(new CNLODpairs(network,population,transitSchedule,scenario,this.timeBeans));
-		Network odNetwork=NetworkUtils.readNetwork("data/tpusbNetwork.xml");
-		this.getOdPairs().generateODpairsetSubPop(odNetwork);
+		//Network odNetwork=NetworkUtils.readNetwork("data/tpusbNetwork.xml");
+		Network odNetwork = null;
+		this.getOdPairs().generateODpairset();
 		this.getOdPairs().generateRouteandLinkIncidence(0.);
 		SignalFlowReductionGenerator sg=new SignalFlowReductionGenerator(scenario);
 		for(String s:this.timeBeans.keySet()) {
@@ -322,7 +323,13 @@ public class CNLSUEModel implements AnalyticalModel{
 			this.getDemand().put(timeBeanId, new HashMap<>(this.getOdPairs().getdemand(timeBeanId)));
 			for(Id<AnalyticalModelODpair> odId:this.getDemand().get(timeBeanId).keySet()) {
 				double totalDemand=this.getDemand().get(timeBeanId).get(odId);
-				this.getCarDemand().get(timeBeanId).put(odId, 0.5*totalDemand);
+				if(this.odPairs.getODpairset().get(odId).getTrRoutes()!=null && this.odPairs.getODpairset().get(odId).getRoutes()!=null) {
+					this.getCarDemand().get(timeBeanId).put(odId, 0.5*totalDemand);
+				}else if(this.odPairs.getODpairset().get(odId).getTrRoutes()==null) {
+					this.getCarDemand().get(timeBeanId).put(odId, 1.*totalDemand);
+				}else if(this.odPairs.getODpairset().get(odId).getRoutes()==null) {
+					this.getCarDemand().get(timeBeanId).put(odId, 0.*totalDemand);
+				}
 				AnalyticalModelODpair odpair=this.getOdPairs().getODpairset().get(odId);
 				if(odpair.getSubPopulation()!=null && odpair.getSubPopulation().contains("GV")) {
 					this.getCarDemand().get(timeBeanId).put(odId, totalDemand);
@@ -630,7 +637,7 @@ public class CNLSUEModel implements AnalyticalModel{
 							for(FareLink fl:((CNLTransitRoute)tr).getFareLinks()) {
 								Id<Measurement> mId=Id.create(fl.toString(), Measurement.class);
 								Measurement m=this.measurementsToUpdate.getMeasurements().get(mId);
-								if(m.getVolumes().containsKey(timeBeanId)) {
+								if(m!=null && m.getVolumes().containsKey(timeBeanId)) {
 									m.putVolume(timeBeanId, m.getVolumes().get(timeBeanId)+odpair.getTrRouteFlow().get(timeBeanId).get(tr.getTrRouteId()));
 								}
 
@@ -778,14 +785,14 @@ public class CNLSUEModel implements AnalyticalModel{
 			double u=utility.get(r.getRouteId());
 			double demand=this.getCarDemand().get(timeBeanId).get(ODpairId);
 			String id=null;
-			if(this.odMultiplierId==null) {
-				id=CNLSUEModel.getODtoODMultiplierId(odpair.getODpairId().toString(),timeBeanId);
-			}else {
-				id=this.odMultiplierId.get(odpair.getODpairId()).get(timeBeanId);
-			}
-			if(params.containsKey(id)) {
-				demand=demand*params.get(id);
-			}
+//			if(this.odMultiplierId==null) {
+//				id=CNLSUEModel.getODtoODMultiplierId(odpair.getODpairId().toString(),timeBeanId);
+//			}else {
+//				id=this.odMultiplierId.get(odpair.getODpairId()).get(timeBeanId);
+//			}
+//			if(params.containsKey(id)) {
+//				demand=demand*params.get(id);
+//			}
 			double totalUtility=0;
 			for(double d:utility.values()) {
 				totalUtility+=Math.exp(d-u);
@@ -861,16 +868,16 @@ public class CNLSUEModel implements AnalyticalModel{
 			double totalDemand=this.getDemand().get(timeBeanId).get(ODpairId);
 			double carDemand=this.getCarDemand().get(timeBeanId).get(ODpairId);
 			double q=(totalDemand-carDemand);
-			String id=null;
-			if(this.odMultiplierId==null) {
-				id=CNLSUEModel.getODtoODMultiplierId(odpair.getODpairId().toString(),timeBeanId);
-			}else {
-				id=this.odMultiplierId.get(odpair.getODpairId()).get(timeBeanId);
-			}
-			if(params.containsKey(id)) {
-				double d=params.get(id);
-				q=q*d;
-			}
+//			String id=null;
+//			if(this.odMultiplierId==null) {
+//				id=CNLSUEModel.getODtoODMultiplierId(odpair.getODpairId().toString(),timeBeanId);
+//			}else {
+//				id=this.odMultiplierId.get(odpair.getODpairId()).get(timeBeanId);
+//			}
+//			if(params.containsKey(id)) {
+//				double d=params.get(id);
+//				q=q*d;
+//			}
 			double u=utility.get(r.getTrRouteId());
 			double totalUtility=0;
 			for(double d:utility.values()) {
@@ -933,10 +940,12 @@ public class CNLSUEModel implements AnalyticalModel{
 			List<Map<Id<Link>, Double>> linkVolumes=Collections.synchronizedList(new ArrayList<>());
 			
 			this.odPairs.getODpairset().values().parallelStream().forEach(odpair->{
-				if(odpair.getRoutes()!=null && this.getCarDemand().get(timeBeanId).get(odpair.getODpairId())!=0) {
+			//for(AnalyticalModelODpair odpair: this.odPairs.getODpairset().values()) {
+				if(odpair.getRoutes()!=null && this.carDemand.get(timeBeanId).get(odpair.getODpairId())!=0) {
 					linkVolumes.add(this.NetworkLoadingCarSingleOD(odpair.getODpairId(),timeBeanId,counter,params,anaParams));
 				}
 			});
+			//}
 //			List<List<AnalyticalModelODpair>>odpairLists= Lists.partition(new ArrayList<>(this.odPairs.getODpairset().values()),Runtime.getRuntime().availableProcessors()-2);
 //			Thread[] threads=new Thread[odpairLists.size()];
 //			CarNetworkLoadingRunnable[] carnls=new CarNetworkLoadingRunnable[odpairLists.size()];
