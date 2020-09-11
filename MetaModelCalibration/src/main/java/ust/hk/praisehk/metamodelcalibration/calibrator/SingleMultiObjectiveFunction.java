@@ -10,15 +10,18 @@ import ust.hk.praisehk.metamodelcalibration.analyticalModel.AnalyticalModel;
 import ust.hk.praisehk.metamodelcalibration.analyticalModel.SUEModelOutput;
 import ust.hk.praisehk.metamodelcalibration.matamodels.MetaModel;
 import ust.hk.praisehk.metamodelcalibration.measurements.Measurement;
+import ust.hk.praisehk.metamodelcalibration.measurements.MeasurementType;
 import ust.hk.praisehk.metamodelcalibration.measurements.Measurements;
 
 public class SingleMultiObjectiveFunction extends SimpleOptimizationFunction{
 	
-	final private String objKey;
+	private final MeasurementType objKey;
+	
+	
 	protected SingleMultiObjectiveFunction(AnalyticalModel sueAssignment, Measurements realData,
 			Map<Id<Measurement>, Map<String, MetaModel>> metaModels, LinkedHashMap<String, Double> currentParams,
 			double TrRadius, LinkedHashMap<String, Tuple<Double, Double>> paramLimit, String objectiveType,
-			String MetaModelType, ParamReader pReader, int currentIterNo, String fileLoc, String objKey) {
+			String MetaModelType, ParamReader pReader, int currentIterNo, String fileLoc, MeasurementType objKey) {
 		super(sueAssignment, realData, metaModels, currentParams, TrRadius, paramLimit, objectiveType, MetaModelType, pReader,
 				currentIterNo, fileLoc);
 		this.objKey = objKey;
@@ -41,7 +44,9 @@ public class SingleMultiObjectiveFunction extends SimpleOptimizationFunction{
 		}
 		
 		objective=ObjectiveCalculator.calcMultiObjective(this.getRealData(), metaMeasurements,type).get(objKey);
+		if(objective<minObj) minObj = objective;
 		return objective;
 	}
 
+	
 }

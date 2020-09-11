@@ -8,9 +8,12 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+import de.xypron.jcobyla.Cobyla;
+import de.xypron.jcobyla.CobylaExitStatus;
 import ust.hk.praisehk.metamodelcalibration.analyticalModel.AnalyticalModel;
 import ust.hk.praisehk.metamodelcalibration.matamodels.MetaModel;
 import ust.hk.praisehk.metamodelcalibration.matamodels.SimAndAnalyticalGradientCalculator;
+import ust.hk.praisehk.metamodelcalibration.measurements.MeasurementType;
 import ust.hk.praisehk.metamodelcalibration.measurements.Measurements;
 import ust.hk.praisehk.metamodelcalibration.measurements.MeasurementsWriter;
 
@@ -60,10 +63,10 @@ public class MultiObjectiveCalibratorImpl extends CalibratorImpl{
 			//Run IterLogger
 			//Fix Tr Radius
 			this.writeMeasurementComparison(fileLoc);
-			double CurrentSimObjective=Collections.max(ObjectiveCalculator.calcMultiObjective(this.calibrationMeasurements, this.simMeasurements.get(this.currentParamNo),type).values());
-			double CurrentMetaModelObjective=Collections.max(ObjectiveCalculator.calcMultiObjective(this.calibrationMeasurements, this.CalcMetaModelPrediction(this.currentParamNo)).values());
-			double trialSimObjective=Collections.max(ObjectiveCalculator.calcMultiObjective(this.calibrationMeasurements, this.simMeasurements.get(this.iterationNo)).values());
-			double trialMetaModelObjective=Collections.max(ObjectiveCalculator.calcMultiObjective(this.calibrationMeasurements, this.CalcMetaModelPrediction(this.iterationNo)).values());
+			double CurrentSimObjective=Collections.max(ObjectiveCalculator.calcMultiObjective(this.calibrationMeasurements, this.simMeasurements.get(this.currentParamNo),this.ObjectiveType).values());
+			double CurrentMetaModelObjective=Collections.max(ObjectiveCalculator.calcMultiObjective(this.calibrationMeasurements, this.CalcMetaModelPrediction(this.currentParamNo),this.ObjectiveType).values());
+			double trialSimObjective=Collections.max(ObjectiveCalculator.calcMultiObjective(this.calibrationMeasurements, this.simMeasurements.get(this.iterationNo),this.ObjectiveType).values());
+			double trialMetaModelObjective=Collections.max(ObjectiveCalculator.calcMultiObjective(this.calibrationMeasurements, this.CalcMetaModelPrediction(this.iterationNo),this.ObjectiveType).values());
 			double SimObjectiveChange=CurrentSimObjective-trialSimObjective;
 			double MetaObjectiveChange=CurrentMetaModelObjective-trialMetaModelObjective;
 			double rouk=SimObjectiveChange/MetaObjectiveChange;
@@ -123,14 +126,60 @@ public class MultiObjectiveCalibratorImpl extends CalibratorImpl{
 			if(this.calcAverageMetaParamsChange()<this.minMetaParamChange && !metaModelType.equals(MetaModel.GradientBased_I_MetaModelName)) {
 				trialParam=this.drawRandomPoint(this.pReader.getInitialParamLimit());
 			}else {
-				AnalyticalModelOptimizer anaOptimizer=new AnalyticalModelOptimizerImpl(sue, this.calibrationMeasurements, this.metaModels, this.currentParam, this.TrRadius, this.pReader.getInitialParamLimit(),this.ObjectiveType ,metaModelType,this.pReader, this.iterationNo,this.fileLoc);
-				anaOptimizer.setOptimizerType(AnalyticalModelOptimizer.TROptimizerName);
-				this.trialParam=anaOptimizer.performOptimization();
+				Map<MeasurementType,Double> currObj = ObjectiveCalculator.calcMultiObjective(this.calibrationMeasurements, this.simMeasurements.get(this.currentParamNo),this.ObjectiveType);
+				Map<MeasurementType,Double> bstObj = new HashMap<>();
+ 				for(MeasurementType mType:this.calibrationMeasurements.getMeasurementsByType().keySet()) {
+					AnalyticalModelOptimizer anaOptimizer=new AnalyticalModelOptimizerImpl(new SingleMultiObjectiveFunction(sue, this.calibrationMeasurements, this.metaModels, this.currentParam, this.TrRadius, this.pReader.getInitialParamLimit(),this.ObjectiveType ,metaModelType,this.pReader, this.iterationNo,this.fileLoc,mType));
+					anaOptimizer.setOptimizerType(AnalyticalModelOptimizer.TROptimizerName);
+					this.trialParam=anaOptimizer.performOptimization();
+					bstObj.put(mType, anaOptimizer.getOptimizationFunction().getMinObj());
+				}
+ 				MultiObjOptimDecisionObjective optimFunc = new MultiObjOptimDecisionObjective(sue, this.calibrationMeasurements, 
+ 						this.metaModels, this.currentParam, this.TrRadius, this.pReader.getInitialParamLimit(),
+ 						this.ObjectiveType ,metaModelType,this.pReader, this.iterationNo,this.fileLoc,
+ 						bstObj, currObj); 
+ 				double[] x=new double[optimFunc.getCalibrationParamSize()+1];
+
+ 				for (int j=0;j<x.length;j++) {
+ 					x[j]=1;
+ 					j++;
+ 				}
+
+ 				
+				//Call the optimization subroutine
+				CobylaExitStatus result = Cobyla.findMinimum(optimFunc,x.length, optimFunc.getConstrainNo(),
+						x,10,.01 ,3, 1500);
+				for(int i=0;i<x.length;i++)System.out.println(x[i]);
+				this.trialParam=optimFunc.ScaleUp(x);
+			
 			}
 			
 		}else {
-			AnalyticalModelOptimizer anaOptimizer=new AnalyticalModelOptimizerImpl(sue, this.calibrationMeasurements, this.metaModels, this.currentParam, this.TrRadius, this.pReader.getInitialParamLimit(),this.ObjectiveType, metaModelType,this.pReader,this.iterationNo, this.fileLoc);
-			this.trialParam=anaOptimizer.performOptimization();
+			Map<MeasurementType,Double> currObj = ObjectiveCalculator.calcMultiObjective(this.calibrationMeasurements, this.simMeasurements.get(this.currentParamNo),this.ObjectiveType);
+			Map<MeasurementType,Double> bstObj = new HashMap<>();
+				for(MeasurementType mType:this.calibrationMeasurements.getMeasurementsByType().keySet()) {
+				AnalyticalModelOptimizer anaOptimizer=new AnalyticalModelOptimizerImpl(new SingleMultiObjectiveFunction(sue, this.calibrationMeasurements, this.metaModels, this.currentParam, this.TrRadius, this.pReader.getInitialParamLimit(),this.ObjectiveType ,metaModelType,this.pReader, this.iterationNo,this.fileLoc,mType));
+				anaOptimizer.setOptimizerType(AnalyticalModelOptimizer.TROptimizerName);
+				this.trialParam=anaOptimizer.performOptimization();
+				bstObj.put(mType, anaOptimizer.getOptimizationFunction().getMinObj());
+			}
+				MultiObjOptimDecisionObjective optimFunc = new MultiObjOptimDecisionObjective(sue, this.calibrationMeasurements, 
+						this.metaModels, this.currentParam, this.TrRadius, this.pReader.getInitialParamLimit(),
+						this.ObjectiveType ,metaModelType,this.pReader, this.iterationNo,this.fileLoc,
+						bstObj, currObj); 
+				double[] x=new double[optimFunc.getCalibrationParamSize()+1];
+
+				for (int j=0;j<x.length;j++) {
+					x[j]=1;
+					j++;
+				}
+
+				
+			//Call the optimization subroutine
+			CobylaExitStatus result = Cobyla.findMinimum(optimFunc,x.length, optimFunc.getConstrainNo(),
+					x,10,.01 ,3, 1500);
+			for(int i=0;i<x.length;i++)System.out.println(x[i]);
+			this.trialParam=optimFunc.ScaleUp(x);
 		}
 		
 		
@@ -138,4 +187,5 @@ public class MultiObjectiveCalibratorImpl extends CalibratorImpl{
 		WriteParam(this.fileLoc+"param"+this.iterationNo+".csv",this.trialParam);
 		return this.trialParam;
 	}
+	
 }

@@ -50,6 +50,8 @@ public abstract class OptimizationFunction implements Calcfc, MatlabObj  {
 	
 	public abstract double[] calcConstrain(double[] x, LinkedHashMap<String,Tuple<Double,Double>> paramLimit);
 	
+	public abstract double getMinObj();
+	
 	public LinkedHashMap<String,Double> ScaleUp(double[] x) {
 		LinkedHashMap<String,Double> params=new LinkedHashMap<>();
 		int j=0;

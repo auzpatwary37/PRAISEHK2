@@ -25,6 +25,7 @@ public class SimpleOptimizationFunction extends OptimizationFunction{
 	protected final int currentIterNo;
 	protected final String fileLoc;
 	protected int optimIter=0;
+	protected double minObj = Double.MAX_VALUE;
 	
 	protected SimpleOptimizationFunction(AnalyticalModel sueAssignment, Measurements realData, Map<Id<Measurement>, Map<String, MetaModel>> metaModels,
 			LinkedHashMap<String, Double> currentParams, double TrRadius,
@@ -61,6 +62,8 @@ public class SimpleOptimizationFunction extends OptimizationFunction{
 		
 		this.logOoptimizationDetails(this.currentIterNo, this.optimIter, this.fileLoc, this.pReader.ScaleUp(new LinkedHashMap<>(params)), objective);
 		this.optimIter++;
+		if(this.minObj<objective) minObj = objective;
+		
 		return objective;
 	
 	}
@@ -166,6 +169,7 @@ public class SimpleOptimizationFunction extends OptimizationFunction{
 		
 		this.logOoptimizationDetails(this.currentIterNo, this.optimIter, this.fileLoc, this.pReader.ScaleUp(new LinkedHashMap<>(params)), objective);
 		this.optimIter++;
+		if(this.minObj<objective) minObj = objective;
 		return objective;
 	}
 
@@ -179,6 +183,11 @@ public class SimpleOptimizationFunction extends OptimizationFunction{
 		}
 		double c=this.getTrustRegionRadius()-Math.sqrt(trustRegionConst);
 		return c;
+	}
+
+	@Override
+	public double getMinObj() {
+		return this.minObj;
 	}
 	
 
