@@ -142,7 +142,7 @@ public class AnalyticalModelOptimizerImpl implements AnalyticalModelOptimizer{
 			LinkedHashMap<String,Double> resultParam=this.optimFunction.ScaleUp(x);
 			
 			return resultParam;
-		}else {
+		}else if(this.optimizerType.equals(MATLABOptimizerName)){
 			double[] xl=new double[x.length];
 			double[] xu=new double[x.length];
 			int j=0;
@@ -158,5 +158,6 @@ public class AnalyticalModelOptimizerImpl implements AnalyticalModelOptimizer{
 			LinkedHashMap<String,Double> resultParam=this.optimFunction.ScaleUp(xr);
 			return resultParam;
 		}
+		return null;
 	}	
 }

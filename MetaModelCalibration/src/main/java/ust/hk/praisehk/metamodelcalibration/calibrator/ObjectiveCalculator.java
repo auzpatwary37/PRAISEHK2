@@ -2,14 +2,18 @@ package ust.hk.praisehk.metamodelcalibration.calibrator;
 
 
 
+import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 
 import org.apache.log4j.Logger;
 import org.matsim.api.core.v01.Id;
 
 import ust.hk.praisehk.metamodelcalibration.matamodels.MetaModel;
 import ust.hk.praisehk.metamodelcalibration.measurements.Measurement;
+import ust.hk.praisehk.metamodelcalibration.measurements.MeasurementType;
 import ust.hk.praisehk.metamodelcalibration.measurements.Measurements;
 
 /**
@@ -25,6 +29,7 @@ public class ObjectiveCalculator {
 	public static final String TypeMeasurementAndTimeSpecific="MeasurementAndTimeSpecific";
 	public static final Logger logger=Logger.getLogger(ObjectiveCalculator.class);
 	public static final String Type=TypeMeasurementAndTimeSpecific;
+	public static final String TypeMultiObjective = "MultiObjective";
 	/**
 	 * 
 	 * @param realMeasurements
@@ -53,7 +58,7 @@ public class ObjectiveCalculator {
 				objective+=Math.pow((stationCountReal-stationCountAnaOrSim),2);
 			}
 			
-		}else {
+		}else if(Type.equals(TypeMeasurementAndTimeSpecific)){
 			for(Measurement m:realMeasurements.getMeasurements().values()) {
 				for(String timeBeanId:m.getVolumes().keySet()) {
 					if(simOrAnaMeasurements.getMeasurements().get(m.getId())==null) {
@@ -72,6 +77,51 @@ public class ObjectiveCalculator {
 		return objective;
 	}
 	
+	public static Map<MeasurementType,Double> calcMultiObjective(Measurements realMeasurements,Measurements simOrAnaMeasurements,String Type) {
+		Map<MeasurementType,Double> objective = new HashMap<>();
+		if(Type.equals(TypeAADT)) {
+			for(Entry<MeasurementType, List<Measurement>> d:realMeasurements.getMeasurementsByType().entrySet()) {
+				double obj = 0;
+				for(Measurement m:d.getValue()) {
+					double stationCountReal=0;
+					double stationCountAnaOrSim=0;
+					for(String timeBeanId:m.getVolumes().keySet()) {
+						if(simOrAnaMeasurements.getMeasurements().get(m.getId())==null) {
+							logger.error("The Measurements entered are not comparable (measuremtn do not match)!!! This should not happen. Please check");
+
+						}else if(simOrAnaMeasurements.getMeasurements().get(m.getId()).getVolumes().get(timeBeanId)==null) {
+							logger.error("The Measurements entered are not comparable (volume timeBeans do not match)!!! This should not happen. Please check");
+
+						}
+
+						stationCountReal+=m.getVolumes().get(timeBeanId);
+						stationCountAnaOrSim+=simOrAnaMeasurements.getMeasurements().get(m.getId()).getVolumes().get(timeBeanId);
+					}
+					obj+=Math.pow((stationCountReal-stationCountAnaOrSim),2);
+				}
+				objective.put(d.getKey(),obj);
+			}
+		}else if(Type.equals(TypeMeasurementAndTimeSpecific)){
+			for(Entry<MeasurementType, List<Measurement>> d:realMeasurements.getMeasurementsByType().entrySet()) {
+				double obj=0;
+				for(Measurement m:d.getValue()) {
+					for(String timeBeanId:m.getVolumes().keySet()) {
+						if(simOrAnaMeasurements.getMeasurements().get(m.getId())==null) {
+							logger.error("The Measurements entered are not comparable (measuremtn do not match)!!! This should not happen. Please check");
+
+						}else if(simOrAnaMeasurements.getMeasurements().get(m.getId()).getVolumes().get(timeBeanId)==null) {
+							logger.error("The Measurements entered are not comparable (volume timeBeans do not match)!!! This should not happen. Please check");
+
+						}
+
+						obj+=Math.pow((m.getVolumes().get(timeBeanId)-simOrAnaMeasurements.getMeasurements().get(m.getId()).getVolumes().get(timeBeanId)),2);
+					}
+				}
+				objective.put(d.getKey(),obj);
+			}
+		}
+		return objective;
+	}
 	
 	public static double calcObjective(Measurements realMeasurements,Measurements anaMeasurements,Map<Id<Measurement>,Map<String,MetaModel>>metaModels,LinkedHashMap<String,Double>param,String Type) {
 		Measurements metaMeasurements=realMeasurements.clone();

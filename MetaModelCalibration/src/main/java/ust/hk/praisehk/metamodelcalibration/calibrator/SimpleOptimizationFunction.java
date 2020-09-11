@@ -19,12 +19,12 @@ import ust.hk.praisehk.metamodelcalibration.measurements.Measurements;
 
 
 public class SimpleOptimizationFunction extends OptimizationFunction{
-	private final String metaModelType;
-	private final String type;
-	private final ParamReader pReader;
-	private final int currentIterNo;
-	private final String fileLoc;
-	private int optimIter=0;
+	protected final String metaModelType;
+	protected final String type;
+	protected final ParamReader pReader;
+	protected final int currentIterNo;
+	protected final String fileLoc;
+	protected int optimIter=0;
 	
 	protected SimpleOptimizationFunction(AnalyticalModel sueAssignment, Measurements realData, Map<Id<Measurement>, Map<String, MetaModel>> metaModels,
 			LinkedHashMap<String, Double> currentParams, double TrRadius,
@@ -65,7 +65,7 @@ public class SimpleOptimizationFunction extends OptimizationFunction{
 	
 	}
 
-	private void logOoptimizationDetails(int currentIterNo,int optimIterNo,String fileLoc,LinkedHashMap<String,Double>params,double objective) {
+	protected void logOoptimizationDetails(int currentIterNo,int optimIterNo,String fileLoc,LinkedHashMap<String,Double>params,double objective) {
 		try {
 			File file=new File(fileLoc+"OoptimizationDetails"+currentIterNo);
 			FileWriter fw=new FileWriter(file,true);

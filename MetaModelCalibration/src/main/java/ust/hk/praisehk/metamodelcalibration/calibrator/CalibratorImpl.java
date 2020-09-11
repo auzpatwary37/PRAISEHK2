@@ -40,46 +40,46 @@ public class CalibratorImpl implements Calibrator {
 
 	//Necessary Containers
 
-	private Map<Integer,Measurements> simMeasurements=new HashMap<>();
-	private Map<Integer,Measurements> anaMeasurements=new HashMap<>();
-	private Map<Id<Measurement>,Map<String,MetaModel>>metaModels=new HashMap<>();
-	private Map<Integer,LinkedHashMap<String,Double>>params=new HashMap<>();
+	protected Map<Integer,Measurements> simMeasurements=new HashMap<>();
+	protected Map<Integer,Measurements> anaMeasurements=new HashMap<>();
+	protected Map<Id<Measurement>,Map<String,MetaModel>>metaModels=new HashMap<>();
+	protected Map<Integer,LinkedHashMap<String,Double>>params=new HashMap<>();
 	private Map<Id<Measurement>,Map<String,MetaModel>> oldMetaModel=new HashMap<>();
-	private Map<Id<Measurement>, Map<String, LinkedHashMap<String, Double>>> currentSimGradient;
-	private Map<Id<Measurement>, Map<String, LinkedHashMap<String, Double>>> currentAnaGradient; 
+	protected Map<Id<Measurement>, Map<String, LinkedHashMap<String, Double>>> currentSimGradient;
+	protected Map<Id<Measurement>, Map<String, LinkedHashMap<String, Double>>> currentAnaGradient; 
 	
-	private Measurements calibrationMeasurements;
+	protected Measurements calibrationMeasurements;
 
-	private int iterationNo=0;
-	private int currentParamNo=0;
+	protected int iterationNo=0;
+	protected int currentParamNo=0;
 
-	private LinkedHashMap<String,Double> currentParam;
-	private LinkedHashMap<String,Double> trialParam;
+	protected LinkedHashMap<String,Double> currentParam;
+	protected LinkedHashMap<String,Double> trialParam;
 	private String OptimzerName=AnalyticalModelOptimizer.TROptimizerName;
 
 
-	private AnalyticalModel sueAssignment;
+	protected AnalyticalModel sueAssignment;
 
 	private static final Logger logger=Logger.getLogger(CalibratorImpl.class);
 
 	//Trust region parameters
-	private String ObjectiveType=ObjectiveCalculator.TypeMeasurementAndTimeSpecific;
-	private double TrRadius=25;
+	protected String ObjectiveType=ObjectiveCalculator.TypeMeasurementAndTimeSpecific;
+	protected double TrRadius=25;
 	
 
 
-	private double maxTrRadius=2.5*this.TrRadius;
-	private double minTrRadius=0.001;
-	private double successiveRejection=0;
-	private double maxSuccesiveRejection=4;
-	private double minMetaParamChange=.001;
-	private double thresholdErrorRatio=.01;
-	private String metaModelType=MetaModel.AnalyticalLinearMetaModelName;
-	private double trusRegionIncreamentRatio=1.25;
-	private double trustRegionDecreamentRatio=0.9;
-	private ParamReader pReader;
-	private final String fileLoc;
-	private final boolean shouldPerformInternalParamCalibration;
+	protected double maxTrRadius=2.5*this.TrRadius;
+	protected double minTrRadius=0.001;
+	protected double successiveRejection=0;
+	protected double maxSuccesiveRejection=4;
+	protected double minMetaParamChange=.001;
+	protected double thresholdErrorRatio=.01;
+	protected String metaModelType=MetaModel.AnalyticalLinearMetaModelName;
+	protected double trusRegionIncreamentRatio=1.25;
+	protected double trustRegionDecreamentRatio=0.9;
+	protected ParamReader pReader;
+	protected final String fileLoc;
+	protected final boolean shouldPerformInternalParamCalibration;
 
 	
 	
@@ -105,7 +105,7 @@ public class CalibratorImpl implements Calibrator {
 	 * Rather will assume the input measurement is the measurement of current iteration
 	 * @param m
 	 */
-	private void updateSimMeasurements(Measurements m) {
+	protected void updateSimMeasurements(Measurements m) {
 		this.simMeasurements.put(this.iterationNo, m);
 	}
 
@@ -114,7 +114,7 @@ public class CalibratorImpl implements Calibrator {
 	 * It will update all the analytical model measurements at once  
 	 * @param anaMeasurements a map of iterationNo vs Analytical model Measurements
 	 */
-	private void updateAnalyticalMeasurement(Map<Integer, Measurements> measurements) {
+	protected void updateAnalyticalMeasurement(Map<Integer, Measurements> measurements) {
 		if(this.anaMeasurements.size()!=measurements.size()) {
 			logger.error("Measurements size must match. Aborting update");
 			for(int i:this.anaMeasurements.keySet()) {
@@ -147,7 +147,7 @@ public class CalibratorImpl implements Calibrator {
 	 * @param anaGradient
 	 * @throws IllegalArgumentException
 	 */
-	private void createMetaModel(Map<Id<Measurement>,Map<String,LinkedHashMap<String,Double>>>simGradient,Map<Id<Measurement>,Map<String,LinkedHashMap<String,Double>>> anaGradient, String metaModelType) {
+	protected void createMetaModel(Map<Id<Measurement>,Map<String,LinkedHashMap<String,Double>>>simGradient,Map<Id<Measurement>,Map<String,LinkedHashMap<String,Double>>> anaGradient, String metaModelType) {
 		try {
 		if((this.metaModelType.equals(MetaModel.GradientBased_I_MetaModelName)||this.metaModelType.equals(MetaModel.GradientBased_II_MetaModelName)||this.metaModelType.equals(MetaModel.GradientBased_III_MetaModelName))&& (anaGradient==null||simGradient==null)) {
 			logger.error("Cannot create gradient based meta-model without gradient. switching to AnalyticalLinear");
@@ -324,7 +324,7 @@ public class CalibratorImpl implements Calibrator {
 		return this.trialParam;
 	}
 
-	private LinkedHashMap<String, Double> drawRandomPoint(LinkedHashMap<String, Tuple<Double, Double>> paramLimit) {
+	protected LinkedHashMap<String, Double> drawRandomPoint(LinkedHashMap<String, Tuple<Double, Double>> paramLimit) {
 		LinkedHashMap<String, Double> randPoint=new LinkedHashMap<>();
 		for(String s: paramLimit.keySet()) {
 			double l=paramLimit.get(s).getFirst();
@@ -357,7 +357,7 @@ public class CalibratorImpl implements Calibrator {
 	}
 	
 	
-	private Measurements CalcMetaModelPrediction(int iterNo) {
+	protected Measurements CalcMetaModelPrediction(int iterNo) {
 		Measurements metaModelMeasurements=this.calibrationMeasurements.clone();
 		for(Measurement m: this.calibrationMeasurements.getMeasurements().values()) {
 			for(String timeBeanId:m.getVolumes().keySet()) {
@@ -369,7 +369,7 @@ public class CalibratorImpl implements Calibrator {
 	
 	
 	
-	private void interLogger(String fileLoc,int IterNo, int currentParamNo, double CurrentAnalyticalObjective,
+	protected void interLogger(String fileLoc,int IterNo, int currentParamNo, double CurrentAnalyticalObjective,
 			double currentSimObjective, double newAnalyticalObjective, double newSimObjective, boolean Accepted,
 			double currentTrRadius, double currentrouK,String metaModelType, LinkedHashMap<String, Double> Params,AnalyticalModel sue) {
 		
@@ -413,7 +413,7 @@ public class CalibratorImpl implements Calibrator {
 	
 	
 	
-	private double calcAverageMetaParamsChange() {
+	protected double calcAverageMetaParamsChange() {
 		boolean comparable=true;
 		double z=0;
 		int k=0;
