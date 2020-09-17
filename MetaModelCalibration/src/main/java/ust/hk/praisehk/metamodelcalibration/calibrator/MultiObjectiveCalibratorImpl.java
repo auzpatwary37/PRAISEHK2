@@ -129,6 +129,7 @@ public class MultiObjectiveCalibratorImpl extends CalibratorImpl{
 				Map<MeasurementType,Double> currObj = ObjectiveCalculator.calcMultiObjective(this.calibrationMeasurements, this.simMeasurements.get(this.currentParamNo),this.ObjectiveType);
 				Map<MeasurementType,Double> bstObj = new HashMap<>();
  				for(MeasurementType mType:this.calibrationMeasurements.getMeasurementsByType().keySet()) {
+ 					if(this.calibrationMeasurements.getMeasurementsByType().get(mType).isEmpty())continue;
 					AnalyticalModelOptimizer anaOptimizer=new AnalyticalModelOptimizerImpl(new SingleMultiObjectiveFunction(sue, this.calibrationMeasurements, this.metaModels, this.currentParam, this.TrRadius, this.pReader.getInitialParamLimit(),this.ObjectiveType ,metaModelType,this.pReader, this.iterationNo,this.fileLoc,mType));
 					anaOptimizer.setOptimizerType(AnalyticalModelOptimizer.TROptimizerName);
 					this.trialParam=anaOptimizer.performOptimization();
@@ -158,11 +159,12 @@ public class MultiObjectiveCalibratorImpl extends CalibratorImpl{
 			Map<MeasurementType,Double> currObj = ObjectiveCalculator.calcMultiObjective(this.calibrationMeasurements, this.simMeasurements.get(this.currentParamNo),this.ObjectiveType);
 			Map<MeasurementType,Double> bstObj = new HashMap<>();
 				for(MeasurementType mType:this.calibrationMeasurements.getMeasurementsByType().keySet()) {
-				AnalyticalModelOptimizer anaOptimizer=new AnalyticalModelOptimizerImpl(new SingleMultiObjectiveFunction(sue, this.calibrationMeasurements, this.metaModels, this.currentParam, this.TrRadius, this.pReader.getInitialParamLimit(),this.ObjectiveType ,metaModelType,this.pReader, this.iterationNo,this.fileLoc,mType));
-				anaOptimizer.setOptimizerType(AnalyticalModelOptimizer.TROptimizerName);
-				this.trialParam=anaOptimizer.performOptimization();
-				bstObj.put(mType, anaOptimizer.getOptimizationFunction().getMinObj());
-			}
+					if(this.calibrationMeasurements.getMeasurementsByType().get(mType).isEmpty())continue;
+					AnalyticalModelOptimizer anaOptimizer=new AnalyticalModelOptimizerImpl(new SingleMultiObjectiveFunction(sue, this.calibrationMeasurements, this.metaModels, this.currentParam, this.TrRadius, this.pReader.getInitialParamLimit(),this.ObjectiveType ,metaModelType,this.pReader, this.iterationNo,this.fileLoc,mType));
+					anaOptimizer.setOptimizerType(AnalyticalModelOptimizer.TROptimizerName);
+					this.trialParam=anaOptimizer.performOptimization();
+					bstObj.put(mType, anaOptimizer.getOptimizationFunction().getMinObj());
+				}
 				MultiObjOptimDecisionObjective optimFunc = new MultiObjOptimDecisionObjective(sue, this.calibrationMeasurements, 
 						this.metaModels, this.currentParam, this.TrRadius, this.pReader.getInitialParamLimit(),
 						this.ObjectiveType ,metaModelType,this.pReader, this.iterationNo,this.fileLoc,

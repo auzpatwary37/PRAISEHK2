@@ -99,7 +99,9 @@ public class ObjectiveCalculator {
 					}
 					obj+=Math.pow((stationCountReal-stationCountAnaOrSim),2);
 				}
-				objective.put(d.getKey(),obj);
+				if(!d.getValue().isEmpty()) {
+					objective.put(d.getKey(),obj);
+				}
 			}
 		}else if(Type.equals(TypeMeasurementAndTimeSpecific)){
 			for(Entry<MeasurementType, List<Measurement>> d:realMeasurements.getMeasurementsByType().entrySet()) {
@@ -117,7 +119,9 @@ public class ObjectiveCalculator {
 						obj+=Math.pow((m.getVolumes().get(timeBeanId)-simOrAnaMeasurements.getMeasurements().get(m.getId()).getVolumes().get(timeBeanId)),2);
 					}
 				}
-				objective.put(d.getKey(),obj);
+				if(!d.getValue().isEmpty()) {
+					objective.put(d.getKey(),obj);
+				}
 			}
 		}
 		return objective;

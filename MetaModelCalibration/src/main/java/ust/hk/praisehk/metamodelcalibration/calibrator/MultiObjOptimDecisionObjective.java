@@ -36,8 +36,12 @@ public class MultiObjOptimDecisionObjective extends SimpleOptimizationFunction{
 	
 	@Override
 	public double compute(int n, int m, double[] x, double[] constrains) {
-		double t = x[x.length-1];
-		constrains = this.calcConstrain(x, super.getParamLimit());
+		double t = x[x.length-1]*100;
+		int  i = 0;
+		for(double d:this.calcConstrain(x, super.getParamLimit())) {
+			constrains[i] = d;
+			i++;
+		};
 		if(this.minObj<t) minObj = t;
 		return t;
 	}
@@ -46,7 +50,7 @@ public class MultiObjOptimDecisionObjective extends SimpleOptimizationFunction{
 
 	@Override
 	public double[] calcConstrain(double[] x, LinkedHashMap<String, Tuple<Double, Double>> paramLimit) {
-		double t = x[x.length-1];
+		double t = x[x.length-1]*100;
 		int j=0;
 		int k=0;
 		LinkedHashMap<String,Double> param = new LinkedHashMap<>();
@@ -72,7 +76,7 @@ public class MultiObjOptimDecisionObjective extends SimpleOptimizationFunction{
 		j=0;
 		double trustRegionConst=0;
 		for(double d:this.getCurrentParams().values()) {
-			trustRegionConst+=Math.pow(d*x[j]*this.getHessian()[j]/100,2);
+			trustRegionConst+=Math.pow(d*x[j]/100,2);
 			j++;
 		}
 		

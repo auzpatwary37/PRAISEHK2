@@ -74,6 +74,13 @@ public class Measurements {
 		}
 		this.measurementsByType.remove(type);
 	}
+	
+	public void removeMeasurement(Id<Measurement> mId) {
+		Measurement m = this.measurements.get(mId);
+		this.measurements.remove(mId);
+		this.measurementsByType.get(m.getMeasurementType()).remove(m);
+		if(this.measurementsByType.get(m.getMeasurementType()).isEmpty())this.measurementsByType.remove(m.getMeasurementType());
+	}
 
 	public Map<String, Tuple<Double, Double>> getTimeBean() {
 		return timeBean;
