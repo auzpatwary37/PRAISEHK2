@@ -81,6 +81,7 @@ public class ObjectiveCalculator {
 		Map<MeasurementType,Double> objective = new HashMap<>();
 		if(Type.equals(TypeAADT)) {
 			for(Entry<MeasurementType, List<Measurement>> d:realMeasurements.getMeasurementsByType().entrySet()) {
+				if(simOrAnaMeasurements.getMeasurementsByType().get(d.getKey()).isEmpty())continue;
 				double obj = 0;
 				for(Measurement m:d.getValue()) {
 					double stationCountReal=0;
@@ -105,6 +106,7 @@ public class ObjectiveCalculator {
 			}
 		}else if(Type.equals(TypeMeasurementAndTimeSpecific)){
 			for(Entry<MeasurementType, List<Measurement>> d:realMeasurements.getMeasurementsByType().entrySet()) {
+				if(simOrAnaMeasurements.getMeasurementsByType().get(d.getKey()).isEmpty())continue;
 				double obj=0;
 				for(Measurement m:d.getValue()) {
 					for(String timeBeanId:m.getVolumes().keySet()) {
