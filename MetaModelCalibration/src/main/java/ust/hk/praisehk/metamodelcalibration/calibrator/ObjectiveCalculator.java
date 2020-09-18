@@ -129,6 +129,58 @@ public class ObjectiveCalculator {
 		return objective;
 	}
 	
+	public static double calcObjective(Measurements realMeasurements,Measurements simOrAnaMeasurements,String Type,List<MeasurementType>mType) {
+		double objective = 0;
+		if(Type.equals(TypeAADT)) {
+			for(Entry<MeasurementType, List<Measurement>> d:realMeasurements.getMeasurementsByType().entrySet()) {
+				if(!mType.contains(d.getKey()))continue;
+				double obj = 0;
+				for(Measurement m:d.getValue()) {
+					double stationCountReal=0;
+					double stationCountAnaOrSim=0;
+					for(String timeBeanId:m.getVolumes().keySet()) {
+						if(simOrAnaMeasurements.getMeasurements().get(m.getId())==null) {
+							logger.error("The Measurements entered are not comparable (measuremtn do not match)!!! This should not happen. Please check");
+
+						}else if(simOrAnaMeasurements.getMeasurements().get(m.getId()).getVolumes().get(timeBeanId)==null) {
+							logger.error("The Measurements entered are not comparable (volume timeBeans do not match)!!! This should not happen. Please check");
+
+						}
+
+						stationCountReal+=m.getVolumes().get(timeBeanId);
+						stationCountAnaOrSim+=simOrAnaMeasurements.getMeasurements().get(m.getId()).getVolumes().get(timeBeanId);
+					}
+					obj+=Math.pow((stationCountReal-stationCountAnaOrSim),2);
+				}
+				if(!d.getValue().isEmpty()) {
+					objective+=obj;
+				}
+			}
+		}else if(Type.equals(TypeMeasurementAndTimeSpecific)){
+			for(Entry<MeasurementType, List<Measurement>> d:realMeasurements.getMeasurementsByType().entrySet()) {
+				if(!mType.contains(d.getKey()))continue;
+				double obj=0;
+				for(Measurement m:d.getValue()) {
+					for(String timeBeanId:m.getVolumes().keySet()) {
+						if(simOrAnaMeasurements.getMeasurements().get(m.getId())==null) {
+							logger.error("The Measurements entered are not comparable (measuremtn do not match)!!! This should not happen. Please check");
+
+						}else if(simOrAnaMeasurements.getMeasurements().get(m.getId()).getVolumes().get(timeBeanId)==null) {
+							logger.error("The Measurements entered are not comparable (volume timeBeans do not match)!!! This should not happen. Please check");
+
+						}
+
+						obj+=Math.pow((m.getVolumes().get(timeBeanId)-simOrAnaMeasurements.getMeasurements().get(m.getId()).getVolumes().get(timeBeanId)),2);
+					}
+				}
+				if(!d.getValue().isEmpty()) {
+					objective+=obj;
+				}
+			}
+		}
+		return objective;
+	}
+	
 	public static double calcObjective(Measurements realMeasurements,Measurements anaMeasurements,Map<Id<Measurement>,Map<String,MetaModel>>metaModels,LinkedHashMap<String,Double>param,String Type) {
 		Measurements metaMeasurements=realMeasurements.clone();
 		for(Measurement m:realMeasurements.getMeasurements().values()) {

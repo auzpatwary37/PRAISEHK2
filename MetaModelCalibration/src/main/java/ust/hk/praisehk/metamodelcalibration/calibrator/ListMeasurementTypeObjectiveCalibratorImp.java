@@ -61,10 +61,10 @@ public class ListMeasurementTypeObjectiveCalibratorImp extends CalibratorImpl{
 			//Run IterLogger
 			//Fix Tr Radius
 			this.writeMeasurementComparison(fileLoc);
-			double CurrentSimObjective=ObjectiveCalculator.calcObjective(this.calibrationMeasurements, this.simMeasurements.get(this.currentParamNo), this.ObjectiveType);
-			double CurrentMetaModelObjective=ObjectiveCalculator.calcObjective(this.calibrationMeasurements, this.CalcMetaModelPrediction(this.currentParamNo), this.ObjectiveType);
-			double trialSimObjective=ObjectiveCalculator.calcObjective(this.calibrationMeasurements, this.simMeasurements.get(this.iterationNo), this.ObjectiveType);
-			double trialMetaModelObjective=ObjectiveCalculator.calcObjective(this.calibrationMeasurements, this.CalcMetaModelPrediction(this.iterationNo), this.ObjectiveType);
+			double CurrentSimObjective=ObjectiveCalculator.calcObjective(this.calibrationMeasurements, this.simMeasurements.get(this.currentParamNo), this.ObjectiveType,keys);
+			double CurrentMetaModelObjective=ObjectiveCalculator.calcObjective(this.calibrationMeasurements, this.CalcMetaModelPrediction(this.currentParamNo), this.ObjectiveType,keys);
+			double trialSimObjective=ObjectiveCalculator.calcObjective(this.calibrationMeasurements, this.simMeasurements.get(this.iterationNo), this.ObjectiveType,keys);
+			double trialMetaModelObjective=ObjectiveCalculator.calcObjective(this.calibrationMeasurements, this.CalcMetaModelPrediction(this.iterationNo), this.ObjectiveType,keys);
 			double SimObjectiveChange=CurrentSimObjective-trialSimObjective;
 			double MetaObjectiveChange=CurrentMetaModelObjective-trialMetaModelObjective;
 			double rouk=SimObjectiveChange/MetaObjectiveChange;
