@@ -7,6 +7,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import ust.hk.praisehk.metamodelcalibration.analyticalModel.AnalyticalModel;
 import ust.hk.praisehk.metamodelcalibration.matamodels.MetaModel;
@@ -16,8 +17,8 @@ import ust.hk.praisehk.metamodelcalibration.measurements.Measurements;
 import ust.hk.praisehk.metamodelcalibration.measurements.MeasurementsWriter;
 
 public class ListMeasurementTypeObjectiveCalibratorImp extends CalibratorImpl{
-	private final List<MeasurementType> keys;
-	public ListMeasurementTypeObjectiveCalibratorImp(Measurements calibrationMeasurements,String fileLoc,boolean internalParamCalibration, ParamReader pReader,double initialTRRadius,int maxSuccessiveRejection, List<MeasurementType> types) {
+	private final Set<MeasurementType> keys;
+	public ListMeasurementTypeObjectiveCalibratorImp(Measurements calibrationMeasurements,String fileLoc,boolean internalParamCalibration, ParamReader pReader,double initialTRRadius,int maxSuccessiveRejection, Set<MeasurementType> types) {
 		super(calibrationMeasurements,fileLoc,internalParamCalibration,pReader,initialTRRadius,maxSuccessiveRejection);
 		this.keys = types;
 		//super.setObjectiveType(ObjectiveCalculator.TypeMultiObjective);

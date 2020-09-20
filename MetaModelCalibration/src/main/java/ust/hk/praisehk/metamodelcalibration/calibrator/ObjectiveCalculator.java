@@ -7,6 +7,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 
 import org.apache.log4j.Logger;
 import org.matsim.api.core.v01.Id;
@@ -129,7 +130,16 @@ public class ObjectiveCalculator {
 		return objective;
 	}
 	
-	public static double calcObjective(Measurements realMeasurements,Measurements simOrAnaMeasurements,String Type,List<MeasurementType>mType) {
+	public static Map<String,Double> calcMultiObjective(Measurements realMeasurements,Measurements simOrAnaMeasurements,String Type,Map<String, Set<MeasurementType>> mTypes) {
+		Map<String,Double> objective = new HashMap<>();
+		for(Entry<String, Set<MeasurementType>> d:mTypes.entrySet()) {
+			double obj = calcObjective(realMeasurements,simOrAnaMeasurements,Type,d.getValue());
+			objective.put(d.getKey(),obj);
+		}
+		return objective;
+	}
+	
+	public static double calcObjective(Measurements realMeasurements,Measurements simOrAnaMeasurements,String Type,Set<MeasurementType>mType) {
 		double objective = 0;
 		if(Type.equals(TypeAADT)) {
 			for(Entry<MeasurementType, List<Measurement>> d:realMeasurements.getMeasurementsByType().entrySet()) {

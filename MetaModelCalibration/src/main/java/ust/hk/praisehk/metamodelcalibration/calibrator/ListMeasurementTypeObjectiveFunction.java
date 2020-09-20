@@ -4,6 +4,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 
 import org.matsim.api.core.v01.Id;
 import org.matsim.core.utils.collections.Tuple;
@@ -15,13 +16,13 @@ import ust.hk.praisehk.metamodelcalibration.measurements.MeasurementType;
 import ust.hk.praisehk.metamodelcalibration.measurements.Measurements;
 
 public class ListMeasurementTypeObjectiveFunction extends SimpleOptimizationFunction{
-private final List<MeasurementType> objKeys;
+private final Set<MeasurementType> objKeys;
 	
 	
 	protected ListMeasurementTypeObjectiveFunction(AnalyticalModel sueAssignment, Measurements realData,
 			Map<Id<Measurement>, Map<String, MetaModel>> metaModels, LinkedHashMap<String, Double> currentParams,
 			double TrRadius, LinkedHashMap<String, Tuple<Double, Double>> paramLimit, String objectiveType,
-			String MetaModelType, ParamReader pReader, int currentIterNo, String fileLoc, List<MeasurementType> objKeys) {
+			String MetaModelType, ParamReader pReader, int currentIterNo, String fileLoc, Set<MeasurementType> objKeys) {
 		super(sueAssignment, realData, metaModels, currentParams, TrRadius, paramLimit, objectiveType, MetaModelType, pReader,
 				currentIterNo, fileLoc);
 		this.objKeys = objKeys;
