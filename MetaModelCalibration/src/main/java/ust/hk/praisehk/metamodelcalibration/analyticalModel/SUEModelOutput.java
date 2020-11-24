@@ -18,6 +18,11 @@ public class SUEModelOutput {
 	
 	private Map<String,Double> MaaSPackageUsage;
 	
+	private Map<String,Map<Id<Link>,Double>> linkFlowWithoutPT = null;
+	
+	private Map<String,Map<Id<TransitLink>,Double>> transitDirectLinkTT = null;
+	private Map<String,Map<Id<TransitLink>,Double>> transitTransferLinkTT = null;
+	
 	
 	private Map<String,Map<String,Map<String,Double>>> MaaSSpecificFareLinkFlow;
 	
@@ -83,6 +88,38 @@ public class SUEModelOutput {
 	 */
 	public void setMaaSSpecificFareLinkFlow(Map<String, Map<String, Map<String, Double>>> maaSSpecificFareLinkFlow) {
 		MaaSSpecificFareLinkFlow = maaSSpecificFareLinkFlow;
+	}
+
+	public void setLinkTravelTime(Map<String, Map<Id<Link>, Double>> linkTravelTime) {
+		this.linkTravelTime = linkTravelTime;
+	}
+
+	public void setTrLinkTravelTime(Map<String, Map<Id<TransitLink>, Double>> trLinkTravelTime) {
+		this.trLinkTravelTime = trLinkTravelTime;
+	}
+
+	public Map<String, Map<Id<Link>, Double>> getLinkFlowWithoutPT() {
+		return linkFlowWithoutPT;
+	}
+
+	public void setLinkFlowWithoutPT(Map<String, Map<Id<Link>, Double>> linkFlowWithoutPT) {
+		this.linkFlowWithoutPT = linkFlowWithoutPT;
+	}
+
+	public Map<String, Map<Id<TransitLink>, Double>> getTransitDirectLinkTT() {
+		return transitDirectLinkTT;
+	}
+
+	public void setTransitDirectLinkTT(Map<String, Map<Id<TransitLink>, Double>> transitDirectLinkTT) {
+		this.transitDirectLinkTT = transitDirectLinkTT;
+	}
+
+	public Map<String, Map<Id<TransitLink>, Double>> getTransitTransferLinkTT() {
+		return transitTransferLinkTT;
+	}
+
+	public void setTransitTransferLinkTT(Map<String, Map<Id<TransitLink>, Double>> transitTransferLinkTT) {
+		this.transitTransferLinkTT = transitTransferLinkTT;
 	}
 	
 	
