@@ -70,4 +70,5 @@ public interface AnalyticalModelRoute{
 //	double calcRouteUtility(LinkedHashMap<String, Double> parmas, LinkedHashMap<String, Double> anaParmas,
 //			Map<String, AnalyticalModelNetwork> networks, Map<String, Tuple<Double, Double>> timeBean,
 //			String timeBeanId, double startTime);
+	public AnalyticalModelRoute clone();
 }

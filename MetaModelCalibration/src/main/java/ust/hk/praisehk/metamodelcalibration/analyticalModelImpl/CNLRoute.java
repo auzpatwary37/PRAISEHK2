@@ -38,7 +38,12 @@ public class CNLRoute implements AnalyticalModelRoute{
 		this.oldRouteId = Id.create(r.getRouteDescription(), AnalyticalModelRoute.class);
 	}
 	
-	
+	public CNLRoute(Id<AnalyticalModelRoute> routeId,ArrayList<Id<Link>> linkList,double dist) {
+		this.links = new ArrayList<>(linkList);
+		this.distanceTravelled=dist;
+		this.routeId=Id.create(routeId.toString(), AnalyticalModelRoute.class);
+		this.oldRouteId = Id.create(routeId.toString(), AnalyticalModelRoute.class);
+	}
 	
 	@Override
 	public double getTravelTime(AnalyticalModelNetwork network,Tuple<Double,Double>timeBean,LinkedHashMap<String,Double> params,LinkedHashMap<String,Double>anaParams) {
@@ -232,5 +237,8 @@ public class CNLRoute implements AnalyticalModelRoute{
 	}
 	
 	
-	
+	@Override
+	public AnalyticalModelRoute clone() {
+		return new CNLRoute(this.routeId,this.links,this.distanceTravelled);
+	}
 }

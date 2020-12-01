@@ -121,6 +121,7 @@ public abstract class AnalyticalModelODpairs {
 			}
 		}
 		System.out.println("no of trips withoutRoutes = "+tripsWithoutRoute);
+		//this.population = null;
 	}
 
 	public HashMap <Id<AnalyticalModelODpair>,ActivityFacility> getOriginActivityFacilitie(){
@@ -161,16 +162,16 @@ public abstract class AnalyticalModelODpairs {
 	}
 	
 	public void generateRouteandLinkIncidence(double routePercentage){
-		for (Id<AnalyticalModelODpair> odpairId:ODpairset.keySet()){
+		this.ODpairset.keySet().parallelStream().forEach(odpairId->{
 			ODpairset.get(odpairId).generateRoutes(routePercentage);
 			ODpairset.get(odpairId).generateTRRoutes(routePercentage);
 			ODpairset.get(odpairId).generateLinkIncidence();
 			ODpairset.get(odpairId).generateTimeBasedTransitRoutes();
 			ODpairset.get(odpairId).calcAutoRoutePathSize();
 			ODpairset.get(odpairId).calcTransitRoutePathSize();
-			this.ODpairset.get(odpairId).generateDepartureTimeDistribution();
+			//this.ODpairset.get(odpairId).generateDepartureTimeDistribution();
 			
-		}
+		});
 	}
 	
 	public void generateRouteandLinkIncidence(double routePercentage,Map<String,Map<String,Double>>capacity,Map<String,Map<String,Double>>vehicleCount){
@@ -181,7 +182,7 @@ public abstract class AnalyticalModelODpairs {
 			ODpairset.get(odpairId).generateTimeBasedTransitRoutes(capacity,vehicleCount);
 			ODpairset.get(odpairId).calcAutoRoutePathSize();
 			ODpairset.get(odpairId).calcTransitRoutePathSize();
-			this.ODpairset.get(odpairId).generateDepartureTimeDistribution();
+			//this.ODpairset.get(odpairId).generateDepartureTimeDistribution();
 		}
 	}
 	
@@ -284,6 +285,7 @@ public abstract class AnalyticalModelODpairs {
 			}
 		}
 		System.out.println("no of trips withoutRoutes = "+tripsWithoutRoute);
+		//this.population = null;
 	}
 	/**
 	 * Apply this just after creation of the od pair.

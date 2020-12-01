@@ -293,6 +293,7 @@ public class AnalyticalModelODpair {
 	/**
 	 * 
 	 * adding trips generated from a population file
+	 * Increases demand
 	 * @param trip 
 	 */
 
@@ -308,9 +309,9 @@ public class AnalyticalModelODpair {
 			}
 			
 		}
-		
-		
-		
+		if((trip.getRoute()!=null || trip.getTrRoute()!=null) && timeId!=null){
+			demand.put(timeId, demand.get(timeId)+1);
+		}
 		if(trip.getRoute()!=null && timeId!=null){
 			
 			this.startTimes.get(timeId).add(trip.getStartTime());
@@ -323,7 +324,7 @@ public class AnalyticalModelODpair {
 			//this.median.put(timeId, this.startTimeSum.get(timeId)/(this.demand.get(timeId)+1));
 			
 			//demand.put(timeId, demand.get(timeId)+trip.getCarPCU());//TODO: how to fix it??
-			demand.put(timeId, demand.get(timeId)+1);//TODO: how to fix it??
+//			demand.put(timeId, demand.get(timeId)+1);//TODO: how to fix it??
 			//Add the demand to the vehicleType demand 
 			if(this.vehicleSpecificDemand.get(timeId).containsKey(trip.getVehicleType())) {
 				this.vehicleSpecificDemand.get(timeId).put(trip.getVehicleType(),this.vehicleSpecificDemand.get(timeId).get(trip.getVehicleType())+1);
@@ -352,7 +353,7 @@ public class AnalyticalModelODpair {
 //			}
 			this.startTimes.get(timeId).add(trip.getStartTime());
 			//demand.put(timeId, demand.get(timeId)+trip.getCarPCU());
-			demand.put(timeId, demand.get(timeId)+1);
+			//demand.put(timeId, demand.get(timeId)+1);
 			this.agentTrCounter++;
 			if(!this.Transitroutes.containsKey(trip.getTrRoute().getTrRouteId())) {
 				this.Transitroutes.put(trip.getTrRoute().getTrRouteId(),trip.getTrRoute());
@@ -377,7 +378,12 @@ public class AnalyticalModelODpair {
 //			this.median.put(timeId, this.startTimes.get(timeId).get((size+1)/2));
 //		}
 //	}
-	
+	/**
+	 * Only adds the route from the trip. The route is cloned
+	 * the demand do not increase.
+	 * Assume this route comes from a secondary od pair
+	 * @param trip
+	 */
 	public void addRoute(Trip trip) {
 		String timeId=null;
 		Integer i=0;
@@ -391,13 +397,14 @@ public class AnalyticalModelODpair {
 			
 		}
 		if(trip.getRoute()!=null && timeId!=null){
-			demand.put(timeId, demand.get(timeId)+1);//TODO: how to fix it??
-			this.agentCARCounter+=1;
-			this.updateAveragePCU(trip.getCarPCU());
+			//demand.put(timeId, demand.get(timeId)+1);//TODO: how to fix it??
+			//this.agentCARCounter+=1;
+			//this.updateAveragePCU(trip.getCarPCU());
 
 			if(!routeset.containsKey(trip.getRoute().getRouteId())){//A new route 
-				routeset.put(trip.getRoute().getRouteId(),1);
-				this.RoutesWithDescription.put(trip.getRoute().getRouteId(),trip.getRoute());
+				AnalyticalModelRoute r = trip.getRoute().clone();
+				routeset.put(r.getRouteId(),1);
+				this.RoutesWithDescription.put(r.getRouteId(),r);
 				//this.RoutesWithDescription.get(trip.getRoute().getRouteDescription()).addPerson(trip.getPersonId());
 				//this.no_of_occurance.put(trip.getRouteId(), 1);
 
@@ -409,11 +416,12 @@ public class AnalyticalModelODpair {
 			//			if(demand.get(timeId)==null) {
 			//				System.out.println();
 			//			}
-			this.startTimes.get(timeId).add(trip.getStartTime());
-			demand.put(timeId, demand.get(timeId)+trip.getCarPCU());
-			this.agentTrCounter++;
+//			this.startTimes.get(timeId).add(trip.getStartTime());
+//			demand.put(timeId, demand.get(timeId)+trip.getCarPCU());
+//			this.agentTrCounter++;
 			if(!this.Transitroutes.containsKey(trip.getTrRoute().getTrRouteId())) {
-				this.Transitroutes.put(trip.getTrRoute().getTrRouteId(),trip.getTrRoute());
+				AnalyticalModelTransitRoute r = trip.getTrRoute().cloneRoute();
+				this.Transitroutes.put(r.getTrRouteId(),r);
 				this.transitRouteCounter.put(trip.getTrRoute().getTrRouteId(), 1);
 			}else {
 				this.transitRouteCounter.put(trip.getTrRoute().getTrRouteId(),this.transitRouteCounter.get(trip.getTrRoute().getTrRouteId())+ 1);
@@ -647,9 +655,12 @@ public class AnalyticalModelODpair {
 		}
 		//System.out.println();
 		
-		if((this.finalRoutes!=null ||this.finalTrRoutes!=null)&&(this.routeset.size()!=0 && this.finalRoutes.size()==0)||(this.transitRouteCounter.size()!=0 && this.finalTrRoutes.size()==0)) {
-			throw new IllegalArgumentException("Stop!!! No Routes Were Created!!!");
-		}
+//		if((this.finalRoutes!=null ||this.finalTrRoutes!=null)&&(this.routeset.size()!=0 && this.finalRoutes.size()==0)||(this.transitRouteCounter.size()!=0 && this.finalTrRoutes.size()==0)) {
+//			throw new IllegalArgumentException("Stop!!! No Routes Were Created!!!");
+//		}
+//		if((this.finalRoutes!=null&& this.routeset.size()!=0) ||(this.finalTrRoutes!=null &&  this.Transitroutes.size()==0)||(this.transitRouteCounter.size()!=0 && this.finalTrRoutes.size()==0)) {
+//			throw new IllegalArgumentException("Stop!!! No Routes Were Created!!!");
+//		}
 	}
 	
 	
