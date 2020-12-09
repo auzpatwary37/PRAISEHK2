@@ -66,7 +66,11 @@ public class MeasurementsReader extends DefaultHandler {
 		}
 		
 		if(qName.equalsIgnoreCase("linkId")) {
-			linkIds.add(Id.createLinkId(attributes.getValue("Id")));
+			String id = attributes.getValue("Id");
+			if(id.contains("\"")) {
+				id = id.replace("\"", "");
+			}
+			linkIds.add(Id.createLinkId(id));
 		}
 		
 		if(qName.equalsIgnoreCase("Volume")) {

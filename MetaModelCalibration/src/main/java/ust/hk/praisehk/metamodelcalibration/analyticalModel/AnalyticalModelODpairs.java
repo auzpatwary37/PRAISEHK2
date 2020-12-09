@@ -252,6 +252,7 @@ public abstract class AnalyticalModelODpairs {
 				trips.addAll( tripchain.getTrips());
 			}
 		}
+		System.out.println("Number of Trips = "+trips.size());
 		double tripsWithoutRoute=0;
 		for (Trip trip:trips){
 			double pcu=1;

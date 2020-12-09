@@ -64,10 +64,10 @@ public class ObjectiveCalculator {
 				for(String timeBeanId:m.getVolumes().keySet()) {
 					if(simOrAnaMeasurements.getMeasurements().get(m.getId())==null) {
 						logger.error("The Measurements entered are not comparable (measuremtn do not match)!!! This should not happen. Please check");
-						
+						continue;
 					}else if(simOrAnaMeasurements.getMeasurements().get(m.getId()).getVolumes().get(timeBeanId)==null) {
 						logger.error("The Measurements entered are not comparable (volume timeBeans do not match)!!! This should not happen. Please check");
-						
+						continue;
 					}
 					
 					objective+=Math.pow((m.getVolumes().get(timeBeanId)-simOrAnaMeasurements.getMeasurements().get(m.getId()).getVolumes().get(timeBeanId)),2);
