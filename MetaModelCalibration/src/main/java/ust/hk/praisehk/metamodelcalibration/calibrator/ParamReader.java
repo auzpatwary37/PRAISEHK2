@@ -346,5 +346,22 @@ public class ParamReader {
 	}
 	
 	
+	public void setDefaultParams(Config configOut, String subPop) {
+		LinkedHashMap<String,Double> params=this.ScaleUp(this.DefaultParam);
+		configOut.planCalcScore().getOrCreateScoringParameters(subPop).getOrCreateModeParams("car").setMarginalUtilityOfTraveling(params.get(AnalyticalModel.MarginalUtilityofTravelCarName));
+		configOut.planCalcScore().getOrCreateScoringParameters(subPop).getOrCreateModeParams("car").setMarginalUtilityOfDistance(params.get(AnalyticalModel.MarginalUtilityofDistanceCarName));
+		configOut.planCalcScore().getOrCreateScoringParameters(subPop).setMarginalUtilityOfMoney(params.get(AnalyticalModel.MarginalUtilityofMoneyName));
+		configOut.planCalcScore().getOrCreateScoringParameters(subPop).getOrCreateModeParams("car").setMonetaryDistanceRate(params.get(AnalyticalModel.DistanceBasedMoneyCostCarName));
+		configOut.planCalcScore().getOrCreateScoringParameters(subPop).getOrCreateModeParams("pt").setMarginalUtilityOfTraveling(params.get(AnalyticalModel.MarginalUtilityofTravelptName));
+		configOut.planCalcScore().getOrCreateScoringParameters(subPop).getOrCreateModeParams("pt").setMonetaryDistanceRate(params.get(AnalyticalModel.MarginalUtilityOfDistancePtName));
+		configOut.planCalcScore().getOrCreateScoringParameters(subPop).setMarginalUtlOfWaitingPt_utils_hr(params.get(AnalyticalModel.MarginalUtilityofWaitingName));
+		configOut.planCalcScore().getOrCreateScoringParameters(subPop).setUtilityOfLineSwitch(params.get(AnalyticalModel.UtilityOfLineSwitchName));
+		configOut.planCalcScore().getOrCreateScoringParameters(subPop).getOrCreateModeParams("walk").setMarginalUtilityOfTraveling(params.get(AnalyticalModel.MarginalUtilityOfWalkingName));
+		configOut.planCalcScore().getOrCreateScoringParameters(subPop).getOrCreateModeParams("walk").setMonetaryDistanceRate(params.get(AnalyticalModel.DistanceBasedMoneyCostWalkName));
+		configOut.planCalcScore().getOrCreateScoringParameters(subPop).getOrCreateModeParams("pt").setConstant(params.get(AnalyticalModel.ModeConstantPtname));
+		configOut.planCalcScore().getOrCreateScoringParameters(subPop).getOrCreateModeParams("car").setConstant(params.get(AnalyticalModel.ModeConstantCarName));
+		configOut.planCalcScore().getOrCreateScoringParameters(subPop).setPerforming_utils_hr(params.get(AnalyticalModel.MarginalUtilityofPerformName));
+	}
+	
 	
 }
