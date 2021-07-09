@@ -87,7 +87,7 @@ public class CNLLink extends AnalyticalModelLink{
 	 */
 	public double getLinkTravelTime(Tuple<Double,Double> timeBean,LinkedHashMap<String,Double>params,LinkedHashMap<String,Double>anaParams) {
 		if(!this.link.getAllowedModes().contains("train")) {
-		double totalpcu=super.getLinkCarVolume()+super.getLinkTransitVolume();
+		double totalpcu=super.getLinkCarVolume()+super.getLinkTransitVolume()*params.get(CNLSUEModel.CapacityMultiplierName);
 		double capacity=super.getCapacity()*(timeBean.getSecond()-timeBean.getFirst())/3600*params.get(CNLSUEModel.CapacityMultiplierName)*this.getGcRatio();
 		double freeflowTime=super.getLength()/super.getFreespeed();
 		double linkTravelTime=freeflowTime*(1+anaParams.get(CNLSUEModel.BPRalphaName)*Math.pow(totalpcu/capacity, anaParams.get(CNLSUEModel.BPRbetaName)));

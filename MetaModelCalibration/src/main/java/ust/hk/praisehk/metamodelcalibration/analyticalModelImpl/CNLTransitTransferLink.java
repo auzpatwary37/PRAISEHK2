@@ -61,11 +61,11 @@ public class CNLTransitTransferLink extends TransitTransferLink {
 	 * returns 0 if this transfer link is the last one of the trip 
 	 */
 	@Override
-	public double getWaitingTime(LinkedHashMap<String,Double> anaParams,AnalyticalModelNetwork network) {
+	public double getWaitingTime(LinkedHashMap<String,Double>params,LinkedHashMap<String,Double> anaParams,AnalyticalModelNetwork network) {
 		
 		if(this.nextdLink!=null) {
 			headway=this.nextdLink.getHeadway();
-			capacity=this.nextdLink.getCapacity();
+			capacity=this.nextdLink.getCapacity()*params.get(CNLSUEModel.CapacityMultiplierName);
 			double noOfVehicles=this.nextdLink.getFrequency();
 			CNLLink l_gamma = ((CNLLink)network.getLinks().get(this.nextdLink.getLinkList().get(0)));
 			currentOnboardPassenger = l_gamma.getTransitPassengerVolume(this.nextdLink.getLineId()+"_"+this.nextdLink.getRouteId());

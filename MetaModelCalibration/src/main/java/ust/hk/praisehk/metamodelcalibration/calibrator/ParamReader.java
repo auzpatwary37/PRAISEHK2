@@ -7,8 +7,10 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Map.Entry;
+import java.util.Set;
 
 import org.apache.log4j.Logger;
 import org.matsim.core.config.Config;
@@ -248,15 +250,16 @@ public class ParamReader {
 	 * @return
 	 */
 	public LinkedHashMap<String,Double> ScaleDown(LinkedHashMap<String,Double>param) throws IllegalArgumentException{
-		if((this.ParamNoCode.values()).containsAll(param.keySet())) {
-			logger.warn("Parameter is already scaled down, i.e. in ParamNo-Value format. Method will exit.");
+		Set<String> keys = new HashSet<>(param.keySet());
+		keys.retainAll(this.ParamNoCode.keySet());
+		if(keys.size()==0) {
+			logger.warn("nothing to scale down. Method will exit.");
 			return new LinkedHashMap<String,Double>(param);
-		}else if((this.ParamNoCode.keySet()).containsAll(param.keySet())) {
-			
-		}else {
-			logger.error("Invalid input. Params can be either in ParamName-Value format or ParamCode-Value Format");
-			throw new IllegalArgumentException("Invalid input. Params can be either in ParamName-Value format or ParamCode-Value Format");
 		}
+		//else {
+		//logger.error("Invalid input. Params can be either in ParamName-Value format or ParamCode-Value Format");
+		//throw new IllegalArgumentException("Invalid input. Params can be either in ParamName-Value format or ParamCode-Value Format");
+	//}
 		
 		LinkedHashMap<String,Double> scaledDownParam=new LinkedHashMap<String,Double>();
 		for(String s:param.keySet()) {
@@ -283,6 +286,7 @@ public class ParamReader {
 	 * @return
 	 */
 	public Config SetParamToConfig(Config config, LinkedHashMap<String, Double> noparams) {
+		System.out.println(config.isLocked());
 		LinkedHashMap<String,Double> Nparams=this.ScaleDown(noparams);
 		LinkedHashMap<String,Double>Noparams=new LinkedHashMap<>(Nparams);
 		new ConfigWriter(config).write("config_Intermediate.xml");
@@ -340,7 +344,7 @@ public class ParamReader {
 			configOut.qsim().setFlowCapFactor(params.get(AnalyticalModel.CapacityMultiplierName));
 		}else {
 			Double factor=params.get("All "+AnalyticalModel.CapacityMultiplierName);
-			configOut.qsim().setFlowCapFactor(factor);
+			if(factor!=null)configOut.qsim().setFlowCapFactor(factor);
 		}
 		return configOut;
 	}

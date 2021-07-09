@@ -78,6 +78,46 @@ public class ObjectiveCalculator {
 		return objective;
 	}
 	
+	public static double calcGEHObjective(Measurements realMeasurements,Measurements simOrAnaMeasurements,String Type) {
+		double objective=0;
+		if(Type.equals(TypeAADT)) {
+			double stationCountReal=0;
+			double stationCountAnaOrSim=0;
+			for(Measurement m:realMeasurements.getMeasurements().values()) {
+				for(String timeBeanId:m.getVolumes().keySet()) {
+					if(simOrAnaMeasurements.getMeasurements().get(m.getId())==null) {
+						logger.error("The Measurements entered are not comparable (measuremtn do not match)!!! This should not happen. Please check");
+						
+					}else if(simOrAnaMeasurements.getMeasurements().get(m.getId()).getVolumes().get(timeBeanId)==null) {
+						logger.error("The Measurements entered are not comparable (volume timeBeans do not match)!!! This should not happen. Please check");
+						
+					}
+					
+					stationCountReal+=m.getVolumes().get(timeBeanId);
+					stationCountAnaOrSim+=simOrAnaMeasurements.getMeasurements().get(m.getId()).getVolumes().get(timeBeanId);
+				}
+				objective+=2*Math.pow((stationCountReal-stationCountAnaOrSim),2)/(stationCountReal+stationCountAnaOrSim);
+			}
+			
+		}else if(Type.equals(TypeMeasurementAndTimeSpecific)){
+			for(Measurement m:realMeasurements.getMeasurements().values()) {
+				for(String timeBeanId:m.getVolumes().keySet()) {
+					if(simOrAnaMeasurements.getMeasurements().get(m.getId())==null) {
+						logger.error("The Measurements entered are not comparable (measuremtn do not match)!!! This should not happen. Please check");
+						continue;
+					}else if(simOrAnaMeasurements.getMeasurements().get(m.getId()).getVolumes().get(timeBeanId)==null) {
+						logger.error("The Measurements entered are not comparable (volume timeBeans do not match)!!! This should not happen. Please check");
+						continue;
+					}
+					
+					objective+=2*Math.pow((m.getVolumes().get(timeBeanId)-simOrAnaMeasurements.getMeasurements().get(m.getId()).getVolumes().get(timeBeanId)),2)/(m.getVolumes().get(timeBeanId)+simOrAnaMeasurements.getMeasurements().get(m.getId()).getVolumes().get(timeBeanId));
+				}
+			}
+			
+		}
+		return objective;
+	}
+	
 	public static Map<MeasurementType,Double> calcMultiObjective(Measurements realMeasurements,Measurements simOrAnaMeasurements,String Type) {
 		Map<MeasurementType,Double> objective = new HashMap<>();
 		if(Type.equals(TypeAADT)) {

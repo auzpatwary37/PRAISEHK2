@@ -60,7 +60,7 @@ public interface AnalyticalModelTransitRoute{
 	 * Calculates and returns the route waiting time
 	 * @return
 	 */
-	public double getRouteWaitingTime(LinkedHashMap<String,Double> anaParams,AnalyticalModelNetwork network, Map<Id<TransitLink>,TransitLink>transitLinks);
+	public double getRouteWaitingTime(LinkedHashMap<String,Double> params,LinkedHashMap<String,Double> anaParams,AnalyticalModelNetwork network, Map<Id<TransitLink>,TransitLink>transitLinks);
 
 	public Id<AnalyticalModelTransitRoute> getTrRouteId();
 	
