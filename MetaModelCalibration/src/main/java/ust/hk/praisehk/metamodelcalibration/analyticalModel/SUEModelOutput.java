@@ -23,6 +23,8 @@ public class SUEModelOutput {
 	private Map<String,Map<Id<TransitLink>,Double>> transitDirectLinkTT = null;
 	private Map<String,Map<Id<TransitLink>,Double>> transitTransferLinkTT = null;
 	private double autoFlow = 0;
+	private double transitFlow = 0;
+	private double activities = 0;
 	
 	
 	private Map<String,Map<String,Map<String,Double>>> MaaSSpecificFareLinkFlow;
@@ -129,6 +131,22 @@ public class SUEModelOutput {
 
 	public void setAutoFlow(double autoFlow) {
 		this.autoFlow = autoFlow;
+	}
+
+	public double getTransitFlow() {
+		return transitFlow;
+	}
+
+	public void setTransitFlow(double transitFlow) {
+		this.transitFlow = transitFlow;
+	}
+
+	public double getActivities() {
+		return activities;
+	}
+
+	public void setActivities(double activities) {
+		this.activities = activities;
 	}
 
 	
