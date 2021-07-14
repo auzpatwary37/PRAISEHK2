@@ -1,7 +1,10 @@
 package ust.hk.praisehk.metamodelcalibration.measurements;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 
 import org.apache.log4j.Logger;
 import org.matsim.api.core.v01.Id;
@@ -248,6 +251,12 @@ public enum MeasurementType {
 			}
 			String key =m.getAttribute(Measurement.FareLinkAttributeName).toString();
 			Map<String,Map<String,Double>>fareLinkVolume = modelOut.getFareLinkVolume();
+			if(fareLinkVolume==null) {
+				fareLinkVolume = new HashMap<>();
+				for(Entry<String, Map<String, Map<String, Double>>> e:modelOut.getMaaSSpecificFareLinkFlow().entrySet()){
+					fareLinkVolume.put(e.getKey(), e.getValue().get("noMass"));
+				}
+			}
 			
 			for(String s:m.getVolumes().keySet()) {
 				double volume=0;
@@ -282,6 +291,79 @@ public enum MeasurementType {
 		
 	},
 	
+	
+	fareLinkVolumeCluster
+	{
+
+		@Override
+		public void updateMeasurement(SUEModelOutput modelOut, AnalyticalModel sue, Object otherDataContainer,
+				Measurement m) {
+			
+			List<FareLink> fareLinks = (List<FareLink>) m.getAttribute(Measurement.FareLinkClusterAttributeName);
+			if(fareLinks==null) {
+				throw new IllegalArgumentException("No fare links in the fare link cluster");
+			}
+			for(FareLink fl:fareLinks) {	
+			if(m.getVolumes().size()==0) {
+				System.out.println("MeasurementId: "+m.getId().toString()+" Volume is empty!!! Updating volume for all time beans");
+				for(String s: m.getTimeBean().keySet()) {
+					if(modelOut.getFareLinkVolume().containsKey(s)) {
+						m.getVolumes().put(s, 0.);
+					}
+				}
+			}
+			String key = fl.toString();
+			Map<String,Map<String,Double>>fareLinkVolume = modelOut.getFareLinkVolume();
+			if(fareLinkVolume==null) {
+				fareLinkVolume = new HashMap<>();
+				for(Entry<String, Map<String, Map<String, Double>>> e:modelOut.getMaaSSpecificFareLinkFlow().entrySet()){
+					fareLinkVolume.put(e.getKey(), e.getValue().get("noMass"));
+				}
+				modelOut.setFareLinkVolume(fareLinkVolume);
+			}
+			
+			for(String s:m.getVolumes().keySet()) {
+				double volume=0;
+				try {
+					if(fareLinkVolume.get(s)==null) {
+						throw new IllegalArgumentException("linkVolumes does not contain volume information");
+					}
+					if(fareLinkVolume.get(s).get(key)==null) {
+						throw new IllegalArgumentException("linkVolumes does not contain volume information");
+					}
+					volume+=modelOut.getFareLinkVolume().get(s).get(key);
+				}catch(Exception e) {
+					System.out.println("Illegal Argument Excepton. Could not update measurements. Volumes are missing for measurement Id: "+m.getId()+" timeBeanId: "
+							+s+" fareLinkId: "+key);
+				}
+				m.getVolumes().put(s, volume+m.getVolumes().get(s));
+				}
+			}
+				
+			}
+		
+
+		@Override
+		public void writeAttribute(Element melement, Measurement m) {
+			String s = "";
+			String sep = "";
+			for(FareLink fl:(List<FareLink>)m.getAttribute(Measurement.FareLinkClusterAttributeName)) {
+				s = s+sep+fl.toString();
+				sep = ",";
+			}
+			melement.setAttribute(Measurement.FareLinkClusterAttributeName, s);
+			
+		}
+
+		@Override
+		public void parseAttribute(Attributes atr, Measurement m) {
+			String[] part = atr.getValue(Measurement.FareLinkClusterAttributeName).split(",");
+			List<FareLink> fareLinks = new ArrayList<>();
+			for(String s:part)fareLinks.add(new FareLink(s));
+			m.setAttribute(Measurement.FareLinkClusterAttributeName, fareLinks);
+		}
+		
+	},
 	
 	maasSpecificFareLinkVolume
 	{

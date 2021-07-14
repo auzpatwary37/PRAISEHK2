@@ -46,14 +46,16 @@ public class MeasurementsReader extends DefaultHandler {
 				mType=MeasurementType.linkVolume;
 			}
 			this.m.createAnadAddMeasurement(mId.toString(),mType);
-			for(int i=0;i<attributes.getLength();i++) {
-				String attrName = attributes.getQName(i);
-                String attrVal = attributes.getValue(i);
-                if(!attrName.equals(Measurement.linkListAttributeName)) {
-                	this.m.getMeasurements().get(this.mId).setAttribute(attrName, attrVal);
-                }
-			}
-			
+			mType.parseAttribute(attributes, this.m.getMeasurements().get(this.mId));
+			////This piece of code is useless 
+//			for(int i=0;i<attributes.getLength();i++) {
+//				String attrName = attributes.getQName(i);
+//                String attrVal = attributes.getValue(i);
+//                if(!attrName.equals(Measurement.linkListAttributeName)&& !attrName.equals(Measurement.FareLinkAttributeName) && !attrName.equals("MeasurementId") && !attrName.equals("MeasurementType")) {
+//                	this.m.getMeasurements().get(this.mId).setAttribute(attrName, attrVal);
+//                }
+//			}
+			///// Have to see if this is even needed
 		}
 		
 		if(qName.equalsIgnoreCase("Coord")) {

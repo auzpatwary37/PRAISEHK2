@@ -133,6 +133,7 @@ public class SUEModelOutput {
 		this.autoFlow = autoFlow;
 	}
 
+
 	public double getTransitFlow() {
 		return transitFlow;
 	}
@@ -147,6 +148,10 @@ public class SUEModelOutput {
 
 	public void setActivities(double activities) {
 		this.activities = activities;
+	}
+	public void setFareLinkVolume(Map<String, Map<String, Double>> fareLinkVolume) {
+		FareLinkVolume = fareLinkVolume;
+
 	}
 
 	
