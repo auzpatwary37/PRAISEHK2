@@ -78,4 +78,18 @@ public class LinearMetaModel extends MetaModelImpl{
 	public String getMetaModelName() {
 		return this.LinearMetaModelName;
 	}
+
+
+	@Override
+	public double[] getGradientVector() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+
+	@Override
+	public Double getanaGradMultiplier() {
+		// TODO Auto-generated method stub
+		return 0.;
+	}
 }

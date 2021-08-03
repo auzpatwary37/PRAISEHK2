@@ -144,4 +144,20 @@ public class AnalyticalQuadraticMetaModel extends MetaModelImpl{
 	public String getMetaModelName() {
 		return this.AnalyticalQuadraticMetaModelName;
 	}
+
+
+
+	@Override
+	public double[] getGradientVector() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+
+
+	@Override
+	public Double getanaGradMultiplier() {
+		// TODO Auto-generated method stub
+		return null;
+	}
 }

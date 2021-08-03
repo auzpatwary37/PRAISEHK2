@@ -48,4 +48,16 @@ public class WrappedMetaModel implements MetaModel {
 		return this.measurementId;
 	}
 
+	@Override
+	public double[] getGradientVector() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public Double getanaGradMultiplier() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
 }

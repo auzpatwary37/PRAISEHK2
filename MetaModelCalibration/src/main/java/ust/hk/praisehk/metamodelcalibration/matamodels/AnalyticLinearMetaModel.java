@@ -103,4 +103,18 @@ public class AnalyticLinearMetaModel extends MetaModelImpl {
 	public String getMetaModelName() {
 		return this.AnalyticalLinearMetaModelName;
 	}
+
+
+	@Override
+	public double[] getGradientVector() {
+		double[] grad = new double[this.MetaModelParams.length-2];
+		for(int i = 2;i<this.MetaModelParams.length;i++)grad[i-2] = this.MetaModelParams[i];
+		return grad;
+	}
+
+
+	@Override
+	public Double getanaGradMultiplier() {
+		return this.MetaModelParams[1];
+	}
 }

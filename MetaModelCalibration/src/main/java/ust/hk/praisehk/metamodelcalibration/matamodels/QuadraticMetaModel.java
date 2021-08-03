@@ -129,4 +129,17 @@ public class QuadraticMetaModel extends MetaModelImpl{
 	public String getMetaModelName() {
 		return this.QudaraticMetaModelName;
 	}
+
+	@Override
+	public double[] getGradientVector() {
+		
+		return null;
+	}
+
+	@Override
+	public Double getanaGradMultiplier() {
+		// TODO Auto-generated method stub
+		return 0.;
+	}
+	
 }

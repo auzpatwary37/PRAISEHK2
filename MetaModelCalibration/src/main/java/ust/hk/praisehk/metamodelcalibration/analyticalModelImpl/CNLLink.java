@@ -140,4 +140,10 @@ public class CNLLink extends AnalyticalModelLink{
 			return new HashSet<>();
 		}
 	}
+
+	@Override
+	public double getCapacityPeriod() {
+		// TODO Auto-generated method stub
+		return 0;
+	}
 }

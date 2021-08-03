@@ -1,6 +1,7 @@
 package ust.hk.praisehk.metamodelcalibration.matamodels;
 
 import java.util.LinkedHashMap;
+import java.util.Map;
 
 import org.matsim.api.core.v01.Id;
 
@@ -20,8 +21,6 @@ public interface MetaModel {
 	 * param: contains the parameters to be calibrated.
 	 */
 	public double calcMetaModel(double analyticalModelPart,LinkedHashMap<String,Double> param);
-	
-	
 	
 	/**
 	 * @return hour
@@ -46,4 +45,23 @@ public interface MetaModel {
 	public static final String GradientBased_III_MetaModelName="GD-III";
 	
 	public Id<Measurement> getMeasurementId();
+	
+	/**
+	 * This function is currently implemented for analytical linear metamodel.
+	 * There is no point implementing this model for the generic linear and quadratic metamodels.
+	 * The gradient based metamodels and the quadratic metamodels however can benefit. The function is not implemented for those metamodels 
+	 * as of now. //Aug21, Ashraf. 
+	 * @return
+	 */
+	public double[] getGradientVector();
+	
+	
+	/**
+	 * This function is currently implemented for analytical linear metamodel.
+	 * There is no point implementing this model for the generic linear and quadratic metamodels.
+	 * The gradient based metamodels and the quadratic metamodels however can benefit. The function is not implemented for those metamodels 
+	 * as of now. //Aug21, Ashraf. 
+	 * @return
+	 */
+	public Double getanaGradMultiplier();
 }

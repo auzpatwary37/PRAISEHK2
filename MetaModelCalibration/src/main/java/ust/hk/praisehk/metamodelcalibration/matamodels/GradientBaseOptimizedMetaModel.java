@@ -142,5 +142,15 @@ public class GradientBaseOptimizedMetaModel extends MetaModelImpl{
 		public String getMetaModelName() {
 			return this.GradientBased_II_MetaModelName;
 		}
+		@Override
+		public double[] getGradientVector() {
+			// TODO Auto-generated method stub
+			return null;
+		}
+		@Override
+		public Double getanaGradMultiplier() {
+			// TODO Auto-generated method stub
+			return null;
+		}
 	}
 

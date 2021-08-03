@@ -79,4 +79,20 @@ public class GradientBasedMetaModel implements MetaModel{
 	public Id<Measurement> getMeasurementId() {
 		return this.measurementId;
 	}
+
+
+
+	@Override
+	public double[] getGradientVector() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+
+
+	@Override
+	public Double getanaGradMultiplier() {
+		// TODO Auto-generated method stub
+		return null;
+	}
 }

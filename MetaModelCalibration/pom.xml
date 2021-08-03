@@ -109,14 +109,14 @@
 		  <dependency>
     <groupId>org.matsim</groupId>
     <artifactId>matsim</artifactId>
-    <version>12.0-SNAPSHOT</version>
+    <version>14.0-SNAPSHOT</version>
   </dependency>
   
 
 <dependency>
 		    <groupId>org.matsim.contrib</groupId>
 		    <artifactId>roadpricing</artifactId>
-		    <version>12.0-SNAPSHOT</version>
+		    <version>14.0-SNAPSHOT</version>
 		    <exclusions>
 		    	<exclusion>
 		    		<groupId>org.matsim</groupId>
@@ -127,7 +127,7 @@
 		<dependency>
 			<groupId>org.matsim.contrib</groupId>
 			<artifactId>signals</artifactId>
- 			<version>12.0-SNAPSHOT</version>
+ 			<version>14.0-SNAPSHOT</version>
  			<exclusions>
  				<exclusion>
  					<groupId>org.matsim</groupId>
@@ -138,7 +138,7 @@
 		<dependency>
 			<groupId>org.matsim.contrib</groupId>
 			<artifactId>emissions</artifactId>
-			<version>12.0-SNAPSHOT</version>
+			<version>14.0-SNAPSHOT</version>
 			<exclusions>
 				<exclusion>
 					<groupId>org.matsim</groupId>
@@ -220,22 +220,13 @@
 		</dependency>
 
 
-		
-
-		<dependency>
-            <groupId>junit</groupId>
-            <artifactId>junit</artifactId>
-            <version>4.12</version>
-            <scope>test</scope>
-        </dependency>
-
-		<dependency>
-			<groupId>cz.cvut.fit.jcool</groupId>
-			<artifactId>jcool-core</artifactId>
-			<version>1.2-SNAPSHOT</version>
-			<scope>system</scope>
-			<systemPath>${project.basedir}/src/main/resources/jcool-core.jar</systemPath>
-		</dependency>
+<!-- 		<dependency> -->
+<!-- 			<groupId>cz.cvut.fit.jcool</groupId> -->
+<!-- 			<artifactId>jcool-core</artifactId> -->
+<!-- 			<version>1.2-SNAPSHOT</version> -->
+<!-- 			<scope>system</scope> -->
+<!-- 			<systemPath>${basedir}/src/main/resources/jcool-core.jar</systemPath> -->
+<!-- 		</dependency> -->
 		
 	
 	</dependencies>
