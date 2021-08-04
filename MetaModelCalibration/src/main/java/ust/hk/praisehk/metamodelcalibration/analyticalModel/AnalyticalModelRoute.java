@@ -3,11 +3,13 @@ package ust.hk.praisehk.metamodelcalibration.analyticalModel;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.network.Link;
+import org.matsim.api.core.v01.population.PlanElement;
 import org.matsim.core.utils.collections.Tuple;
 /**
  * 
@@ -71,4 +73,7 @@ public interface AnalyticalModelRoute{
 //			Map<String, AnalyticalModelNetwork> networks, Map<String, Tuple<Double, Double>> timeBean,
 //			String timeBeanId, double startTime);
 	public AnalyticalModelRoute clone();
+	
+	public void setPlanElements(List<PlanElement> pes);
+	public List<PlanElement> getPlanElements();
 }

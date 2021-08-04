@@ -72,6 +72,13 @@ public abstract class TripChain{
 					//pt activity end in this activity
 					ptactivityList.add(activity);
 					AnalyticalModelTransitRoute ptleg=this.getTransitRoute(ptlegList,ptactivityList,ts,scenario);
+					List<PlanElement> pes = new ArrayList<>();
+					pes.add(ptlegList.get(0));
+					for(int jj=0;jj<ptactivityList.size();jj++) {
+						pes.add(ptactivityList.get(jj));
+						pes.add(ptlegList.get(jj+1));
+					}
+					ptleg.setPlanElements(pes);
 					ptlegs.add(ptleg);
 					Leg l=popfac.createLeg("pt");
 					
@@ -119,7 +126,9 @@ public abstract class TripChain{
 					r.setDistance(d);
 				}
 				trip.setRoute(this.createRoute((leglist.get(i).getRoute())));
-				
+				List<PlanElement> pes = new ArrayList<>();
+				pes.add(leglist.get(i));
+				trip.getRoute().setPlanElements(pes);
 			}else if(leglist.get(i).getMode().equals("pt")){
 				if(ptlegs.size()!=0) {
 				trip.setTrRoute(ptlegs.get(pttrip));

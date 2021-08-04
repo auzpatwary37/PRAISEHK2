@@ -8,6 +8,7 @@ import java.util.Map;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.network.Network;
+import org.matsim.api.core.v01.population.PlanElement;
 import org.matsim.core.utils.collections.Tuple;
 import org.matsim.pt.transitSchedule.api.TransitSchedule;
 
@@ -89,4 +90,6 @@ public interface AnalyticalModelTransitRoute{
 	
 	public void updateToOdBasedId(Id<AnalyticalModelODpair> odId, int routeNumber);
 	public Id<AnalyticalModelTransitRoute> getOldTrRouteId();
+	public void setPlanElements(List<PlanElement> pes);
+	public List<PlanElement> getPlanElements();
 }

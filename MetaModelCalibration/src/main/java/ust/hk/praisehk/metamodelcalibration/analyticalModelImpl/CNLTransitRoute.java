@@ -17,6 +17,7 @@ import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.network.Network;
 import org.matsim.api.core.v01.population.Activity;
 import org.matsim.api.core.v01.population.Leg;
+import org.matsim.api.core.v01.population.PlanElement;
 import org.matsim.core.utils.collections.Tuple;
 import org.matsim.pt.transitSchedule.api.TransitLine;
 import org.matsim.pt.transitSchedule.api.TransitRoute;
@@ -66,6 +67,7 @@ public class CNLTransitRoute implements AnalyticalModelTransitRoute{
 	private routeInfoOut info;
 	private final Id<AnalyticalModelTransitRoute> oldTrRouteId;
 	public static final String routeIdSubscript = "_tr_";
+	private List<PlanElement> planElements;
 	/**
 	 * Constructor
 	 * these two lists holds all the pt legs and pt activity sequentially for one single transit trip
@@ -662,6 +664,21 @@ public class CNLTransitRoute implements AnalyticalModelTransitRoute{
 	@Override
 	public Id<AnalyticalModelTransitRoute> getOldTrRouteId() {
 		return this.oldTrRouteId;
+	}
+
+
+
+	@Override
+	public void setPlanElements(List<PlanElement> pes) {
+		this.planElements = pes;
+		
+	}
+
+
+
+	@Override
+	public List<PlanElement> getPlanElements() {
+		return this.planElements;
 	}
 	
 	

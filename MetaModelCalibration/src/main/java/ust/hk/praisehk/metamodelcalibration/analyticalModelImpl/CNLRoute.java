@@ -3,10 +3,12 @@ package ust.hk.praisehk.metamodelcalibration.analyticalModelImpl;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.network.Link;
+import org.matsim.api.core.v01.population.PlanElement;
 import org.matsim.api.core.v01.population.Route;
 import org.matsim.core.utils.collections.Tuple;
 
@@ -27,6 +29,7 @@ public class CNLRoute implements AnalyticalModelRoute{
 	private Map<Id<Link>,Double> linkReachTime=new HashMap<>();
 	private final Id<AnalyticalModelRoute> oldRouteId;
 	public static final String routeIdSubscript = "_r_";
+	public List<PlanElement> planElements;
 	
 	public CNLRoute(Route r) {
 		String[] part=r.getRouteDescription().split(" ");
@@ -240,5 +243,16 @@ public class CNLRoute implements AnalyticalModelRoute{
 	@Override
 	public AnalyticalModelRoute clone() {
 		return new CNLRoute(this.routeId,this.links,this.distanceTravelled);
+	}
+
+	@Override
+	public void setPlanElements(List<PlanElement> pes) {
+		this.planElements = pes;
+		
+	}
+
+	@Override
+	public List<PlanElement> getPlanElements() {
+		return this.planElements;
 	}
 }
