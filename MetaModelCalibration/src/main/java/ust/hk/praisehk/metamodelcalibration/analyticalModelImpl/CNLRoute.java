@@ -29,7 +29,7 @@ public class CNLRoute implements AnalyticalModelRoute{
 	private Map<Id<Link>,Double> linkReachTime=new HashMap<>();
 	private final Id<AnalyticalModelRoute> oldRouteId;
 	public static final String routeIdSubscript = "_r_";
-	public List<PlanElement> planElements;
+	private List<PlanElement> planElements;
 	
 	public CNLRoute(Route r) {
 		String[] part=r.getRouteDescription().split(" ");

@@ -89,7 +89,7 @@ public class CalibratorImpl implements Calibrator {
 		this.shouldPerformInternalParamCalibration=internalParameterCalibration;
 		this.pReader=pReader;
 		this.TrRadius=initialTRRadius;
-		this.currentParam=new LinkedHashMap<>(pReader.getInitialParam());
+		if(pReader!=null)this.currentParam=new LinkedHashMap<>(pReader.getInitialParam());
 		this.trialParam=new LinkedHashMap<>(this.currentParam);
 		this.currentParamNo=0;
 		this.iterationNo=0;
@@ -620,7 +620,7 @@ public class CalibratorImpl implements Calibrator {
 		this.shouldPerformInternalParamCalibration=internalParameterCalibration;
 		this.pReader=pReader;
 		this.TrRadius=initialTRRadius;
-		this.currentParam=new LinkedHashMap<>(pReader.getInitialParam());
+		if(pReader!=null)this.currentParam=new LinkedHashMap<>(pReader.getInitialParam());
 		this.trialParam=new LinkedHashMap<>(this.currentParam);
 		this.currentParamNo=0;
 		this.iterationNo=0;
