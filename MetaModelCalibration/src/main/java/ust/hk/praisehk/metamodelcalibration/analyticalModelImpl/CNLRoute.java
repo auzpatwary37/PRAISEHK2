@@ -41,11 +41,12 @@ public class CNLRoute implements AnalyticalModelRoute{
 		this.oldRouteId = Id.create(r.getRouteDescription(), AnalyticalModelRoute.class);
 	}
 	
-	public CNLRoute(Id<AnalyticalModelRoute> routeId,ArrayList<Id<Link>> linkList,double dist) {
+	public CNLRoute(Id<AnalyticalModelRoute> routeId,ArrayList<Id<Link>> linkList,double dist, List<PlanElement>pe) {
 		this.links = new ArrayList<>(linkList);
 		this.distanceTravelled=dist;
 		this.routeId=Id.create(routeId.toString(), AnalyticalModelRoute.class);
 		this.oldRouteId = Id.create(routeId.toString(), AnalyticalModelRoute.class);
+		this.planElements = pe;
 	}
 	
 	@Override
@@ -242,7 +243,7 @@ public class CNLRoute implements AnalyticalModelRoute{
 	
 	@Override
 	public AnalyticalModelRoute clone() {
-		return new CNLRoute(this.routeId,this.links,this.distanceTravelled);
+		return new CNLRoute(this.routeId,this.links,this.distanceTravelled,this.planElements);
 	}
 
 	@Override

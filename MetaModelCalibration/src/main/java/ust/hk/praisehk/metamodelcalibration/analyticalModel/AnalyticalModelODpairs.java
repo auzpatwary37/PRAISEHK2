@@ -259,9 +259,10 @@ public abstract class AnalyticalModelODpairs {
 			Vehicle v=this.scenario.getVehicles().getVehicles().get(Id.createVehicleId(trip.getPersonId().toString()));
 			if(v!=null) {
 				pcu=v.getType().getPcuEquivalents();
+				trip.setCarPCU(pcu);
+				trip.setVehicleType(v.getType().getId());
 			}
-			trip.setCarPCU(pcu);
-			trip.setVehicleType(v.getType().getId());
+			
 			if(trip.getRoute()!=null ||trip.getTrRoute()!=null) {
 				Id<AnalyticalModelODpair> ODId=trip.generateODpairId(odNetwork);
 				Id<AnalyticalModelODpair> pureODId=trip.generateODpairIdWithoutSubPop(odNetwork);

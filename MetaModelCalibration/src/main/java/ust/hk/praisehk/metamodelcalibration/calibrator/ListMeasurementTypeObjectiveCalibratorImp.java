@@ -18,7 +18,9 @@ import ust.hk.praisehk.metamodelcalibration.measurements.MeasurementsWriter;
 
 public class ListMeasurementTypeObjectiveCalibratorImp extends CalibratorImpl{
 	private final Set<MeasurementType> keys;
-	public ListMeasurementTypeObjectiveCalibratorImp(Measurements calibrationMeasurements,String fileLoc,boolean internalParamCalibration, ParamReader pReader,double initialTRRadius,int maxSuccessiveRejection, Set<MeasurementType> types) {
+	public ListMeasurementTypeObjectiveCalibratorImp(Measurements calibrationMeasurements,String fileLoc,
+			boolean internalParamCalibration, ParamReader pReader,double initialTRRadius,int maxSuccessiveRejection, 
+			Set<MeasurementType> types) {
 		super(calibrationMeasurements,fileLoc,internalParamCalibration,pReader,initialTRRadius,maxSuccessiveRejection);
 		this.keys = types;
 		//super.setObjectiveType(ObjectiveCalculator.TypeMultiObjective);

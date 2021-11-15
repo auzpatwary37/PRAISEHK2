@@ -162,6 +162,7 @@ public enum MeasurementType {
 			m.setAttribute(Measurement.transitLineAttributeName, Id.create(atr.getValue("LineId"),TransitLine.class));
 			m.setAttribute(Measurement.transitRouteAttributeName, Id.create(atr.getValue("RouteId"),TransitRoute.class));
 			m.setAttribute(Measurement.transitBoardingStopAtrributeName, atr.getValue("BoardingStop"));
+			if(atr.getValue("ifForValidation")!=null)m.setAttribute("ifForValidation", atr.getValue("ifForValidation"));
 		}
 	},
 	
@@ -197,6 +198,7 @@ public enum MeasurementType {
 				m.setAttribute(Measurement.transitLineAttributeName, atr.getValue("LineId"));
 				m.setAttribute(Measurement.transitRouteAttributeName, atr.getValue("RouteId"));
 			}
+			if(atr.getValue("ifForValidation")!=null)m.setAttribute("ifForValidation", atr.getValue("ifForValidation"));
 		}
 	},
 	
@@ -287,6 +289,7 @@ public enum MeasurementType {
 		@Override
 		public void parseAttribute(Attributes atr, Measurement m) {
 			m.setAttribute(Measurement.FareLinkAttributeName, new FareLink(atr.getValue(Measurement.FareLinkAttributeName)));
+			if(atr.getValue("ifForValidation")!=null)m.setAttribute("ifForValidation", atr.getValue("ifForValidation"));
 		}
 		
 	},
@@ -305,7 +308,7 @@ public enum MeasurementType {
 			}
 			for(FareLink fl:fareLinks) {	
 			if(m.getVolumes().size()==0) {
-				System.out.println("MeasurementId: "+m.getId().toString()+" Volume is empty!!! Updating volume for all time beans");
+				//System.out.println("MeasurementId: "+m.getId().toString()+" Volume is empty!!! Updating volume for all time beans");
 				for(String s: m.getTimeBean().keySet()) {
 					if(modelOut.getFareLinkVolume().containsKey(s)) {
 						m.getVolumes().put(s, 0.);
@@ -326,15 +329,15 @@ public enum MeasurementType {
 				double volume=0;
 				try {
 					if(fareLinkVolume.get(s)==null) {
-						throw new IllegalArgumentException("linkVolumes does not contain volume information");
+						//throw new IllegalArgumentException("linkVolumes does not contain volume information");
 					}
 					if(fareLinkVolume.get(s).get(key)==null) {
-						throw new IllegalArgumentException("linkVolumes does not contain volume information");
+						//throw new IllegalArgumentException("linkVolumes does not contain volume information");
 					}
 					volume+=modelOut.getFareLinkVolume().get(s).get(key);
 				}catch(Exception e) {
-					System.out.println("Illegal Argument Excepton. Could not update measurements. Volumes are missing for measurement Id: "+m.getId()+" timeBeanId: "
-							+s+" fareLinkId: "+key);
+					//System.out.println("Illegal Argument Excepton. Could not update measurements. Volumes are missing for measurement Id: "+m.getId()+" timeBeanId: "
+					//		+s+" fareLinkId: "+key);
 				}
 				m.getVolumes().put(s, volume+m.getVolumes().get(s));
 				}
@@ -359,8 +362,10 @@ public enum MeasurementType {
 		public void parseAttribute(Attributes atr, Measurement m) {
 			String[] part = atr.getValue(Measurement.FareLinkClusterAttributeName).split(",");
 			List<FareLink> fareLinks = new ArrayList<>();
-			for(String s:part)fareLinks.add(new FareLink(s));
+			for(String s : part) // Adding every part
+				fareLinks.add(new FareLink(s.replace("[", "").replace("]","").replace(" ",""))); //XXX: It is a hotfix by Enoch 21 Aug 2021
 			m.setAttribute(Measurement.FareLinkClusterAttributeName, fareLinks);
+			if(atr.getValue("ifForValidation")!=null)m.setAttribute("ifForValidation", atr.getValue("ifForValidation"));
 		}
 		
 	},
@@ -422,6 +427,7 @@ public enum MeasurementType {
 		public void parseAttribute(Attributes atr, Measurement m) {
 			m.setAttribute(Measurement.FareLinkAttributeName, new FareLink(atr.getValue(Measurement.FareLinkAttributeName)));
 			m.setAttribute(Measurement.MaaSPackageAttributeName, atr.getValue(Measurement.MaaSPackageAttributeName));
+			if(atr.getValue("ifForValidation")!=null)m.setAttribute("ifForValidation", atr.getValue("ifForValidation"));
 		}
 		
 	},
@@ -445,6 +451,7 @@ public enum MeasurementType {
 		@Override
 		public void parseAttribute(Attributes atr, Measurement m) {
 			m.setAttribute(Measurement.MaaSPackageAttributeName, new FareLink(atr.getValue(Measurement.MaaSPackageAttributeName)));	
+			if(atr.getValue("ifForValidation")!=null)m.setAttribute("ifForValidation", atr.getValue("ifForValidation"));
 		}
 		
 	};	

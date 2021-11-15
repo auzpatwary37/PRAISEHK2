@@ -13,7 +13,6 @@
 			<attribute name="maven.pomderived" value="true"/>
 		</attributes>
 	</classpathentry>
-	<classpathentry combineaccessrules="false" kind="src" path="/MATSim-HK"/>
 	<classpathentry excluding="**" kind="src" output="target/classes" path="src/main/resources">
 		<attributes>
 			<attribute name="maven.pomderived" value="true"/>
@@ -29,6 +28,8 @@
 			<attribute name="maven.pomderived" value="true"/>
 		</attributes>
 	</classpathentry>
-	<classpathentry kind="lib" path="/Users/ashrafzaman/git/PRAISEHK2/MetaModelCalibration/src/main/resources/jcool-core.jar"/>
+	<classpathentry kind="lib" path="C:/Users/envf/git/PRAISEHK2/MetaModelCalibration/src/main/resources/jcool-core.jar"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/MATSim-HK"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/matsim-e"/>
 	<classpathentry kind="output" path="target/classes"/>
 </classpath>

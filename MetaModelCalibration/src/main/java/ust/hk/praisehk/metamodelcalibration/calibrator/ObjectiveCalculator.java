@@ -69,13 +69,17 @@ public class ObjectiveCalculator {
 						logger.error("The Measurements entered are not comparable (volume timeBeans do not match)!!! This should not happen. Please check");
 						continue;
 					}
-					
-					objective+=Math.pow((m.getVolumes().get(timeBeanId)-simOrAnaMeasurements.getMeasurements().get(m.getId()).getVolumes().get(timeBeanId)),2);
+					double dd = simOrAnaMeasurements.getMeasurements().get(m.getId()).getVolumes().get(timeBeanId);
+					double d =Math.pow((m.getVolumes().get(timeBeanId)-dd),2);
+					if(d>1) {
+						logger.debug("");
+					}
+					objective+=d;
 				}
 			}
 			
 		}
-		return objective;
+return objective;
 	}
 	
 	public static double calcGEHObjective(Measurements realMeasurements,Measurements simOrAnaMeasurements,String Type) {

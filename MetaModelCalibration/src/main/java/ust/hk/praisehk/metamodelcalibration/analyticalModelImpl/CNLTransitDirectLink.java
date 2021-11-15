@@ -13,6 +13,7 @@ import org.matsim.pt.transitSchedule.api.TransitLine;
 import org.matsim.pt.transitSchedule.api.TransitRoute;
 import org.matsim.pt.transitSchedule.api.TransitSchedule;
 import org.matsim.vehicles.Vehicle;
+import org.matsim.vehicles.VehicleType;
 
 import ust.hk.praisehk.metamodelcalibration.analyticalModel.AnalyticalModelLink;
 import ust.hk.praisehk.metamodelcalibration.analyticalModel.AnalyticalModelNetwork;
@@ -87,15 +88,18 @@ public class CNLTransitDirectLink extends TransitDirectLink{
 		Map<Id<Departure>,Departure>Departures= ts.getTransitLines().get(Id.create(lineId, TransitLine.class)).
 				getRoutes().get(Id.create(routeId, TransitRoute.class)).getDepartures();
 		int noofVehicle=0;
+		this.capacity =0;
 		for(Departure d:Departures.values()) {
 			
 			
 			double time=d.getDepartureTime();
-			if(time>=timeBeans.get(timeBeanId).getFirst() && time<timeBeans.get(timeBeanId).getSecond()) {
+			if(time==0)time++;
+			if(time>timeBeans.get(timeBeanId).getFirst() && time<=timeBeans.get(timeBeanId).getSecond()) {
 				noofVehicle++;
 				Id<Vehicle> vehicleId=d.getVehicleId();
-				this.capacity+=scenario.getTransitVehicles().getVehicles().get(vehicleId).getType().getCapacity().getSeats()+
-						scenario.getTransitVehicles().getVehicles().get(vehicleId).getType().getCapacity().getStandingRoom();
+				VehicleType vt = scenario.getTransitVehicles().getVehicles().get(vehicleId).getType();
+				this.capacity+=vt.getCapacity().getSeats()+
+						vt.getCapacity().getStandingRoom();
 			}
 		}
 		this.frequency=noofVehicle;
@@ -105,6 +109,9 @@ public class CNLTransitDirectLink extends TransitDirectLink{
 		}else {
 			this.capacity=this.capacity/noofVehicle;
 			this.headway=(timeBeans.get(timeBeanId).getSecond()-timeBeans.get(timeBeanId).getFirst())/noofVehicle;
+		}
+		if(capacity==0) {
+			System.out.println("No Capacity!!!");
 		}
 	}
 	

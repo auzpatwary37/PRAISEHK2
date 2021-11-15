@@ -48,7 +48,8 @@ public class CNLNetwork extends AnalyticalModelNetwork{
 		for(Id<Link> linkId:network.getLinks().keySet()){
 			AnalyticalModelLink link=new CNLLink(network.getLinks().get(linkId),this.network);
 			if(sg!=null) {
-				link.setGcRatio(sg.getGCratio(network.getLinks().get(linkId))[0]);
+				double[] a = sg.getGCratio(network.getLinks().get(linkId));
+				link.setGcRatio(a[0]);
 			}
 			this.network.addLink(link);
 		}

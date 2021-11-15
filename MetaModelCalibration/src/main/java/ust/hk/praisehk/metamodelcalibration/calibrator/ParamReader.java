@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
@@ -177,15 +178,15 @@ public class ParamReader {
 	 * This will scale up the parameter from no format to Parameter name format
 	 * The sent parameter is not changed. A new parameter is generated and returned
 	 * If the parameter sent is already in String format, than nothing will be changed.
-	 * @param param
+	 * @param trialParam
 	 * @return
 	 */
-	public LinkedHashMap<String,Double> ScaleUp(LinkedHashMap<String,Double>param) throws IllegalArgumentException{
-		if((this.ParamNoCode.values()).containsAll(param.keySet())) {
+	public LinkedHashMap<String,Double> ScaleUp(Map<String, Double> trialParam) throws IllegalArgumentException{
+		if((this.ParamNoCode.values()).containsAll(trialParam.keySet())) {
 			
-		}else if((this.ParamNoCode.keySet()).containsAll(param.keySet())) {
+		}else if((this.ParamNoCode.keySet()).containsAll(trialParam.keySet())) {
 			logger.warn("Parameter is already scaled up, i.e. in ParamName-Value format. Method will exit.");
-			return new LinkedHashMap<String,Double>(param);
+			return new LinkedHashMap<String,Double>(trialParam);
 		}else {
 			if(this.allowUnkownParamaeterWhileScalingUp==false) {
 				logger.error("Invalid input. Params can be either in ParamName-Value format or ParamCode-Value Format");
@@ -194,15 +195,15 @@ public class ParamReader {
 		}
 		LinkedHashMap<String,Double> scaledParam=new LinkedHashMap<String,Double>();
 		for(Entry<String, String> e:this.ParamNoCode.entrySet()) {
-			if(param.get(e.getValue())==null) {
+			if(trialParam.get(e.getValue())==null) {
 				//scaledParam.put(e.getKey(),this.DefaultParam.get(e.getValue()));
 			}else {
-				scaledParam.put(e.getKey(), param.get(e.getValue()));
+				scaledParam.put(e.getKey(), trialParam.get(e.getValue()));
 			}
 		}
 		
 		if(this.allowUnkownParamaeterWhileScalingUp) {
-			for(Entry<String,Double> parameter:param.entrySet()) {
+			for(Entry<String,Double> parameter:trialParam.entrySet()) {
 				if(!this.ParamNoCode.containsValue(parameter.getKey())){
 					scaledParam.put(parameter.getKey(), parameter.getValue());
 				}

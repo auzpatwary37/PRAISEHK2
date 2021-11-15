@@ -3,6 +3,7 @@ package ust.hk.praisehk.metamodelcalibration.analyticalModelImpl;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -31,7 +32,7 @@ public class CNLLink extends AnalyticalModelLink{
 	
 	private double alpha=0.15;
 	private double beta=4;
-	
+	private boolean ifScalePt = true;
 	/**
 	 * 
 	 * @return: value of alpha in the BPR function
@@ -87,13 +88,17 @@ public class CNLLink extends AnalyticalModelLink{
 	 */
 	public double getLinkTravelTime(Tuple<Double,Double> timeBean,LinkedHashMap<String,Double>params,LinkedHashMap<String,Double>anaParams) {
 		if(!this.link.getAllowedModes().contains("train")) {
-		double totalpcu=super.getLinkCarVolume()+super.getLinkTransitVolume()*params.get(CNLSUEModel.CapacityMultiplierName);
+		double multiplier = 1;
+		if(this.ifScalePt)multiplier = params.get(CNLSUEModel.CapacityMultiplierName);
+		double totalpcu=super.getLinkCarVolume()+super.getLinkTransitVolume()*multiplier;
 		double capacity=super.getCapacity()*(timeBean.getSecond()-timeBean.getFirst())/3600*params.get(CNLSUEModel.CapacityMultiplierName)*this.getGcRatio();
 		double freeflowTime=super.getLength()/super.getFreespeed();
 		double linkTravelTime=freeflowTime*(1+anaParams.get(CNLSUEModel.BPRalphaName)*Math.pow(totalpcu/capacity, anaParams.get(CNLSUEModel.BPRbetaName)));
-//		if(linkTravelTime>2*3600 || Double.isNaN(linkTravelTime)) {
-//			System.out.println("Travel time too high or nan");
-//		}
+		if(linkTravelTime>2*3600 || Double.isNaN(linkTravelTime)) {
+			//System.out.println("Travel time too high or nan");
+			//double capa=super.getCapacity()*(timeBean.getSecond()-timeBean.getFirst())/3600*params.get(CNLSUEModel.CapacityMultiplierName)*this.getGcRatio();
+
+		}
 		return linkTravelTime;
 		}else {
 			linkTravelTime=this.link.getLength()/(this.link.getFreespeed()*1000/(3600));
@@ -131,6 +136,10 @@ public class CNLLink extends AnalyticalModelLink{
 		}else {
 			return 0;
 		}
+	}
+	
+	public Map<String, Double> getTransitPassengerVolumes() {
+		return this.TransitMapping;
 	}
 	
 	public Set<Id<TransitLink>> getTransitDirectLinks(String lineId_routeId) {

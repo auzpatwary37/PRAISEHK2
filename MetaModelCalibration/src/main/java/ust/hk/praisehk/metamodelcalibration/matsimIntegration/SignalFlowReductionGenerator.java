@@ -89,6 +89,10 @@ public class SignalFlowReductionGenerator {
 		if(gc==0) {
 			gc=1;
 		}
+		if(gc<0.07) {
+			//System.out.println("Debug!!");
+			//gc = 
+		}
 		return new double[] {gc, cycleTime};
 	}
 	

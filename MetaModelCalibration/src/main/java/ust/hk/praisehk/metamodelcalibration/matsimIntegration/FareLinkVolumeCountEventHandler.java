@@ -50,10 +50,15 @@ public class FareLinkVolumeCountEventHandler implements PersonMoneyEventHandler{
 			FareLink fl = new FareLink(event.getAttributes().get(PersonMoneyEvent.ATTRIBUTE_TRANSACTION_PARTNER));
 			String timeId = getTimeId(event.getTime(), this.measurements.getTimeBean());
 			if(timeId!=null) {
-				for(Id<Measurement> mId:this.fareLinkIncidence.get(fl.toString())) {
-					Map<String,Double> vols = this.measurements.getMeasurements().get(mId).getVolumes();
-					if(vols.containsKey(timeId)) {
-						vols.put(timeId,vols.get(timeId)+1);
+				if(this.fareLinkIncidence == null) {
+					throw new NullPointerException();
+				}
+				if(this.fareLinkIncidence.get(fl.toString()) != null) { //Only for valid fare links
+					for(Id<Measurement> mId:this.fareLinkIncidence.get(fl.toString())) {
+						Map<String,Double> vols = this.measurements.getMeasurements().get(mId).getVolumes();
+						if(vols.containsKey(timeId)) {
+							vols.put(timeId,vols.get(timeId)+1);
+						}
 					}
 				}
 			}

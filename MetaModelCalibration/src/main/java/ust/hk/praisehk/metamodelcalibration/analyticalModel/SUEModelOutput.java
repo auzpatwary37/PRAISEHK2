@@ -1,6 +1,10 @@
 package ust.hk.praisehk.metamodelcalibration.analyticalModel;
 
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.Map;
+import java.util.Map.Entry;
 
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.network.Link;
@@ -10,6 +14,8 @@ public class SUEModelOutput {
 	
 	private Map<String,Map<Id<Link>,Double>> linkVolume;
 	private Map<String,Map<Id<TransitLink>,Double>> linkTransitVolume;
+	private Map<String,Map<Id<Link>,Map<String,Double>>> trainCount;
+	private Map<String,Map<String,Double>> trainTransfers;
 	
 	private Map<String,Map<Id<Link>,Double>> linkTravelTime;
 	private Map<String,Map<Id<TransitLink>,Double>>trLinkTravelTime;
@@ -52,9 +58,25 @@ public class SUEModelOutput {
 	public Map<String, Map<Id<Link>, Double>> getLinkTravelTime() {
 		return linkTravelTime;
 	}
+	
+	public Map<String, Map<Id<Link>, Map<String, Double>>> getTrainCount() {
+		return trainCount;
+	}
+
+	public void setTrainCount(Map<String, Map<Id<Link>, Map<String, Double>>> trainCount) {
+		this.trainCount = trainCount;
+	}
 
 	public Map<String, Map<Id<TransitLink>, Double>> getTrLinkTravelTime() {
 		return trLinkTravelTime;
+	}
+
+	public Map<String, Map<String, Double>> getTrainTransfers() {
+		return trainTransfers;
+	}
+
+	public void setTrainTransfers(Map<String, Map<String, Double>> trainTransfers) {
+		this.trainTransfers = trainTransfers;
 	}
 
 	public Map<String, Map<Id<Link>, Double>> getAveragePtOccupancyOnLink() {
@@ -155,7 +177,57 @@ public class SUEModelOutput {
 	}
 
 	
-	
+	public void writeTrainCountsAndTransfers(String folderLoc, String optionalTimeBean) {
+		File file = new File(folderLoc);
+		if(!file.isDirectory())file.mkdir();
+		if(optionalTimeBean==null)optionalTimeBean = "";
+		String linkCountFileName = folderLoc+"/trainLinkCounts_"+optionalTimeBean+".csv";
+		String transferFileName = folderLoc+"/trainTransfers_"+optionalTimeBean+".csv";
+		if(this.trainCount!=null) {
+			try {
+				FileWriter fw = new FileWriter(new File(linkCountFileName));
+				fw.append("timeId,LinkId,LineAndRoute,Count\n");
+				
+				this.trainCount.entrySet().forEach(e->{
+					e.getValue().entrySet().forEach(linkC->{
+						linkC.getValue().entrySet().forEach(lrv->{
+							try {
+								fw.append(e.getKey()+","+linkC.getKey().toString()+","+lrv.getKey()+","+lrv.getValue()+"\n");
+								fw.flush();
+							} catch (IOException e1) {
+								// TODO Auto-generated catch block
+								e1.printStackTrace();
+							}
+						});
+					});
+				});
+				
+				fw.close();
+				
+				
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+		
+		if(this.trainTransfers!=null) {
+			try {
+				FileWriter fw = new FileWriter(new File(transferFileName));
+				fw.append("timeId,FromStop,toStop,Volume\n");
+				for(Entry<String, Map<String, Double>> d:this.trainTransfers.entrySet()) {
+					for(Entry<String, Double> e:d.getValue().entrySet()) {
+						fw.append(d.getKey()+","+e.getKey().split("___")[0]+","+e.getKey().split("___")[1]+","+e.getValue()+"\n");
+						fw.flush();
+					}
+				}
+				fw.close();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+	}
 	
 	
 }

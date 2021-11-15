@@ -148,10 +148,12 @@ public class Measurements {
 	public void writeCSVMeasurements(String fileLoc) {
 		try {
 			FileWriter fw=new FileWriter(new File(fileLoc),false);
-			fw.append("MeasurementId,timeId,Count,Type\n");
+			fw.append("MeasurementId,timeId,Count,Type,ifForValidation\n");
 			for(Measurement m:this.measurements.values()) {
+				Object forV = "0";
+				if(m.getAttribute("ifForValidation")!=null)forV = m.getAttribute("ifForValidation");
 				for(String timeId:m.getVolumes().keySet())
-				fw.append(m.getId().toString()+","+timeId+","+m.getVolumes().get(timeId)+","+m.getMeasurementType().toString()+"\n");
+				fw.append(m.getId().toString().replace(",", "__")+","+timeId+","+m.getVolumes().get(timeId)+","+m.getMeasurementType().toString()+","+forV.toString()+"\n");
 			}
 			fw.flush();
 			fw.close();

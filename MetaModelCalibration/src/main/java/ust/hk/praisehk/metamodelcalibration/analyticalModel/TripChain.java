@@ -2,6 +2,7 @@ package ust.hk.praisehk.metamodelcalibration.analyticalModel;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.NoSuchElementException;
 
 import org.apache.log4j.Logger;
 import org.matsim.api.core.v01.Id;
@@ -20,9 +21,6 @@ import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.core.utils.misc.OptionalTime;
 import org.matsim.core.utils.misc.Time;
 import org.matsim.pt.transitSchedule.api.TransitSchedule;
-
-
-
 
 public abstract class TripChain{
 	
@@ -43,7 +41,7 @@ public abstract class TripChain{
 		Id<Person>PersonId= plan.getPerson().getId();
 		List<Leg> leglist=new ArrayList<>();
 		
-		int a=0;
+		int a=0; //Indicator of whether it is in 
 		double pt_traveltime=0;
 		ArrayList<Activity> ptactivityList=null;
 		ArrayList<Leg>ptlegList=null;
@@ -67,15 +65,15 @@ public abstract class TripChain{
 					//pt activity continuation
 					ptactivityList.add(activity);
 					continue;
-				}else if (!activity.getType().equals("pt interaction") && a==1){
+				}else if (!activity.getType().equals("pt interaction") && a==1){ //After it is not pt anymore
 					a=0;
 					//pt activity end in this activity
 					ptactivityList.add(activity);
 					AnalyticalModelTransitRoute ptleg=this.getTransitRoute(ptlegList,ptactivityList,ts,scenario);
 					List<PlanElement> pes = new ArrayList<>();
 					pes.add(ptlegList.get(0));
-					for(int jj=0;jj<ptactivityList.size();jj++) {
-						pes.add(ptactivityList.get(jj));
+					for(int jj=0;jj<ptactivityList.size() - 2;jj++) {
+						pes.add(ptactivityList.get(jj +1));
 						pes.add(ptlegList.get(jj+1));
 					}
 					ptleg.setPlanElements(pes);
@@ -113,7 +111,12 @@ public abstract class TripChain{
 			Trip trip=this.createBlankTrip();
 			trip.setAct1coord(activitylist.get(i).getCoord());
 			trip.setAct2coord(activitylist.get(i+1).getCoord());
-			trip.setStartTime(activitylist.get(i).getEndTime().seconds());
+			try {
+				trip.setStartTime(activitylist.get(i).getEndTime().seconds());
+			}catch (NoSuchElementException e) { //If there is no start time in the activity, capture and let it go.
+				//e.printStackTrace();
+				break;
+			}
 			trip.setEndTime(trip.getStartTime()+leglist.get(i).getTravelTime().seconds());
 			trip.setMode(leglist.get(i).getMode());
 			if(leglist.get(i).getMode().equals("car")){
@@ -131,7 +134,7 @@ public abstract class TripChain{
 				trip.getRoute().setPlanElements(pes);
 			}else if(leglist.get(i).getMode().equals("pt")){
 				if(ptlegs.size()!=0) {
-				trip.setTrRoute(ptlegs.get(pttrip));
+					trip.setTrRoute(ptlegs.get(pttrip));
 				}
 				
 				pttrip++;

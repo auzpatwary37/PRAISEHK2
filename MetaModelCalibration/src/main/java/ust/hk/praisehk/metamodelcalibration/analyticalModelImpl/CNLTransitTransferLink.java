@@ -4,6 +4,7 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Set;
 
+import org.apache.log4j.Logger;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.network.Link;
 import org.matsim.pt.transitSchedule.api.TransitSchedule;
@@ -26,6 +27,8 @@ public class CNLTransitTransferLink extends TransitTransferLink {
 	private final Id<TransitLink> trLinkId; 
 	private CNLTransitDirectLink nextdLink;
 	private Set<Id<TransitLink>> incidentLinkIds;
+	private boolean scalePT = false;
+	private final static Logger logger = Logger.getLogger(CNLTransitTransferLink.class);
 	
 	public CNLTransitTransferLink(String startStopId, String endStopId, 
 			Id<Link> startLinkId, Id<Link> endLinkId,TransitSchedule ts,
@@ -65,7 +68,9 @@ public class CNLTransitTransferLink extends TransitTransferLink {
 		
 		if(this.nextdLink!=null) {
 			headway=this.nextdLink.getHeadway();
-			capacity=this.nextdLink.getCapacity()*params.get(CNLSUEModel.CapacityMultiplierName);
+			double multiplier = 1;
+			if(this.scalePT==true)multiplier = params.get(CNLSUEModel.CapacityMultiplierName);
+			capacity=this.nextdLink.getCapacity()*multiplier;
 			double noOfVehicles=this.nextdLink.getFrequency();
 			CNLLink l_gamma = ((CNLLink)network.getLinks().get(this.nextdLink.getLinkList().get(0)));
 			currentOnboardPassenger = l_gamma.getTransitPassengerVolume(this.nextdLink.getLineId()+"_"+this.nextdLink.getRouteId());
@@ -76,6 +81,9 @@ public class CNLTransitTransferLink extends TransitTransferLink {
 			if(Double.isNaN(this.waitingTime)||this.waitingTime==Double.POSITIVE_INFINITY) {
 				return this.waitingTime=3600;
 			}			
+			if(this.waitingTime>3600) {
+				logger.debug("deug Here!!!");
+			}
 			return this.waitingTime;
 			
 		}else {

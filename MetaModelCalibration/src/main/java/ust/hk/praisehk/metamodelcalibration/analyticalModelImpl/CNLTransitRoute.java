@@ -1,3 +1,4 @@
+
 package ust.hk.praisehk.metamodelcalibration.analyticalModelImpl;
 
 import java.util.ArrayList;
@@ -19,6 +20,7 @@ import org.matsim.api.core.v01.population.Activity;
 import org.matsim.api.core.v01.population.Leg;
 import org.matsim.api.core.v01.population.PlanElement;
 import org.matsim.core.utils.collections.Tuple;
+import org.matsim.pt.routes.DefaultTransitPassengerRoute;
 import org.matsim.pt.transitSchedule.api.TransitLine;
 import org.matsim.pt.transitSchedule.api.TransitRoute;
 import org.matsim.pt.transitSchedule.api.TransitSchedule;
@@ -125,8 +127,16 @@ public class CNLTransitRoute implements AnalyticalModelTransitRoute{
 				b--;
 			}else{
 				directLinkCount++;
-				CNLTransitDirectLink dlink=new CNLTransitDirectLink(l.getRoute().getRouteDescription(), 
-						startLinkId, endLinkId, ts, scenario);
+				CNLTransitDirectLink dlink=null;
+				if(l.getRoute() instanceof DefaultTransitPassengerRoute) {
+					DefaultTransitPassengerRoute r = (DefaultTransitPassengerRoute)l.getRoute();
+					dlink = new CNLTransitDirectLink(r.getAccessStopId().toString(),r.getEgressStopId().toString(), 
+							startLinkId, endLinkId, ts,r.getLineId().toString(),r.getRouteId().toString(), scenario);
+				}else{
+					dlink = new CNLTransitDirectLink(l.getRoute().getRouteDescription(), 
+							startLinkId, endLinkId, ts, scenario);
+				}
+						
 				tempDirectLinks.put(a, dlink);
 				a--;
 				
@@ -593,7 +603,7 @@ public class CNLTransitRoute implements AnalyticalModelTransitRoute{
 			i++;
 		}
 		CNLTransitRoute trRoute=new CNLTransitRoute(transferLinks,dlinks,this.scenario,this.transitSchedule,this.routeWalkingDistance,this.trRouteId.toString());
-		
+		trRoute.setPlanElements(this.planElements);
 		return trRoute ; 
 	}
 
