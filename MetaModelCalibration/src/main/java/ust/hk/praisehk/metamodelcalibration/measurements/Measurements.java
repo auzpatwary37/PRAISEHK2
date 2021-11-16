@@ -211,6 +211,7 @@ public class Measurements {
 		for(Measurement m:this.measurements.values()) {
 			for(String timeId:m.getVolumes().keySet()) {
 				m.putVolume(timeId, m.getVolumes().get(timeId)*factor);
+				m.putSD(timeId, factor*m.getSD().get(timeId));
 			}
 		}
 	}
