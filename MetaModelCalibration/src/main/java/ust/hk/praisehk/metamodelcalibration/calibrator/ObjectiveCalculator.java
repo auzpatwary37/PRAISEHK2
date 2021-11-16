@@ -82,6 +82,62 @@ public class ObjectiveCalculator {
 return objective;
 	}
 	
+	/**
+	 * 
+	 * @param realMeasurements
+	 * @param simOrAnaMeasurement
+	 * @param Type: AADT or linkAnadTimeSpecific(default)
+	 * @return
+	 */
+	public static double calcSDWeightedObjective(Measurements realMeasurements,Measurements simOrAnaMeasurements,String Type) {
+		double objective=0;
+		if(Type.equals(TypeAADT)) {
+			double stationCountReal=0;
+			double stationCountAnaOrSim=0;
+			for(Measurement m:realMeasurements.getMeasurements().values()) {
+				double sigma = 0;
+				for(String timeBeanId:m.getVolumes().keySet()) {
+					if(simOrAnaMeasurements.getMeasurements().get(m.getId())==null) {
+						logger.error("The Measurements entered are not comparable (measuremtn do not match)!!! This should not happen. Please check");
+						
+					}else if(simOrAnaMeasurements.getMeasurements().get(m.getId()).getVolumes().get(timeBeanId)==null) {
+						logger.error("The Measurements entered are not comparable (volume timeBeans do not match)!!! This should not happen. Please check");
+						
+					}
+					
+					stationCountReal+=m.getVolumes().get(timeBeanId);
+					if(m.getSD().get(timeBeanId)!=null)sigma+= Math.pow(m.getSD().get(timeBeanId),2);
+					stationCountAnaOrSim+=simOrAnaMeasurements.getMeasurements().get(m.getId()).getVolumes().get(timeBeanId);
+					//sigma+= Math.pow(simOrAnaMeasurements.getMeasurements().get(m.getId()).getSD().get(timeBeanId),2);
+				}
+				objective+=1/(1+sigma)*Math.pow((stationCountReal-stationCountAnaOrSim),2);
+			}
+			
+		}else if(Type.equals(TypeMeasurementAndTimeSpecific)){
+			for(Measurement m:realMeasurements.getMeasurements().values()) {
+				for(String timeBeanId:m.getVolumes().keySet()) {
+					if(simOrAnaMeasurements.getMeasurements().get(m.getId())==null) {
+						logger.error("The Measurements entered are not comparable (measuremtn do not match)!!! This should not happen. Please check");
+						continue;
+					}else if(simOrAnaMeasurements.getMeasurements().get(m.getId()).getVolumes().get(timeBeanId)==null) {
+						logger.error("The Measurements entered are not comparable (volume timeBeans do not match)!!! This should not happen. Please check");
+						continue;
+					}
+					double dd = simOrAnaMeasurements.getMeasurements().get(m.getId()).getVolumes().get(timeBeanId);
+					if(m.getSD().get(timeBeanId)==null)m.putSD(timeBeanId, 0);
+					double d = 1/(1+Math.pow(m.getSD().get(timeBeanId),2))*Math.pow((m.getVolumes().get(timeBeanId)-dd),2);
+//					if(d>1) {
+//						logger.debug("");
+//					}
+					objective+=d;
+				}
+			}
+			
+		}
+return objective;
+	}
+	
+	
 	public static double calcGEHObjective(Measurements realMeasurements,Measurements simOrAnaMeasurements,String Type) {
 		double objective=0;
 		if(Type.equals(TypeAADT)) {
@@ -115,6 +171,49 @@ return objective;
 					}
 					
 					objective+=2*Math.pow((m.getVolumes().get(timeBeanId)-simOrAnaMeasurements.getMeasurements().get(m.getId()).getVolumes().get(timeBeanId)),2)/(m.getVolumes().get(timeBeanId)+simOrAnaMeasurements.getMeasurements().get(m.getId()).getVolumes().get(timeBeanId));
+				}
+			}
+			
+		}
+		return objective;
+	}
+	
+	public static double calcSDWeightedGEHObjective(Measurements realMeasurements,Measurements simOrAnaMeasurements,String Type) {
+		double objective=0;
+		if(Type.equals(TypeAADT)) {
+			double stationCountReal=0;
+			double stationCountAnaOrSim=0;
+			for(Measurement m:realMeasurements.getMeasurements().values()) {
+				double sigma = 0;
+				for(String timeBeanId:m.getVolumes().keySet()) {
+					if(m.getSD().get(timeBeanId)!=null)sigma+=Math.pow(m.getSD().get(timeBeanId),2);
+					if(simOrAnaMeasurements.getMeasurements().get(m.getId())==null) {
+						logger.error("The Measurements entered are not comparable (measuremtn do not match)!!! This should not happen. Please check");
+						
+					}else if(simOrAnaMeasurements.getMeasurements().get(m.getId()).getVolumes().get(timeBeanId)==null) {
+						logger.error("The Measurements entered are not comparable (volume timeBeans do not match)!!! This should not happen. Please check");
+						
+					}
+					
+					stationCountReal+=m.getVolumes().get(timeBeanId);
+					stationCountAnaOrSim+=simOrAnaMeasurements.getMeasurements().get(m.getId()).getVolumes().get(timeBeanId);
+				}
+				objective+=2*1/(1+sigma)*Math.pow((stationCountReal-stationCountAnaOrSim),2)/(stationCountReal+stationCountAnaOrSim);
+			}
+			
+		}else if(Type.equals(TypeMeasurementAndTimeSpecific)){
+			for(Measurement m:realMeasurements.getMeasurements().values()) {
+				for(String timeBeanId:m.getVolumes().keySet()) {
+					if(simOrAnaMeasurements.getMeasurements().get(m.getId())==null) {
+						logger.error("The Measurements entered are not comparable (measuremtn do not match)!!! This should not happen. Please check");
+						continue;
+					}else if(simOrAnaMeasurements.getMeasurements().get(m.getId()).getVolumes().get(timeBeanId)==null) {
+						logger.error("The Measurements entered are not comparable (volume timeBeans do not match)!!! This should not happen. Please check");
+						continue;
+					}
+					Double sigma = m.getSD().get(timeBeanId);
+					if(sigma==null)sigma = 0.;
+					objective+=2*1/(1+sigma*sigma)*Math.pow((m.getVolumes().get(timeBeanId)-simOrAnaMeasurements.getMeasurements().get(m.getId()).getVolumes().get(timeBeanId)),2)/(m.getVolumes().get(timeBeanId)+simOrAnaMeasurements.getMeasurements().get(m.getId()).getVolumes().get(timeBeanId));
 				}
 			}
 			

@@ -34,6 +34,7 @@ public class Measurement {
 	private Map<String,Object> attributes=new HashMap<>();
 	private final Map<String,Tuple<Double,Double>> timeBean;
 	private Map<String,Double> volumes=new ConcurrentHashMap<>();
+	private Map<String,Double> sd = new ConcurrentHashMap<>();
 	private static final Logger logger=Logger.getLogger(Measurement.class);
 	private Coord coord=null;
 	private final MeasurementType measurementType;
@@ -64,6 +65,17 @@ public class Measurement {
 			logger.warn("Ignoring volume for timeBeanId"+timeBeanId);
 		}else {
 			this.volumes.put(timeBeanId, volume);
+			if(!this.sd.containsKey(timeBeanId))this.sd.put(timeBeanId, 0.);
+		}
+	}
+	
+	
+	public void putSD(String timeBeanId,double SD) {
+		if(!this.timeBean.containsKey(timeBeanId)){
+			logger.error("timeBean do not contain timeBeanId"+timeBeanId+", please check.");
+			logger.warn("Ignoring volume for timeBeanId"+timeBeanId);
+		}else {
+			this.sd.put(timeBeanId, SD);
 		}
 	}
 	
@@ -90,6 +102,10 @@ public class Measurement {
 	}
 	public Map<String,Double> getVolumes(){
 		return this.volumes;
+	}
+	
+	public Map<String,Double> getSD(){
+		return this.sd;
 	}
 	
 	public Measurement clone() {

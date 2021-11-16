@@ -78,6 +78,9 @@ public class MeasurementsReader extends DefaultHandler {
 		
 		if(qName.equalsIgnoreCase("Volume")) {
 			this.m.getMeasurements().get(this.mId).putVolume(attributes.getValue("TimeBeanId"), Double.parseDouble(attributes.getValue("PCUVolume")));
+			String sd = attributes.getValue("SD");
+			if(sd==null)sd = Double.toString(0);
+			this.m.getMeasurements().get(this.mId).putSD(attributes.getValue("TimeBeanId"), Double.parseDouble(sd));
 		}
 		
 	}

@@ -60,6 +60,8 @@ public class MeasurementsWriter extends DefaultHandler{
 					Element volume=document.createElement("Volume");
 					volume.setAttribute("TimeBeanId", e.getKey());
 					volume.setAttribute("PCUVolume", Double.toString(e.getValue()));
+					if(mm.getSD().get(e.getKey())==null)mm.putSD(e.getKey(), 0);
+					volume.setAttribute("SD", Double.toString(mm.getSD().get(e.getKey())));
 					Volumes.appendChild(volume);
 				}
 				measurement.appendChild(Volumes);
