@@ -113,6 +113,11 @@ public class Measurement {
 		for(String s:this.volumes.keySet()) {
 			m.putVolume(s, this.getVolumes().get(s));
 		}
+		
+		for(String s:this.sd.keySet()) {
+			m.putSD(s, this.getSD().get(s));
+		}
+		
 		for(String s:this.attributes.keySet()) {
 			m.setAttribute(s, this.attributes.get(s));
 		}

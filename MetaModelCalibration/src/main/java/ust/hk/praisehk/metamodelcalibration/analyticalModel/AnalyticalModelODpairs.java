@@ -255,14 +255,16 @@ public abstract class AnalyticalModelODpairs {
 		System.out.println("Number of Trips = "+trips.size());
 		double tripsWithoutRoute=0;
 		for (Trip trip:trips){
-			double pcu=1;
+			double pcu=0.7;
 			Vehicle v=this.scenario.getVehicles().getVehicles().get(Id.createVehicleId(trip.getPersonId().toString()));
+			
 			if(v!=null) {
 				pcu=v.getType().getPcuEquivalents();
-				trip.setCarPCU(pcu);
+				pcu=0.7;// Delete it for later sceanrios
+				
 				trip.setVehicleType(v.getType().getId());
 			}
-			
+			trip.setCarPCU(pcu);
 			if(trip.getRoute()!=null ||trip.getTrRoute()!=null) {
 				Id<AnalyticalModelODpair> ODId=trip.generateODpairId(odNetwork);
 				Id<AnalyticalModelODpair> pureODId=trip.generateODpairIdWithoutSubPop(odNetwork);

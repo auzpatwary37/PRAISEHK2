@@ -169,7 +169,7 @@ return objective;
 						logger.error("The Measurements entered are not comparable (volume timeBeans do not match)!!! This should not happen. Please check");
 						continue;
 					}
-					
+					if(m.getVolumes().get(timeBeanId)+simOrAnaMeasurements.getMeasurements().get(m.getId()).getVolumes().get(timeBeanId)==0)continue;
 					objective+=2*Math.pow((m.getVolumes().get(timeBeanId)-simOrAnaMeasurements.getMeasurements().get(m.getId()).getVolumes().get(timeBeanId)),2)/(m.getVolumes().get(timeBeanId)+simOrAnaMeasurements.getMeasurements().get(m.getId()).getVolumes().get(timeBeanId));
 				}
 			}
