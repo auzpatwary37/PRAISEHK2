@@ -70,8 +70,11 @@ public class CNLTransitDirectLink extends TransitDirectLink{
 	public void addPassanger(double d,AnalyticalModelNetwork network) {
 		this.passangerCount+=d;
 		for(Id<Link> clId:this.linkList) {
-			((CNLLink)network.getLinks().get(clId)).addTransitPassengerVolume(this.lineId+"_"+this.routeId, this.TrLinkId, d);
+			((CNLLink)network.getLinks().get(clId)).addTransitPassengerVolume(calcLineRouteId(lineId, routeId), this.TrLinkId, d);
 		}
+	}
+	public static String calcLineRouteId(String lineId,String routeId) {
+		return lineId+"___"+routeId;
 	}
 	public double getCapacity() {
 		return capacity;

@@ -29,6 +29,7 @@ public class Measurement {
 	public static final String FareLinkAttributeName=FareLink.FareLinkAttributeName;
 	public static final String FareLinkClusterAttributeName = "fare_link_cluster";
 	public static final String MaaSPackageAttributeName = "MaaSPackage";
+	public static final String MTRLineRouteStopLinkInfosName = "lineRouteLinkStops";
 	
 	private final Id<Measurement> id;
 	private Map<String,Object> attributes=new HashMap<>();

@@ -23,6 +23,7 @@ import ust.hk.praisehk.metamodelcalibration.analyticalModel.AnalyticalModelNetwo
 import ust.hk.praisehk.metamodelcalibration.analyticalModel.SUEModelOutput;
 import ust.hk.praisehk.metamodelcalibration.analyticalModel.TransitLink;
 import ust.hk.praisehk.metamodelcalibration.analyticalModelImpl.CNLLink;
+import ust.hk.praisehk.metamodelcalibration.analyticalModelImpl.CNLTransitDirectLink;
 
 public enum MeasurementType {
 	
@@ -454,7 +455,41 @@ public enum MeasurementType {
 			if(atr.getValue("ifForValidation")!=null)m.setAttribute("ifForValidation", atr.getValue("ifForValidation"));
 		}
 		
-	};	
+	},
+	TransitPhysicalLinkVolume{
+
+		@Override
+		public void updateMeasurement(SUEModelOutput modelOut, AnalyticalModel sue, Object otherDataContainer,
+				Measurement m) {
+			for(MTRLinkVolumeInfo s:(List<MTRLinkVolumeInfo>)m.getAttribute(Measurement.MTRLineRouteStopLinkInfosName)) {
+				m.getVolumes().entrySet().forEach(v->{
+					v.setValue(v.getValue()+modelOut.getTrainCount().get(v.getKey()).get(s.linkId).get(CNLTransitDirectLink.calcLineRouteId(s.lineId.toString(), s.routeId.toString())));
+				});
+			}
+		}
+
+		@Override
+		public void writeAttribute(Element melement, Measurement m) {
+			String ss = "";
+			String sep = "";
+			for(MTRLinkVolumeInfo s:(List<MTRLinkVolumeInfo>)m.getAttribute(Measurement.MTRLineRouteStopLinkInfosName)) {
+				ss = sep+s.toString();
+				sep = ",";
+			}
+			melement.setAttribute(Measurement.MTRLineRouteStopLinkInfosName, ss);
+		}
+
+		@Override
+		public void parseAttribute(Attributes atr, Measurement m) {
+			List<MTRLinkVolumeInfo> linklist = new ArrayList<>();
+			for(String s:atr.getValue(Measurement.MTRLineRouteStopLinkInfosName).split(",")) {
+				linklist.add(new MTRLinkVolumeInfo(s));
+			}
+			m.setAttribute(Measurement.MTRLineRouteStopLinkInfosName, linklist);	
+			if(atr.getValue("ifForValidation")!=null)m.setAttribute("ifForValidation", atr.getValue("ifForValidation"));
+		}
+		
+	};		
 	/**
 	 * !!!!USE WITH CAUTION!!!
 	 * model out only includes the link and transit link volumes and travel times. So, only link Volume and Travel time is currently auto updatable. Does not work for the rest 
