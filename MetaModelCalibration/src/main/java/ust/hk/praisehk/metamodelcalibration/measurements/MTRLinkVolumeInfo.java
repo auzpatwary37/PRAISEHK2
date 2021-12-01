@@ -8,10 +8,10 @@ import org.matsim.pt.transitSchedule.api.TransitStopFacility;
 
 public class MTRLinkVolumeInfo {
 
-	final Id<TransitLine> lineId;
-	final Id<TransitRoute> routeId;
-	final Id<TransitStopFacility> stopId;
-	final Id<Link> linkId;
+	public final Id<TransitLine> lineId;
+	public final Id<TransitRoute> routeId;
+	public final Id<TransitStopFacility> stopId;
+	public final Id<Link> linkId;
 	
 	public MTRLinkVolumeInfo(Id<TransitStopFacility> stopId, Id<TransitRoute> routeId, Id<Link> linkId, Id<TransitLine> lineId) {
 		this.lineId = lineId;

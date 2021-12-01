@@ -74,7 +74,7 @@ public class CNLTransitDirectLink extends TransitDirectLink{
 		}
 	}
 	public static String calcLineRouteId(String lineId,String routeId) {
-		return lineId+"___"+routeId;
+		return lineId+"_"+routeId;
 	}
 	public double getCapacity() {
 		return capacity;
