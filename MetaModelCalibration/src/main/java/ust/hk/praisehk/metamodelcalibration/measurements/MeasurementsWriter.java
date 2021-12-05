@@ -49,6 +49,7 @@ public class MeasurementsWriter extends DefaultHandler{
 				Element measurement=document.createElement("Measurement");
 				measurement.setAttribute("MeasurementId", mm.getId().toString());
 				measurement.setAttribute("MeasurementType", mm.getMeasurementType().toString());
+				mm.getMeasurementType().writeAttribute(measurement, mm);
 				if(mm.getCoord()!=null) {
 					Element Coord=document.createElement("Coord");
 					Coord.setAttribute("X", Double.toString(mm.getCoord().getX()));
@@ -82,7 +83,9 @@ public class MeasurementsWriter extends DefaultHandler{
 				measurement.appendChild(linkIds);
 				
 				for(String s:mm.getAttributes().keySet()) {
-					measurement.setAttribute(s, mm.getAttribute(s).toString());
+					if(measurement.getAttribute(s)==null) {
+						measurement.setAttribute(s, mm.getAttribute(s).toString());
+					}
 				}
 				
 				rootEle.appendChild(measurement);

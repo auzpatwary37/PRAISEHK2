@@ -455,7 +455,9 @@ public enum MeasurementType {
 			if(atr.getValue("ifForValidation")!=null)m.setAttribute("ifForValidation", atr.getValue("ifForValidation"));
 		}
 		
-	},
+	},	
+	
+
 	TransitPhysicalLinkVolume{
 
 		@Override
@@ -463,7 +465,9 @@ public enum MeasurementType {
 				Measurement m) {
 			for(MTRLinkVolumeInfo s:(List<MTRLinkVolumeInfo>)m.getAttribute(Measurement.MTRLineRouteStopLinkInfosName)) {
 				m.getVolumes().entrySet().forEach(v->{
+					if(modelOut.getTrainCount().get(v.getKey()).get(s.linkId).get(CNLTransitDirectLink.calcLineRouteId(s.lineId.toString(), s.routeId.toString()))!=null) {
 					v.setValue(v.getValue()+modelOut.getTrainCount().get(v.getKey()).get(s.linkId).get(CNLTransitDirectLink.calcLineRouteId(s.lineId.toString(), s.routeId.toString())));
+					}
 				});
 			}
 		}
@@ -473,7 +477,7 @@ public enum MeasurementType {
 			String ss = "";
 			String sep = "";
 			for(MTRLinkVolumeInfo s:(List<MTRLinkVolumeInfo>)m.getAttribute(Measurement.MTRLineRouteStopLinkInfosName)) {
-				ss = sep+s.toString();
+				ss = ss+sep+s.toString();
 				sep = ",";
 			}
 			melement.setAttribute(Measurement.MTRLineRouteStopLinkInfosName, ss);
@@ -490,6 +494,7 @@ public enum MeasurementType {
 		}
 		
 	};		
+
 	/**
 	 * !!!!USE WITH CAUTION!!!
 	 * model out only includes the link and transit link volumes and travel times. So, only link Volume and Travel time is currently auto updatable. Does not work for the rest 
