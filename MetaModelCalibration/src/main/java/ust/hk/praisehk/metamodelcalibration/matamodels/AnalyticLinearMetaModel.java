@@ -43,15 +43,14 @@ public class AnalyticLinearMetaModel extends MetaModelImpl {
 	 * 
 	 */
 	private final boolean addRidgePenalty=true;
-	private final double ridgeCoefficient=10;
+	private final double ridgeCoefficient=1e-3;
 	private final double positivityCoefficient =10;
 	private Map<Integer,Double> analyticalData=new HashMap<>();
-	private double[] xL;
-	private double[] scale;
 	private static double errorT = 0;
 	public double zerothPredictoin;
 	public double anaValue;
 	public double simValue;
+
 	
 	public AnalyticLinearMetaModel(Id<Measurement> measurementId,Map<Integer,Measurements> SimData, Map<Integer,Measurements> AnalyticalData,
 			Map<Integer, LinkedHashMap<String, Double>> paramsToCalibrate,String timeBeanId, int currentParamNo) {
@@ -63,19 +62,18 @@ public class AnalyticLinearMetaModel extends MetaModelImpl {
 		}
 		this.noOfMetaModelParams=this.noOfParams+2;
 		//this.calibrateMetaModel(currentParamNo);
-		this.xL = new double[this.noOfMetaModelParams];
-		this.scale = new double[this.noOfMetaModelParams];
-		for(int i =0; i<this.scale.length;i++)this.scale[i] = 1;
+		
 		this.calibrateMetaModelWithAdam(currentParamNo);
-		
-		
-		
+	
 		
 		this.params.clear();
 		this.simData.clear();
 		this.analyticalData.clear();
 		
 	}
+	
+	
+	
 	public static synchronized void updateErrorT(double e) {
 		errorT+=e;
 	}
@@ -173,62 +171,40 @@ public class AnalyticLinearMetaModel extends MetaModelImpl {
 		RealMatrix x = MatrixUtils.createRealMatrix(this.params.size(), this.noOfMetaModelParams);
 		
 		double error = 0;
-		double[] xMax = new double[this.noOfMetaModelParams];
-		double [] xMin = new double[this.noOfMetaModelParams];
-		xMax[0] = 1;
-		xMin[0] = 0;
-		for(int i=1;i<xMax.length;i++) {
-			xMax[i] = Double.NEGATIVE_INFINITY;
-			xMin[i] = Double.POSITIVE_INFINITY;
-		}
+		
+		
+		
 		for(int i:params.keySet()) {
 			weights[i] = calcEuclDistanceBasedWeight(params, i,currentParamNo);
 			y[i] = simData.get(i);
 			double[] xrow = new double[this.noOfMetaModelParams];
 			xrow[0] = 1;
 			xrow[1] = analyticalData.get(i);
-			if(xMax[1]<xrow[1]) {
-				xMax[1] = xrow[1];
-			}
-			else if(xMin[1]>xrow[1])xMin[1] = xrow[1];
 			
 			error += Math.pow(xrow[1]-y[i],2);
 			int k = 0;
 			for(double d:params.get(i).values()) {
 				xrow[k+2] = d;
-				if(xMax[k+2]<xrow[k+2])xMax[k+2] = xrow[k+2];
-				else if(xMin[k+2]>xrow[k+2])xMin[k+2] = xrow[k+2];
 				k++;
 			}
 			x.setRow(i, xrow);
 		}
 	
-		RealVector xL = MatrixUtils.createRealVector(xMin);
-		if(xL.isInfinite()) {
-			for(int i = 0;i<xMin.length;i++)if(Double.isInfinite(xMin[i]))xMin[i]=0;
-			xL = MatrixUtils.createRealVector(xMin);
-		}
-		RealVector scale = MatrixUtils.createRealVector(xMax).subtract(xL);
-		for(int i = 0;i<scale.getDimension();i++)if(scale.getEntry(i)==0)scale.setEntry(i, 1);
-		this.scale = scale.toArray();
-		this.xL =xMin;
 		
-		for(int i = 0; i<x.getRowDimension();i++) {
-			x.setRow(i, MatrixUtils.createRealVector(x.getRow(i)).subtract(xL).ebeDivide(scale).toArray());
-		}
+		
 		
 		RealVector Y = MatrixUtils.createRealVector(y);
-		//RealVector b = MatrixUtils.createRealVector(new double[this.noOfMetaModelParams]).mapAdd(1.0);
 		RealVector b = MatrixUtils.createRealVector(new double[this.noOfMetaModelParams]);
-		b.setEntry(1, this.scale[1]);
+		b.setEntry(1, 1);
+		
 		RealVector bIn = MatrixUtils.createRealVector(b.toArray());
 		//		/
 //		if(error>400) {
 //			System.out.println("Debug!!!");
 //		}
 		double[] delta = null;
-		MatrixBasedUnconstrainedGD gd  = new MatrixBasedUnconstrainedGD(this.noOfMetaModelParams);
-		gd.setLimitFor2ndElement(new Tuple<Double,Double>(0.,this.scale[1]*2));
+		MatrixBasedUnconstrainedAdam gd  = new MatrixBasedUnconstrainedAdam(this.noOfMetaModelParams);
+		gd.setLimitFor2ndElement(new Tuple<Double,Double>(0.,3.));
 		double dCheck = Double.POSITIVE_INFINITY;
 		for(int i=0;i<300;i++) {
 			
@@ -246,7 +222,7 @@ public class AnalyticLinearMetaModel extends MetaModelImpl {
 				//System.out.println("Debug!!!SF!!!");
 				dCheck = newdCheck;
 			}
-			
+			if(g.getNorm()<0.00000001)break;
 		}
 		this.MetaModelParams = b.toArray();
 		double e = simData.get(0)-this.calcMetaModel(analyticalData.get(0), params.get(0));
@@ -261,10 +237,10 @@ public class AnalyticLinearMetaModel extends MetaModelImpl {
 
 	@Override
 	public double calcMetaModel(double analyticalModelPart, LinkedHashMap<String, Double> param) {
-		double modelOutput=this.MetaModelParams[0]+MetaModelParams[1]*(analyticalModelPart-this.xL[1])/this.scale[1];
+		double modelOutput=this.MetaModelParams[0]+MetaModelParams[1]*(analyticalModelPart);
 		int i=1;
 		for(double d:param.values()) {
-			modelOutput+=this.MetaModelParams[i+1]*(d-this.xL[i+1])/this.scale[i+1];
+			modelOutput+=this.MetaModelParams[i+1]*d;
 			i++;
 		}
 		
@@ -282,14 +258,14 @@ public class AnalyticLinearMetaModel extends MetaModelImpl {
 	@Override
 	public double[] getGradientVector() {
 		double[] grad = new double[this.MetaModelParams.length-2];
-		for(int i = 2;i<this.MetaModelParams.length;i++)grad[i-2] = this.MetaModelParams[i]/this.scale[i];
+		for(int i = 2;i<this.MetaModelParams.length;i++)grad[i-2] = this.MetaModelParams[i];
 		return grad;
 	}
 
 
 	@Override
 	public Double getanaGradMultiplier() {
-		return this.MetaModelParams[1]/this.scale[1];
+		return this.MetaModelParams[1];
 	}
 	
 	
