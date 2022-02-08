@@ -3,6 +3,7 @@ package ust.hk.praisehk.metamodelcalibration.analyticalModelImpl;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+import org.apache.log4j.Logger;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.network.Link;
@@ -29,6 +30,7 @@ import ust.hk.praisehk.metamodelcalibration.analyticalModel.TransitLink;
  */
 
 public class CNLTransitDirectLink extends TransitDirectLink{
+	private static final Logger logger = Logger.getLogger(CNLTransitDirectLink.class);
 	private Scenario scenario;
 	public CNLTransitDirectLink(String startStopId, String endStopId, Id<Link> startLinkId, Id<Link> endLinkId,
 			TransitSchedule ts, String lineId, String routeId, Scenario scenario) {
@@ -113,9 +115,11 @@ public class CNLTransitDirectLink extends TransitDirectLink{
 			this.capacity=this.capacity/noofVehicle;
 			this.headway=(timeBeans.get(timeBeanId).getSecond()-timeBeans.get(timeBeanId).getFirst())/noofVehicle;
 		}
-		if(capacity==0) {
-			System.out.println("No Capacity!!!");
-		}
+		
+		//Enoch: Even if the capacity is 0, it is fine. Feb 2022
+//		if(capacity==0) {
+//			logger.warn("No Capacity!!!");
+//		}
 	}
 	
 	public void calcCapacityAndHeadway(Map<String,Map<String,Double>>vehicleCount,Map<String,Map<String,Double>>capacity,

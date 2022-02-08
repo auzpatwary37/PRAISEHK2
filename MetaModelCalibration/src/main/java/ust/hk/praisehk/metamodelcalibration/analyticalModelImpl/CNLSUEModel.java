@@ -77,7 +77,7 @@ public class CNLSUEModel implements AnalyticalModel{
 		private Map<Id<AnalyticalModelODpair>,Map<String,String>> odMultiplierId=null;
 		private boolean emptyMeasurements=false;
 		private Measurements measurementsToUpdate=null;
-		private final Logger logger=Logger.getLogger(CNLSUEModel.class);
+		private static final Logger logger = Logger.getLogger(CNLSUEModel.class);
 		private String fileLoc="traget/";
 		public String getFileLoc() {
 			return fileLoc;

@@ -207,7 +207,7 @@ public class Measurements {
 		}
 	}
 	
-	public void applyFator(Double factor) {
+	public void applyFactor(Double factor) {
 		for(Measurement m:this.measurements.values()) {
 			for(String timeId:m.getVolumes().keySet()) {
 				m.putVolume(timeId, m.getVolumes().get(timeId)*factor);
