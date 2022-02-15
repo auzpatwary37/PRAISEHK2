@@ -59,7 +59,10 @@ public abstract class AnalyticalModelODpairs {
 		this.scenario=scenario;
 	}
 	@SuppressWarnings("unchecked")
-	public void generateODpairset(){
+	public void generateODpairset(Network odNetwork){
+		if(odNetwork==null) {
+			odNetwork=this.network;
+		}
 		ArrayList<Trip> trips=new ArrayList<>();
 		
 		/**
@@ -98,18 +101,18 @@ public abstract class AnalyticalModelODpairs {
 		}
 		double tripsWithoutRoute=0;
 		for (Trip trip:trips){
-			double pcu=1;
-			Vehicle v=this.scenario.getVehicles().getVehicles().get(Id.createVehicleId(trip.getPersonId().toString()));
-			if(v!=null) {
-				pcu=v.getType().getPcuEquivalents();
-			}
-			trip.setCarPCU(pcu);
+//			double pcu=1;
+//			Vehicle v=this.scenario.getVehicles().getVehicles().get(Id.createVehicleId(trip.getPersonId().toString()));
+//			if(v!=null) {
+//				pcu=v.getType().getPcuEquivalents();
+//			}
+//			trip.setCarPCU(pcu);
 			if(trip.getRoute()!=null ||trip.getTrRoute()!=null) {
-				Id<AnalyticalModelODpair> ODId=trip.generateODpairId(network);
+				Id<AnalyticalModelODpair> ODId=trip.generateODpairId(odNetwork);
 				if (ODpairset.containsKey(ODId)){
 					ODpairset.get(ODId).addtrip(trip);
 				}else{
-					AnalyticalModelODpair odpair=this.getNewODPair(trip.getOriginNode(),trip.getDestinationNode(),network,this.timeBean);
+					AnalyticalModelODpair odpair=this.getNewODPair(ODId, trip.getOriginNode(),trip.getDestinationNode(),network,this.timeBean);
 					odpair.addtrip(trip);
 					ODpairset.put(trip.generateODpairId(network), odpair);
 				}
@@ -194,11 +197,11 @@ public abstract class AnalyticalModelODpairs {
 		
 	}
 	protected abstract TripChain getNewTripChain(Plan plan);
-	protected AnalyticalModelODpair getNewODPair(Node oNode,Node dNode, Network network,Map<String, Tuple<Double,Double>> timeBean2) {
-		return new AnalyticalModelODpair(oNode,dNode,network,timeBean2);
+	protected AnalyticalModelODpair getNewODPair(Id<AnalyticalModelODpair> odId,Node oNode,Node dNode, Network network,Map<String, Tuple<Double,Double>> timeBean2) {
+		return new AnalyticalModelODpair(odId,oNode,dNode,network,timeBean2);
 	}
-	protected AnalyticalModelODpair getNewODPair(Node oNode,Node dNode, Network network,Map<String, Tuple<Double,Double>> timeBean2,String subPopName) {
-		return new AnalyticalModelODpair(oNode,dNode,network,timeBean2,subPopName);
+	protected AnalyticalModelODpair getNewODPair(Id<AnalyticalModelODpair> odId, Node oNode,Node dNode, Network network,Map<String, Tuple<Double,Double>> timeBean2,String subPopName) {
+		return new AnalyticalModelODpair(odId, oNode,dNode,network,timeBean2,subPopName);
 	}
 	public Map<String, Tuple<Double,Double>> getTimeBean() {
 		return timeBean;
@@ -271,7 +274,7 @@ public abstract class AnalyticalModelODpairs {
 				if (ODpairset.containsKey(ODId)){
 					ODpairset.get(ODId).addtrip(trip);
 				}else{
-					AnalyticalModelODpair odpair=this.getNewODPair(trip.getOriginNode(),trip.getDestinationNode(),this.network,this.timeBean,trip.getSubPopulationName());
+					AnalyticalModelODpair odpair=this.getNewODPair(ODId, trip.getOriginNode(),trip.getDestinationNode(),this.network,this.timeBean,trip.getSubPopulationName());
 					odpair.addtrip(trip);
 					ODpairset.put(trip.generateODpairId(odNetwork), odpair);
 					if(pureODMap.containsKey(pureODId)) {

@@ -36,7 +36,7 @@ public abstract class AnalyticalModelNetwork implements Network{
 	 * @return new created node
 	 */
 	public static Node cloneNode(Node node,NetworkFactory netfac){
-		netfac = NetworkUtils.createNetwork().getFactory();
+		//netfac = NetworkUtils.createNetwork().getFactory();
 		Node outNode=netfac.createNode(node.getId(), node.getCoord());
 		return outNode;
 	}

@@ -376,7 +376,7 @@ public class SUEModelContTime implements AnalyticalModel{
 			//System.out.println("");
 			this.scenario=scenario;
 			this.odPairs=new CNLODpairs(network,population,transitSchedule,scenario,this.timeBeans);
-			this.odPairs.generateODpairset();
+			this.odPairs.generateODpairset(null);
 			this.ts=transitSchedule;
 			for(String s:this.timeBeans.keySet()) {
 				this.networks.put(s, new CNLNetwork(network));

@@ -52,20 +52,20 @@ public class CNLSUEModelSubPop extends CNLSUEModel{
 	}
 	
 	@Override
-	public void generateRoutesAndOD(Population population,Network network,TransitSchedule transitSchedule,
+	public void generateRoutesAndOD(Population population,Network odNetwork,TransitSchedule transitSchedule,
 			Scenario scenario,Map<String,FareCalculator> fareCalculator) {
 		this.setLastPopulation(population);
 		//System.out.println("");
-		this.setOdPairs(new CNLODpairs(network,population,transitSchedule,scenario,this.getTimeBeans()));
+		this.setOdPairs(new CNLODpairs(scenario.getNetwork(),population,transitSchedule,scenario,this.getTimeBeans()));
 //		Config odConfig=ConfigUtils.createConfig();
 //		odConfig.network().setInputFile("data/odNetwork.xml");
 		
-		Network odNetwork=NetworkUtils.readNetwork("data/tpusbNetwork.xml");
+		//Network odNetwork=NetworkUtils.readNetwork("data/tpusbNetwork.xml");
 		this.getOdPairs().generateODpairsetSubPop(odNetwork);//This network has priority over the constructor network. This allows to use a od pair specific network 
 		this.getOdPairs().generateRouteandLinkIncidence(0.);
 		SignalFlowReductionGenerator sg=new SignalFlowReductionGenerator(scenario);
 		for(String s:this.getTimeBeans().keySet()) {
-			this.getNetworks().put(s, new CNLNetwork(network,sg));
+			this.getNetworks().put(s, new CNLNetwork(scenario.getNetwork(),sg));
 			this.performTransitVehicleOverlay(this.getNetworks().get(s),
 					transitSchedule,scenario.getTransitVehicles(),s);
 			this.getTransitLinks().put(s,this.getOdPairs().getTransitLinks(s));
