@@ -5,10 +5,10 @@ import org.apache.commons.math3.linear.RealVector;
 import org.matsim.core.utils.collections.Tuple;
 
 public class MatrixBasedUnconstrainedGD {
-	protected double alpha = .0001;
+	protected double alpha = .01;
 	
 	private int counter;
-	private double c = 100;
+	private double c = 6;
 	private Tuple<Double,Double> limitFor2ndElement = new Tuple<Double,Double>(0.,2.);
 	public MatrixBasedUnconstrainedGD(int noOfVar) {
 		
@@ -18,11 +18,11 @@ public class MatrixBasedUnconstrainedGD {
 	public double[] update(double[] current,double[] gradient) {
 		RealVector g = MatrixUtils.createRealVector(gradient);
 		RealVector p = MatrixUtils.createRealVector(current);
-		if(g.getNorm()>c*g.getDimension()) {//Clipping
+		if(g.getNorm()>c) {//Clipping
 			if(!Double.isInfinite(g.getNorm())) {
-				g = g.mapDivide(g.getNorm()).mapMultiply(c*g.getDimension());
+				g = g.mapDivide(g.getNorm()).mapMultiply(c);
 			}else {
-				g = g.mapDivide(g.getL1Norm()).mapMultiply(c*g.getDimension());
+				g = g.mapDivide(g.getL1Norm()).mapMultiply(c);
 			}
 		}
 		
@@ -37,9 +37,9 @@ public class MatrixBasedUnconstrainedGD {
 		
 		if(g.getNorm()>c*g.getDimension()) {//Clipping
 			if(!Double.isInfinite(g.getNorm())) {
-				g = g.mapDivide(g.getNorm()).mapMultiply(c*g.getDimension());
+				g = g.mapDivide(g.getNorm()).mapMultiply(c);
 			}else {
-				g = g.mapDivide(g.getL1Norm()).mapMultiply(c*g.getDimension());
+				g = g.mapDivide(g.getL1Norm()).mapMultiply(c);
 			}
 		}
 

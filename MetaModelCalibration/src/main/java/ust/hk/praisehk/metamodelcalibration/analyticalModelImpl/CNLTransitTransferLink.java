@@ -80,8 +80,8 @@ public class CNLTransitTransferLink extends TransitTransferLink {
 			//can add this term : this.passangerCount+ to the current onborad passenger but I think it is overcounting. 
 			if(Double.isNaN(this.waitingTime)||this.waitingTime==Double.POSITIVE_INFINITY) {
 				return this.waitingTime=3600;
-			}			
-			if(this.waitingTime>3600) {
+			}
+			if(this.waitingTime>36000 || currentOnboardPassenger > 40000) {
 				logger.debug("deug Here!!!");
 			}
 			return this.waitingTime;
