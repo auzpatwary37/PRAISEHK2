@@ -31,8 +31,6 @@ import ust.hk.praisehk.metamodelcalibration.analyticalModel.SUEModelOutput;
  */
 public class Measurements {
 	
-	
-	
 	private final Map<String,Tuple<Double,Double>> timeBean;
 	private Map<Id<Measurement>,Measurement> measurements=new HashMap<>();
 	private Map<MeasurementType,List<Measurement>> measurementsByType=new HashMap<>();
@@ -207,7 +205,7 @@ public class Measurements {
 		}
 	}
 	
-	public void applyFator(Double factor) {
+	public void applyFactor(Double factor) {
 		for(Measurement m:this.measurements.values()) {
 			for(String timeId:m.getVolumes().keySet()) {
 				m.putVolume(timeId, m.getVolumes().get(timeId)*factor);

@@ -79,7 +79,7 @@ public class ObjectiveCalculator {
 			}
 			
 		}
-return objective;
+		return objective;
 	}
 	
 	/**
@@ -134,7 +134,7 @@ return objective;
 			}
 			
 		}
-return objective;
+		return objective;
 	}
 	
 	
