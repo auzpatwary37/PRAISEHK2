@@ -57,6 +57,8 @@ public abstract class TransitDirectLink extends TransitLink{
 			}
 		}
 		
+		assert(this.linkList.size() > 0);
+		
 	}
 	
 	
