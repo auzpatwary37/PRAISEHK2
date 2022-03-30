@@ -31,8 +31,6 @@ import ust.hk.praisehk.metamodelcalibration.analyticalModel.SUEModelOutput;
  */
 public class Measurements {
 	
-	
-	
 	private final Map<String,Tuple<Double,Double>> timeBean;
 	private Map<Id<Measurement>,Measurement> measurements=new HashMap<>();
 	private Map<MeasurementType,List<Measurement>> measurementsByType=new HashMap<>();

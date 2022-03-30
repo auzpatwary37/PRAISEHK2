@@ -106,6 +106,7 @@ public class CNLTransitRoute implements AnalyticalModelTransitRoute{
 		Map<Integer,CNLTransitDirectLink> tempDirectLinks=new HashMap<>();
 		Map<Integer, CNLTransitTransferLink> tempTransferLinks=new HashMap<>();
 		for(int i=ptlegList.size()-1;i>=0;i--) {
+			//TODO: Fix the MTR Transfer Distance here
 			Leg l=ptlegList.get(i);
 			String startStopId=null;
 			String endStopId=null;
@@ -114,7 +115,7 @@ public class CNLTransitRoute implements AnalyticalModelTransitRoute{
 			//System.out.println("testing");
 			if(l.getMode().equals("transit_walk")||l.getMode().equals("walk")) {
 				transferLinkCount++;
-				this.routeWalkingDistance+=l.getRoute().getDistance();
+				this.routeWalkingDistance+= l.getTravelTime().seconds() * 1.4;//l.getRoute().getDistance();
 				CNLTransitTransferLink t;
 				if (i==ptlegList.size()-1) {
 					t=new CNLTransitTransferLink(startStopId, 
@@ -231,8 +232,8 @@ public class CNLTransitRoute implements AnalyticalModelTransitRoute{
 		double DistanceBasedMoneyCostWalk=params.get(CNLSUEModel.DistanceBasedMoneyCostWalkName);
 		double fare=-1*this.getFare(transitSchedule, farecalc, AdditionalDataContainer);
 		double travelTime=info.getTravelTime();
-		double walkTime=this.getRouteWalkingDistance()/1.4;
-		double walkDist=this.getRouteWalkingDistance();
+		double walkTime=this.routeWalkingDistance/1.4;
+		double walkDist=this.routeWalkingDistance;
 		double waitingTime=info.getWaitingTime();
 		double distance=info.getRouteDistance();
 		double utility=0;
