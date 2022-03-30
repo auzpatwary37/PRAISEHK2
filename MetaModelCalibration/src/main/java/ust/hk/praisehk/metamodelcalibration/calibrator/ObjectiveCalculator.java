@@ -98,7 +98,7 @@ return objective;
 				double sigma = 0;
 				for(String timeBeanId:m.getVolumes().keySet()) {
 					if(simOrAnaMeasurements.getMeasurements().get(m.getId())==null) {
-						logger.error("The Measurements entered are not comparable (measuremtn do not match)!!! This should not happen. Please check");
+						logger.error("The Measurements entered are not comparable (measurement do not match)!!! This should not happen. Please check");
 						
 					}else if(simOrAnaMeasurements.getMeasurements().get(m.getId()).getVolumes().get(timeBeanId)==null) {
 						logger.error("The Measurements entered are not comparable (volume timeBeans do not match)!!! This should not happen. Please check");
@@ -117,7 +117,7 @@ return objective;
 			for(Measurement m:realMeasurements.getMeasurements().values()) {
 				for(String timeBeanId:m.getVolumes().keySet()) {
 					if(simOrAnaMeasurements.getMeasurements().get(m.getId())==null) {
-						logger.error("The Measurements entered are not comparable (measuremtn do not match)!!! This should not happen. Please check");
+						logger.error("The Measurements entered are not comparable (measurement do not match)!!! This should not happen. Please check");
 						continue;
 					}else if(simOrAnaMeasurements.getMeasurements().get(m.getId()).getVolumes().get(timeBeanId)==null) {
 						logger.error("The Measurements entered are not comparable (volume timeBeans do not match)!!! This should not happen. Please check");
@@ -134,7 +134,7 @@ return objective;
 			}
 			
 		}
-return objective;
+		return objective;
 	}
 	
 	

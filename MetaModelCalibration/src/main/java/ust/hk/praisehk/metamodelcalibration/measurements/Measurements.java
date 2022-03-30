@@ -49,7 +49,7 @@ public class Measurements {
 		return new Measurements(timeBean);
 	}
 	
-	public void createAnadAddMeasurement(String measurementId,MeasurementType mType) {
+	public Measurement createAnadAddMeasurement(String measurementId,MeasurementType mType) {
 		Measurement m=new Measurement(measurementId,this.timeBean,mType);
 		this.measurements.put(m.getId(), m);
 		List<Measurement> mlist=this.measurementsByType.get(m.getMeasurementType());
@@ -58,6 +58,7 @@ public class Measurements {
 			this.measurementsByType.put(mType, mlist);
 		}
 		mlist.add(m);
+		return m;
 	}
 	
 	public void addMeasurement(Measurement m) {
@@ -207,7 +208,7 @@ public class Measurements {
 		}
 	}
 	
-	public void applyFator(Double factor) {
+	public void applyFactor(Double factor) {
 		for(Measurement m:this.measurements.values()) {
 			for(String timeId:m.getVolumes().keySet()) {
 				m.putVolume(timeId, m.getVolumes().get(timeId)*factor);
