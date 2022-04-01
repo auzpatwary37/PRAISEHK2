@@ -87,7 +87,7 @@ public class AnaModelControlerListener implements StartupListener,BeforeMobsimLi
 	
 	@Override
 	public void notifyBeforeMobsim(BeforeMobsimEvent event) {
-		this.pcuVolumeCounter.resetLinkCount();
+		this.pcuVolumeCounter.reset(0);
 		this.occupancyCalculator.reset();
 		this.travelTimeCalculator.reset();
 		this.sc.reset(event.getIteration());
