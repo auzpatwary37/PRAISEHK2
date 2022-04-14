@@ -47,7 +47,7 @@ public class Measurements {
 		return new Measurements(timeBean);
 	}
 	
-	public void createAnadAddMeasurement(String measurementId,MeasurementType mType) {
+	public Measurement createAnadAddMeasurement(String measurementId,MeasurementType mType) {
 		Measurement m=new Measurement(measurementId,this.timeBean,mType);
 		this.measurements.put(m.getId(), m);
 		List<Measurement> mlist=this.measurementsByType.get(m.getMeasurementType());
@@ -56,6 +56,7 @@ public class Measurements {
 			this.measurementsByType.put(mType, mlist);
 		}
 		mlist.add(m);
+		return m;
 	}
 	
 	public void addMeasurement(Measurement m) {

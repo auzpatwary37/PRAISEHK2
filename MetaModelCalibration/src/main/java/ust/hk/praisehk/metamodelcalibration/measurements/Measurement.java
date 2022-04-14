@@ -125,6 +125,9 @@ public class Measurement {
 		return m;
 	}
 	
+	public double getVolume(String timeBean) {
+		return this.volumes.get(timeBean);
+	}
 	
 	
 	public Map<String, Object> getAttributes() {

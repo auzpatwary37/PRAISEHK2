@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.apache.log4j.Logger;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.network.Link;
@@ -30,8 +31,11 @@ import com.google.common.collect.Lists;
 
 
 
+
+
 public abstract class AnalyticalModelODpairs {
 	
+	private static final Logger logger = Logger.getLogger(AnalyticalModelODpairs.class);
 	private Config config=ConfigUtils.createConfig();
 	private Scenario scenario;
 	protected final Network network;
@@ -120,7 +124,7 @@ public abstract class AnalyticalModelODpairs {
 				tripsWithoutRoute++;
 			}
 		}
-		System.out.println("no of trips withoutRoutes = "+tripsWithoutRoute);
+		logger.info("No of trips withoutRoutes = "+tripsWithoutRoute);
 		//this.population = null;
 	}
 
@@ -252,7 +256,7 @@ public abstract class AnalyticalModelODpairs {
 				trips.addAll( tripchain.getTrips());
 			}
 		}
-		System.out.println("Number of Trips = "+trips.size());
+		logger.info("Number of Trips = "+trips.size());
 		double tripsWithoutRoute=0;
 		for (Trip trip:trips){
 			double pcu=0.7;
@@ -288,7 +292,7 @@ public abstract class AnalyticalModelODpairs {
 				tripsWithoutRoute++;
 			}
 		}
-		System.out.println("no of trips withoutRoutes = "+tripsWithoutRoute);
+		logger.info("no of trips withoutRoutes = "+tripsWithoutRoute);
 		//this.population = null;
 	}
 	/**
