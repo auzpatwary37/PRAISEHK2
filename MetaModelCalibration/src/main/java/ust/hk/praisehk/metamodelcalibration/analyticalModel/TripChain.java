@@ -119,7 +119,7 @@ public abstract class TripChain{
 			}
 			trip.setEndTime(trip.getStartTime()+leglist.get(i).getTravelTime().seconds());
 			trip.setMode(leglist.get(i).getMode());
-			if(leglist.get(i).getMode().equals("car")){
+			if(leglist.get(i).getMode().equals("car")||leglist.get(i).getMode().equals("car_passenger")){
 				Route r;
 				if((r=leglist.get(i).getRoute()).getDistance()==0) {
 					double d=0;
@@ -129,9 +129,16 @@ public abstract class TripChain{
 					r.setDistance(d);
 				}
 				trip.setRoute(this.createRoute((leglist.get(i).getRoute())));
+				double pcu = 0;
+				if(leglist.get(i).getMode().equals("car")) {
+					pcu = 1.0;
+				}else if(leglist.get(i).getMode().equals("bike")) {
+					pcu = 0.5;
+				}
 				List<PlanElement> pes = new ArrayList<>();
 				pes.add(leglist.get(i));
 				trip.getRoute().setPlanElements(pes);
+				trip.setCarPCU(pcu);
 			}else if(leglist.get(i).getMode().equals("pt")){
 				if(ptlegs.size()!=0) {
 					trip.setTrRoute(ptlegs.get(pttrip));

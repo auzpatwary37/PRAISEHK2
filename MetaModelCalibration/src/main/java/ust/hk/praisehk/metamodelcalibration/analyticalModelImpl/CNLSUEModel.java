@@ -6,7 +6,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -21,7 +20,6 @@ import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.network.Network;
 import org.matsim.api.core.v01.population.Population;
 import org.matsim.core.config.Config;
-import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.network.NetworkUtils;
 import org.matsim.core.scoring.functions.ScoringParameters;
 import org.matsim.core.utils.collections.Tuple;
@@ -31,8 +29,6 @@ import org.matsim.pt.transitSchedule.api.TransitRoute;
 import org.matsim.pt.transitSchedule.api.TransitSchedule;
 import org.matsim.vehicles.VehicleCapacity;
 import org.matsim.vehicles.Vehicles;
-
-import com.google.common.collect.Lists;
 
 import de.xypron.jcobyla.Cobyla;
 import de.xypron.jcobyla.CobylaExitStatus;
@@ -46,10 +42,8 @@ import ust.hk.praisehk.metamodelcalibration.analyticalModel.AnalyticalModelODpai
 import ust.hk.praisehk.metamodelcalibration.analyticalModel.AnalyticalModelRoute;
 import ust.hk.praisehk.metamodelcalibration.analyticalModel.AnalyticalModelTransitRoute;
 import ust.hk.praisehk.metamodelcalibration.analyticalModel.InternalParamCalibratorFunction;
-import ust.hk.praisehk.metamodelcalibration.analyticalModel.SUEModelOutput;
 import ust.hk.praisehk.metamodelcalibration.analyticalModel.TransitDirectLink;
 import ust.hk.praisehk.metamodelcalibration.analyticalModel.TransitLink;
-import ust.hk.praisehk.metamodelcalibration.analyticalModel.TransitTransferLink;
 import ust.hk.praisehk.metamodelcalibration.matsimIntegration.SignalFlowReductionGenerator;
 import ust.hk.praisehk.metamodelcalibration.measurements.Measurement;
 import ust.hk.praisehk.metamodelcalibration.measurements.MeasurementType;
@@ -146,9 +140,9 @@ public class CNLSUEModel implements AnalyticalModel{
 		this.timeBeans=timeBean;
 		this.defaultParameterInitiation(null);
 		for(String timeBeanId:this.timeBeans.keySet()) {
-			this.getDemand().put(timeBeanId, new HashMap<Id<AnalyticalModelODpair>, Double>());
-			this.getCarDemand().put(timeBeanId, new HashMap<Id<AnalyticalModelODpair>, Double>());
-			this.getTransitLinks().put(timeBeanId, new HashMap<Id<TransitLink>, TransitLink>());
+			this.Demand.put(timeBeanId, new HashMap<Id<AnalyticalModelODpair>, Double>());
+			this.carDemand.put(timeBeanId, new HashMap<Id<AnalyticalModelODpair>, Double>());
+			this.transitLinks.put(timeBeanId, new HashMap<Id<TransitLink>, TransitLink>());
 			this.beta.put(timeBeanId, new ArrayList<Double>());
 			this.error.put(timeBeanId, new ArrayList<Double>());
 			this.error1.put(timeBeanId, new ArrayList<Double>());
@@ -293,22 +287,22 @@ public class CNLSUEModel implements AnalyticalModel{
 	
 	
 	@Override
-	public void generateRoutesAndOD(Population population,Network network,TransitSchedule transitSchedule,
+	public void generateRoutesAndOD(Population population,Network odNetwork,TransitSchedule transitSchedule,
 			Scenario scenario,Map<String,FareCalculator> fareCalculator) {
 		this.setLastPopulation(population);
 		this.scenario = scenario;
 		//System.out.println("");
-		this.setOdPairs(new CNLODpairs(network,population,transitSchedule,scenario,this.timeBeans));
+		this.setOdPairs(new CNLODpairs(scenario.getNetwork(),population,transitSchedule,scenario,this.timeBeans));
 		//Network odNetwork=NetworkUtils.readNetwork("data/tpusbNetwork.xml");
-		Network odNetwork = null;
-		this.getOdPairs().generateODpairset();
+		//Network odNetwork = null;
+		this.getOdPairs().generateODpairset(odNetwork);
 		this.getOdPairs().generateRouteandLinkIncidence(0.);
 		SignalFlowReductionGenerator sg=new SignalFlowReductionGenerator(scenario);
 		for(String s:this.timeBeans.keySet()) {
-			this.getNetworks().put(s, new CNLNetwork(network,sg));
+			this.networks.put(s, new CNLNetwork(scenario.getNetwork(),sg));
 			this.performTransitVehicleOverlay(this.getNetworks().get(s),
 					transitSchedule,scenario.getTransitVehicles(),s);
-			this.getTransitLinks().put(s,this.getOdPairs().getTransitLinks(s));
+			this.transitLinks.put(s,this.getOdPairs().getTransitLinks(s));
 			System.out.println("No of active signal link = "+sg.activeGc);
 			sg.activeGc=0;
 		}

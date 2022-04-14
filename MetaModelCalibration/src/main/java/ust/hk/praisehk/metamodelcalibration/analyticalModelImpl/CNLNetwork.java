@@ -7,6 +7,7 @@ import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.network.Network;
+import org.matsim.api.core.v01.network.NetworkFactory;
 import org.matsim.api.core.v01.network.Node;
 import org.matsim.pt.transitSchedule.api.TransitSchedule;
 import org.matsim.vehicles.VehicleType;
@@ -40,10 +41,10 @@ public class CNLNetwork extends AnalyticalModelNetwork{
 	}
 	
 	public CNLNetwork(Network network,SignalFlowReductionGenerator sg){
-		
+		NetworkFactory netfac = network.getFactory();
 		for(Id<Node> NodeId:network.getNodes().keySet()){
 			
-			this.network.addNode(cloneNode(network.getNodes().get(NodeId),network.getFactory()));
+			this.network.addNode(cloneNode(network.getNodes().get(NodeId),netfac));
 		}
 		for(Id<Link> linkId:network.getLinks().keySet()){
 			AnalyticalModelLink link=new CNLLink(network.getLinks().get(linkId),this.network);

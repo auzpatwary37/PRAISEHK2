@@ -121,8 +121,8 @@ public class LinkCountEventHandler implements LinkEnterEventHandler, TransitDriv
 				get(event.getVehicleId()).getType().getPcuEquivalents());
 		}
 	}
-	
-	public void resetLinkCount() {
+	@Override
+	public void reset(int i) {
 		this.linkCounts.clear();
 		this.Vehicles.clear();
 		this.transitVehicles.clear();

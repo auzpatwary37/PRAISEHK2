@@ -144,7 +144,7 @@ public class AnalyticalModelODpair {
 	 * @param dnode
 	 * @param network
 	 */
-	public AnalyticalModelODpair(Node onode,Node dnode, Network network,Map<String, Tuple<Double, Double>> timeBean2){
+	public AnalyticalModelODpair(Id<AnalyticalModelODpair> odId,Node onode,Node dnode, Network network,Map<String, Tuple<Double, Double>> timeBean2){
 		this.network=network;
 		this.ocoord=onode.getCoord();
 		this.dcoord=dnode.getCoord();
@@ -155,7 +155,7 @@ public class AnalyticalModelODpair {
 			this.demand.put(s,0.);
 			this.vehicleSpecificDemand.put(s, new HashMap<>());
 			}
-		ODpairId=Id.create(onode.getId().toString()+"_"+dnode.getId().toString(), AnalyticalModelODpair.class);
+		ODpairId=odId;
 		this.timeBean=timeBean2;
 		for(String timeBeanId:this.timeBean.keySet()) {
 			this.RouteUtility.put(timeBeanId, new HashMap<Id<AnalyticalModelRoute>, Double>());
@@ -170,7 +170,7 @@ public class AnalyticalModelODpair {
 		
 	}
 	
-	public AnalyticalModelODpair(Node onode,Node dnode, Network network,Map<String, Tuple<Double, Double>> timeBean2,String subPopulation){
+	public AnalyticalModelODpair(Id<AnalyticalModelODpair> odId, Node onode,Node dnode, Network network,Map<String, Tuple<Double, Double>> timeBean2,String subPopulation){
 		this.network=network;
 		this.ocoord=onode.getCoord();
 		this.dcoord=dnode.getCoord();
@@ -180,7 +180,7 @@ public class AnalyticalModelODpair {
 		for(String s:timeBean2.keySet()){
 			this.demand.put(s,0.);
 			this.vehicleSpecificDemand.put(s, new HashMap<>());}
-		ODpairId=Id.create(onode.getId().toString()+"_"+dnode.getId().toString()+"_"+subPopulation, AnalyticalModelODpair.class);
+		ODpairId=odId;
 		this.timeBean=timeBean2;
 		for(String timeBeanId:this.timeBean.keySet()) {
 			this.RouteFlow.put(timeBeanId, new HashMap<Id<AnalyticalModelRoute>, Double>());

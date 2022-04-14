@@ -82,4 +82,9 @@ public class FareLinkVolumeCountEventHandler implements PersonMoneyEventHandler{
 		}
 		return timeId;
 	}
+
+	public Measurements getMeasurements() {
+		return measurements;
+	}
+	
 }
