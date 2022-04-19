@@ -144,6 +144,7 @@ public abstract class AnalyticalModelODpairs {
 		return Dfacilities;
 	}
 	public Map<Id<AnalyticalModelODpair>,Double> getdemand(String timeBeanId){
+		this.ODdemand = new HashMap<>();
 		for(Id<AnalyticalModelODpair> ODpairId:ODpairset.keySet()){
 			this.ODdemand.put(ODpairId, ODpairset.get(ODpairId).getSpecificPeriodODDemand(timeBeanId));
 		}
@@ -258,12 +259,12 @@ public abstract class AnalyticalModelODpairs {
 		System.out.println("Number of Trips = "+trips.size());
 		double tripsWithoutRoute=0;
 		for (Trip trip:trips){
-			double pcu=0.7;
+			double pcu=1.0;
 			Vehicle v=this.scenario.getVehicles().getVehicles().get(Id.createVehicleId(trip.getPersonId().toString()));
 			
 			if(v!=null) {
 				pcu=v.getType().getPcuEquivalents();
-				pcu=0.7;// Delete it for later sceanrios
+			//	pcu=0.7;// Delete it for later sceanrios
 				
 				trip.setVehicleType(v.getType().getId());
 			}

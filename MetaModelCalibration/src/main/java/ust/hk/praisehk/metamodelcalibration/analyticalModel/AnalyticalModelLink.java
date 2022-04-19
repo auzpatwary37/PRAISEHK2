@@ -39,9 +39,14 @@ public abstract class AnalyticalModelLink implements Link{
 	protected double linkTransitVolume=0;
 	protected double linkTransitPassenger=0;
 	protected double linkTravelTime=0;
+	protected double residualCarVolume = 0;
+	protected final double residualCarVolumeThreshold;
 	
 	private double gcRatio=1;
 	protected Map<Id<VehicleType>,Double> vehicleSpecificVolume=new HashMap<>(); 
+	
+	protected Map<Id<VehicleType>,Double> vehicleSpecificResedualVolume=new HashMap<>(); 
+	
 	protected Set<Id<VehicleType>> transitVehicles=new HashSet<>();
 	
 	/**
@@ -58,6 +63,7 @@ public abstract class AnalyticalModelLink implements Link{
 		this.link.setFreespeed(link.getFreespeed());
 		this.link.setLength(link.getLength());
 		this.link.setNumberOfLanes(link.getNumberOfLanes());
+		this.residualCarVolumeThreshold = this.link.getCapacity();
 		
 	}
 	
