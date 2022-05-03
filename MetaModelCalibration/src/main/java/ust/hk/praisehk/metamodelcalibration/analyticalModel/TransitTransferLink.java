@@ -48,7 +48,7 @@ public abstract class TransitTransferLink extends TransitLink{
 	protected double walkDistance=0;
 	protected double waitingTime=0;
 	
-	
+	protected double resedualFlow = 0;
 	//getter and setter
 	
 	
@@ -62,6 +62,12 @@ public abstract class TransitTransferLink extends TransitLink{
 	
 	//-----------------------------
 	
+	public double getResedualFlow() {
+		return resedualFlow;
+	}
+	public void setResedualFlow(double resedualFlow) {
+		this.resedualFlow = resedualFlow;
+	}
 	/**
 	 *
 	 * this method calculates waiting time depending on the following formulae

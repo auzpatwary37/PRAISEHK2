@@ -40,7 +40,7 @@ public abstract class AnalyticalModelLink implements Link{
 	protected double linkTransitPassenger=0;
 	protected double linkTravelTime=0;
 	protected double residualCarVolume = 0;
-	protected final double residualCarVolumeThreshold;
+	
 	
 	private double gcRatio=1;
 	protected Map<Id<VehicleType>,Double> vehicleSpecificVolume=new HashMap<>(); 
@@ -63,7 +63,7 @@ public abstract class AnalyticalModelLink implements Link{
 		this.link.setFreespeed(link.getFreespeed());
 		this.link.setLength(link.getLength());
 		this.link.setNumberOfLanes(link.getNumberOfLanes());
-		this.residualCarVolumeThreshold = this.link.getCapacity();
+		
 		
 	}
 	
@@ -274,6 +274,16 @@ public abstract class AnalyticalModelLink implements Link{
 	
 	public Map<Id<VehicleType>, Double> getVehicleSpecificVolume() {
 		return vehicleSpecificVolume;
+	}
+
+
+	public double getResidualCarVolume() {
+		return residualCarVolume;
+	}
+
+
+	public void setResidualCarVolume(double residualCarVolume) {
+		this.residualCarVolume = residualCarVolume;
 	}
 	
 	

@@ -30,6 +30,7 @@ public class CNLTransitTransferLink extends TransitTransferLink {
 	private boolean scalePT = false;
 	private final static Logger logger = Logger.getLogger(CNLTransitTransferLink.class);
 	
+	
 	public CNLTransitTransferLink(String startStopId, String endStopId, 
 			Id<Link> startLinkId, Id<Link> endLinkId,TransitSchedule ts,
 			CNLTransitDirectLink dlink) {
@@ -73,7 +74,7 @@ public class CNLTransitTransferLink extends TransitTransferLink {
 			capacity=this.nextdLink.getCapacity()*multiplier;
 			double noOfVehicles=this.nextdLink.getFrequency();
 			CNLLink l_gamma = ((CNLLink)network.getLinks().get(this.nextdLink.getLinkList().get(0)));
-			currentOnboardPassenger = l_gamma.getTransitPassengerVolume(this.nextdLink.getLineId()+"_"+this.nextdLink.getRouteId());
+			currentOnboardPassenger = l_gamma.getTransitPassengerVolume(this.nextdLink.getLineId()+"_"+this.nextdLink.getRouteId())+super.getResedualFlow();
 			if(this.incidentLinkIds==null || this.incidentLinkIds.size()==0)this.incidentLinkIds = l_gamma.getTransitDirectLinks(this.nextdLink.getLineId()+"_"+this.nextdLink.getRouteId());
 			this.waitingTime=headway*anaParams.get(CNLSUEModel.TransferalphaName)+
 					headway*Math.pow((this.currentOnboardPassenger)/(capacity*noOfVehicles),anaParams.get(CNLSUEModel.TransferbetaName));
