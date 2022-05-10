@@ -108,7 +108,11 @@ public class CNLTransitTransferLink extends TransitTransferLink {
 
 	
 
-	public Set<Id<TransitLink>> getIncidentLinkIds() {
+	public Set<Id<TransitLink>> getIncidentLinkIds(AnalyticalModelNetwork network) {
+		if(incidentLinkIds==null) {
+			CNLLink l_gamma = ((CNLLink)network.getLinks().get(this.nextdLink.getLinkList().get(0)));
+			this.incidentLinkIds = l_gamma.getTransitDirectLinks(this.nextdLink.getLineId()+"_"+this.nextdLink.getRouteId());
+		}
 		return incidentLinkIds;
 	}
 
