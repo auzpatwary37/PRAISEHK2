@@ -13,7 +13,7 @@ import org.matsim.core.utils.collections.Tuple;
 import org.matsim.pt.transitSchedule.api.TransitSchedule;
 
 import dynamicTransitRouter.fareCalculators.FareCalculator;
-import transitCalculatorsWithFare.FareLink;
+import transitFareAndHandler.FareLink;
 
 
 

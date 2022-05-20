@@ -16,7 +16,7 @@ import org.w3c.dom.Element;
 import org.xml.sax.Attributes;
 
 import dynamicTransitRouter.TransitStop;
-import transitCalculatorsWithFare.FareLink;
+import transitFareAndHandler.FareLink;
 import ust.hk.praisehk.metamodelcalibration.analyticalModel.AnalyticalModel;
 import ust.hk.praisehk.metamodelcalibration.analyticalModel.AnalyticalModelNetwork;
 
@@ -465,8 +465,10 @@ public enum MeasurementType {
 				Measurement m) {
 			for(MTRLinkVolumeInfo s:(List<MTRLinkVolumeInfo>)m.getAttribute(Measurement.MTRLineRouteStopLinkInfosName)) {
 				m.getVolumes().entrySet().forEach(v->{
-					if(modelOut.getTrainCount().get(v.getKey()).get(s.linkId).get(CNLTransitDirectLink.calcLineRouteId(s.lineId.toString(), s.routeId.toString()))!=null) {
-					v.setValue(v.getValue()+modelOut.getTrainCount().get(v.getKey()).get(s.linkId).get(CNLTransitDirectLink.calcLineRouteId(s.lineId.toString(), s.routeId.toString())));
+					if(s.linkId.toString().contains("EAL")) {
+						v.setValue(0.);
+					}else if(modelOut.getTrainCount().get(v.getKey()).get(s.linkId).get(CNLTransitDirectLink.calcLineRouteId(s.lineId.toString(), s.routeId.toString()))!=null) {
+						v.setValue(v.getValue()+modelOut.getTrainCount().get(v.getKey()).get(s.linkId).get(CNLTransitDirectLink.calcLineRouteId(s.lineId.toString(), s.routeId.toString())));
 					}
 				});
 			}

@@ -33,7 +33,7 @@ import org.matsim.vehicles.Vehicles;
 import de.xypron.jcobyla.Cobyla;
 import de.xypron.jcobyla.CobylaExitStatus;
 import dynamicTransitRouter.fareCalculators.FareCalculator;
-import transitCalculatorsWithFare.FareLink;
+import transitFareAndHandler.FareLink;
 import ust.hk.praisehk.metamodelcalibration.analyticalModel.AnalyticalModel;
 import ust.hk.praisehk.metamodelcalibration.analyticalModel.AnalyticalModelLink;
 import ust.hk.praisehk.metamodelcalibration.analyticalModel.AnalyticalModelNetwork;

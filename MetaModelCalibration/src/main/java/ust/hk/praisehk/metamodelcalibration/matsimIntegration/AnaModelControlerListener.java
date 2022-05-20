@@ -21,7 +21,7 @@ import com.google.inject.Inject;
 import com.google.inject.name.Named;
 
 import dynamicTransitRouter.fareCalculators.FareCalculator;
-import transitCalculatorsWithFare.TransitFareHandler;
+import transitFareAndHandler.TransitFareHandler;
 import ust.hk.praisehk.metamodelcalibration.analyticalModel.AnalyticalModel;
 import ust.hk.praisehk.metamodelcalibration.measurements.Measurement;
 import ust.hk.praisehk.metamodelcalibration.measurements.Measurements;
