@@ -427,7 +427,7 @@ public class CalibratorImpl implements Calibrator {
 	@Override
 	public void writeMeasurementComparison(String fileLoc) {
 		try {
-			FileWriter fw=new FileWriter(new File(fileLoc+"Comparison"+this.iterationNo+".csv"),false);
+			FileWriter fw=new FileWriter(new File(fileLoc+"/Comparison"+this.iterationNo+".csv"),false);
 			fw.append("MeasurementId,timeBeanId,RealCount,currentSimCount,trialSimCount\n");
 			for(Measurement m: this.calibrationMeasurements.getMeasurements().values()) {
 				for(String timeBean:m.getVolumes().keySet()) {

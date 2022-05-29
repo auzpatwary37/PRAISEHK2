@@ -16,7 +16,7 @@
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		
 			<!--release:-->
-		<matsim.version>14.0-SNAPSHOT</matsim.version>
+		<matsim.version>15.0-SNAPSHOT</matsim.version>
 
 <!--		in IDE for a possible 13.1-->
 <!--		<matsim.version>13.1-SNAPSHOT</matsim.version>-->
@@ -30,7 +30,7 @@
 <!--		<matsim.version>14.0-SNAPSHOT</matsim.version>-->
 
 <!--		!! matsim-examples is currently on a more modern version since I want to modernize some things there. kai, apr'21 !!-->
-		<matsim-examples.version>14.0-SNAPSHOT</matsim-examples.version>
+<!--	<matsim-examples.version>14.0-SNAPSHOT</matsim-examples.version>-->
 
 		<maven.compiler.source>13</maven.compiler.source>
 		<maven.compiler.target>13</maven.compiler.target>
@@ -81,11 +81,13 @@
 	</build>
 	
 	<repositories>
+
   <repository>
     <id>matsim</id>
-    <name>MATSim release repository</name>
-    <url>http://dl.bintray.com/matsim/matsim</url>
+    <name>MATSim Maven repository</name>
+    <url>https://repo.matsim.org/repository/matsim/</url>
   </repository>
+
   
 <repository>
       <id>osgeo</id>
@@ -112,7 +114,7 @@
 <dependency>
     <groupId>org.deeplearning4j</groupId>
     <artifactId>deeplearning4j-core</artifactId>
-    <version>1.0.0-beta7</version>
+    <version>1.0.0-beta6</version>
 </dependency>
 
 
@@ -121,7 +123,7 @@
 <dependency>
     <groupId>org.nd4j</groupId>
     <artifactId>nd4j-native-platform</artifactId>
-    <version>1.0.0-beta7</version>
+    <version>1.0.0-beta6</version>
 </dependency>
 <!-- https://mvnrepository.com/artifact/org.slf4j/slf4j-api -->
 <dependency>
@@ -231,7 +233,7 @@
 			<version>2.13.2</version>
 		</dependency>
 
-			
+
 		
 		<!-- https://mvnrepository.com/artifact/org.apache.commons/commons-csv -->
 		<dependency>
@@ -283,14 +285,22 @@
 			<version>1.2</version>
 		</dependency>
 
+<!-- https://mvnrepository.com/artifact/com.github.haifengl/smile-core -->
+<dependency>
+    <groupId>com.github.haifengl</groupId>
+    <artifactId>smile-core</artifactId>
+    <version>2.5.3</version>
+</dependency>
 
-<!-- 		<dependency> -->
-<!-- 			<groupId>cz.cvut.fit.jcool</groupId> -->
-<!-- 			<artifactId>jcool-core</artifactId> -->
-<!-- 			<version>1.2-SNAPSHOT</version> -->
-<!-- 			<scope>system</scope> -->
-<!-- 			<systemPath>${basedir}/src/main/resources/jcool-core.jar</systemPath> -->
-<!-- 		</dependency> -->
+<!-- https://mvnrepository.com/artifact/com.github.haifengl/smile-data -->
+<dependency>
+    <groupId>com.github.haifengl</groupId>
+    <artifactId>smile-data</artifactId>
+    <version>2.5.3</version>
+</dependency>
+
+
+
 		
 	
 	</dependencies>

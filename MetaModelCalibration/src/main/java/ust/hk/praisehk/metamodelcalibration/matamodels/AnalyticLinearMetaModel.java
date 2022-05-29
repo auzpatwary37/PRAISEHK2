@@ -8,6 +8,7 @@ import java.util.Map.Entry;
 import org.apache.commons.math3.linear.MatrixUtils;
 import org.apache.commons.math3.linear.RealMatrix;
 import org.apache.commons.math3.linear.RealVector;
+import org.apache.commons.math3.stat.regression.GLSMultipleLinearRegression;
 import org.matsim.api.core.v01.Id;
 import org.matsim.core.utils.collections.Tuple;
 import org.nd4j.linalg.api.buffer.DataType;
@@ -19,6 +20,12 @@ import org.nd4j.linalg.inverse.InvertMatrix;
 import de.xypron.jcobyla.Calcfc;
 import de.xypron.jcobyla.Cobyla;
 import de.xypron.jcobyla.CobylaExitStatus;
+import smile.data.DataFrame;
+import smile.data.formula.Formula;
+import smile.data.vector.BaseVector;
+import smile.data.vector.DoubleVector;
+import smile.regression.LinearModel;
+import smile.regression.RidgeRegression;
 import ust.hk.praisehk.metamodelcalibration.measurements.Measurement;
 import ust.hk.praisehk.metamodelcalibration.measurements.Measurements;
 
@@ -62,9 +69,10 @@ public class AnalyticLinearMetaModel extends MetaModelImpl {
 		}
 		this.noOfMetaModelParams=this.noOfParams+2;
 		//this.calibrateMetaModel(currentParamNo);
-		
-		this.calibrateMetaModelWithAdam(currentParamNo);
-	
+		//this.calibrateMetaModelAnalytically(currentParamNo);
+		//this.calibrateMetaModelWithAdam(currentParamNo);
+		//this.calibrateMetaModelWithApache(currentParamNo);
+		this.calibrateMetaModelWithSmile(currentParamNo);
 		
 		this.params.clear();
 		this.simData.clear();
@@ -165,6 +173,64 @@ public class AnalyticLinearMetaModel extends MetaModelImpl {
 		this.MetaModelParams = b.toDoubleVector();
 	}
 	
+	public void calibrateMetaModelWithApache(int currentParamNo) {
+		
+		double[][] weights = new double[this.params.size()][this.params.size()];
+		double[] y = new double[weights.length];
+		RealMatrix x = MatrixUtils.createRealMatrix(this.params.size(), this.noOfMetaModelParams);
+		
+		for(int i:params.keySet()) {
+			weights[i][i] = 1/calcEuclDistanceBasedWeight(params, i,currentParamNo);
+			y[i] = simData.get(i);
+			double[] xrow = new double[this.noOfMetaModelParams];
+			xrow[0] = 1;
+			xrow[1] = analyticalData.get(i);
+			int k = 0;
+			for(double d:params.get(i).values()) {
+				xrow[k+2] = d;
+				k++;
+			}
+			x.setRow(i, xrow);
+		}
+		
+		GLSMultipleLinearRegression regr = new GLSMultipleLinearRegression();
+        regr.setNoIntercept(false);
+        regr.newSampleData(y, x.getData(), weights);
+        double[] params = regr.estimateRegressionParameters();
+        this.MetaModelParams = params;
+	    
+	}
+	
+public void calibrateMetaModelWithSmile(int currentParamNo) {
+		
+		double[] weights = new double[this.params.size()];
+		double[] y = new double[weights.length];
+		RealMatrix x = MatrixUtils.createRealMatrix(this.params.size(), this.noOfMetaModelParams);
+		
+		for(int i:params.keySet()) {
+			weights[i] = calcEuclDistanceBasedWeight(params, i,currentParamNo);
+			y[i] = simData.get(i);
+			double[] xrow = new double[this.noOfMetaModelParams];
+			xrow[0] = 1;
+			xrow[1] = analyticalData.get(i);
+			int k = 0;
+			for(double d:params.get(i).values()) {
+				xrow[k+2] = d;
+				k++;
+			}
+			x.setRow(i, xrow);
+		}
+		DataFrame df = DataFrame.of(x.getData()).merge(DoubleVector.of("deflator", y));
+		LinearModel model = RidgeRegression.fit(Formula.lhs("deflator"), df, weights, new double[] {this.ridgeCoefficient}, new double[]{0.0});
+        this.MetaModelParams[0] = model.intercept();
+        int i = 0;
+        for(double d:model.coefficients()) {
+        	this.MetaModelParams[i+1] = d;
+        	i++;
+        }
+	    
+	}
+	
 	public void calibrateMetaModelWithAdam(int currentParamNo) {
 		double[] weights = new double[this.params.size()];
 		double[] y = new double[weights.length];
@@ -227,8 +293,8 @@ public class AnalyticLinearMetaModel extends MetaModelImpl {
 		this.MetaModelParams = b.toArray();
 		double e = simData.get(0)-this.calcMetaModel(analyticalData.get(0), params.get(0));
 		updateErrorT(Math.pow(e, 2));
-		if(Math.abs(Math.abs(e)-Math.abs(delta[0]))>1||Math.abs(e)>1.01) {
-			System.out.print("Error!!!!");
+		if(Math.abs(e)>1.01) {
+			System.out.print("Error!!!");
 		}
 		this.zerothPredictoin = this.calcMetaModel(analyticalData.get(0), params.get(0));
 		this.anaValue = analyticalData.get(0);
@@ -267,6 +333,9 @@ public class AnalyticLinearMetaModel extends MetaModelImpl {
 	public Double getanaGradMultiplier() {
 		return this.MetaModelParams[1];
 	}
-	
+//	public static void main(String[] args) {
+//		DataFrame df = DataFrame.of(new double[3][2]);
+//		System.out.println("Done");
+//	}
 	
 }
