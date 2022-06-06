@@ -465,9 +465,7 @@ public enum MeasurementType {
 				Measurement m) {
 			for(MTRLinkVolumeInfo s:(List<MTRLinkVolumeInfo>)m.getAttribute(Measurement.MTRLineRouteStopLinkInfosName)) {
 				m.getVolumes().entrySet().forEach(v->{
-					if(s.linkId.toString().contains("EAL")) {
-						v.setValue(0.);
-					}else if(modelOut.getTrainCount().get(v.getKey()).get(s.linkId).get(CNLTransitDirectLink.calcLineRouteId(s.lineId.toString(), s.routeId.toString()))!=null) {
+					if(modelOut.getTrainCount().get(v.getKey()).get(s.linkId).get(CNLTransitDirectLink.calcLineRouteId(s.lineId.toString(), s.routeId.toString()))!=null) {
 						v.setValue(v.getValue()+modelOut.getTrainCount().get(v.getKey()).get(s.linkId).get(CNLTransitDirectLink.calcLineRouteId(s.lineId.toString(), s.routeId.toString())));
 					}
 				});
