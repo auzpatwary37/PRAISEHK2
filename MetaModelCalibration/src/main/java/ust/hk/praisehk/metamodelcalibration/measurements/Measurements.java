@@ -104,9 +104,6 @@ public class Measurements {
 	
 	public void updateMeasurements(SUEModelOutput modelOut,AnalyticalModel sue,Object otherDataContainer) {
 		for(Measurement m:this.measurements.values()) {
-			if(m.getId().toString().contains("EAL")) {
-				continue;
-			}
 			m.updateMeasurement(modelOut, sue,otherDataContainer);
 		}
 	}
