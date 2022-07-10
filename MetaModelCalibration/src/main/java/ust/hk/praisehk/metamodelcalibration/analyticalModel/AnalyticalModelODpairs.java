@@ -225,7 +225,7 @@ public abstract class AnalyticalModelODpairs {
 		 * Experimental Parallel
 		 */
 		Map<Id<AnalyticalModelODpair>,Set<AnalyticalModelODpair>> pureODMap=new HashMap<>();
-		boolean multiThread=true;
+		boolean multiThread=false;
 		if(multiThread==true) {
 			ArrayList<tripsCreatorFromPlan> threadrun=new ArrayList<>();
 			List<List<Person>> personList=Lists.partition(new ArrayList<Person>(this.population.getPersons().values()), (int)(this.population.getPersons().values().size()/16));
@@ -258,6 +258,7 @@ public abstract class AnalyticalModelODpairs {
 					t.setSubPopulationName(s);
 				}
 				trips.addAll( tripchain.getTrips());
+				trips.forEach(t->t.setPersonId(person.getId()));
 			}
 		}
 		logger.info("Number of Trips = "+trips.size());
@@ -365,6 +366,7 @@ class tripsCreatorFromPlan implements Runnable {
 			for(Person p:this.Persons) {
 				TripChain tripchain=this.odPairs.getNewTripChain(p.getSelectedPlan());
 				trips.addAll( tripchain.getTrips());
+				tripchain.getTrips().forEach(t->t.setPersonId(p.getId()));
 			}
 		}else {
 			for(Person p:this.Persons) {
@@ -374,6 +376,7 @@ class tripsCreatorFromPlan implements Runnable {
 					t.setSubPopulationName(s);
 				}
 				trips.addAll( tripchain.getTrips());
+				tripchain.getTrips().forEach(t->t.setPersonId(p.getId()));
 			}
 			
 		}

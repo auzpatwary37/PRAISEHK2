@@ -15,7 +15,7 @@ import ust.hk.praisehk.metamodelcalibration.measurements.Measurements;
  */
 public interface SimRun {
 	
-	public void run(AnalyticalModel sue,Config configIn,LinkedHashMap<String,Double> params,boolean generateOd,String threadNo,MeasurementsStorage storage);
+	public Measurements run(AnalyticalModel sue,Config configIn,LinkedHashMap<String,Double> params,boolean generateOd,String threadNo,MeasurementsStorage storage);
 
 	public Measurements getOutputMeasurements();
 	

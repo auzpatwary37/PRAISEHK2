@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -158,11 +159,14 @@ public class CalibratorImpl implements Calibrator {
 			System.out.print(e);
 		}
 		this.metaModelType=metaModelType;
+		if(this.iterationNo>0) {
+			for(Entry<Id<Measurement>, Map<String, MetaModel>> d:this.metaModels.entrySet()) {
+				this.oldMetaModel.put(d.getKey(), new HashMap<>(d.getValue()));
+			}
+		}
 		//for(Measurement m:this.calibrationMeasurements.getMeasurements().values()) {
 		this.calibrationMeasurements.getMeasurements().values().parallelStream().forEach(m->{
-			if(this.iterationNo>0) {
-				this.oldMetaModel.put(m.getId(), this.metaModels.get(m.getId()));
-			}
+			
 			this.metaModels.put(m.getId(), new HashMap<String,MetaModel>());
 			
 			for(String timeBeanId:m.getVolumes().keySet()) {
@@ -390,6 +394,9 @@ public class CalibratorImpl implements Calibrator {
 		//Generating metaModels
 		
 		this.createMetaModel(this.currentSimGradient, this.currentAnaGradient, metaModelType);
+		if(this.metaModels.size() != this.simMeasurements.get(0).getMeasurements().size()) {
+			logger.debug("Debug!!! Number of metamodel is less than number of measurements!!!");
+		}
 		
 		//Calculating new Point
 		if(this.iterationNo>0) {

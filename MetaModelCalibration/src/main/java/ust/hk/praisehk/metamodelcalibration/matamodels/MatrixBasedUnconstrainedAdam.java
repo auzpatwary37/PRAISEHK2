@@ -5,7 +5,7 @@ import org.apache.commons.math3.linear.RealVector;
 import org.matsim.core.utils.collections.Tuple;
 
 public class MatrixBasedUnconstrainedAdam {
-	private double alpha = .005;
+	private double alpha = .05;
 	private double beta1 = .9;
 	private double beta2 = 0.999;
 	private double eta = 10e-8;
@@ -18,6 +18,12 @@ public class MatrixBasedUnconstrainedAdam {
 	private Tuple<Double,Double> limitFor2ndElement = new Tuple<Double,Double>(0.,2.);
 	
 	public MatrixBasedUnconstrainedAdam(int noOfVar) {
+		m = MatrixUtils.createRealVector(new double[noOfVar]);
+		v = MatrixUtils.createRealVector(new double[noOfVar]);
+		counter = 0;
+	}
+	public MatrixBasedUnconstrainedAdam(int noOfVar,double alpha) {
+		this.alpha = alpha;
 		m = MatrixUtils.createRealVector(new double[noOfVar]);
 		v = MatrixUtils.createRealVector(new double[noOfVar]);
 		counter = 0;

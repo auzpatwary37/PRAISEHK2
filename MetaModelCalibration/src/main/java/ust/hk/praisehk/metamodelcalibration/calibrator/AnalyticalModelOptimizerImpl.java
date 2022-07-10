@@ -31,10 +31,10 @@ import ust.hk.praisehk.metamodelcalibration.measurements.Measurements;
  */
 public class AnalyticalModelOptimizerImpl implements AnalyticalModelOptimizer{
 	
-	private int maxIter=1500;
+	private int maxIter=50;
 	private final int noOfVariables;
-	private double startingRadius=10;
-	private double endingRadius=0.01;
+	private double startingRadius=15;
+	private double endingRadius=.1;
 	private OptimizationFunction optimFunction;	
 	private CentralDifferenceHessian HassinCalculator;
 	private boolean useUnitDiag=true;

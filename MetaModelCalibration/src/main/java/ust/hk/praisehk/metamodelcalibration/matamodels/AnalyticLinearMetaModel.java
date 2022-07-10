@@ -24,6 +24,7 @@ import smile.data.DataFrame;
 import smile.data.formula.Formula;
 import smile.data.vector.BaseVector;
 import smile.data.vector.DoubleVector;
+import smile.regression.LASSO;
 import smile.regression.LinearModel;
 import smile.regression.RidgeRegression;
 import ust.hk.praisehk.metamodelcalibration.measurements.Measurement;
@@ -57,8 +58,10 @@ public class AnalyticLinearMetaModel extends MetaModelImpl {
 	public double zerothPredictoin;
 	public double anaValue;
 	public double simValue;
-
-	
+	public double[] scaleMean;
+	public double[] scaleSigma;
+	public double scaleMeanY = 0;
+	public double scaleSigmaY =1;
 	public AnalyticLinearMetaModel(Id<Measurement> measurementId,Map<Integer,Measurements> SimData, Map<Integer,Measurements> AnalyticalData,
 			Map<Integer, LinkedHashMap<String, Double>> paramsToCalibrate,String timeBeanId, int currentParamNo) {
 		
@@ -68,11 +71,19 @@ public class AnalyticLinearMetaModel extends MetaModelImpl {
 			
 		}
 		this.noOfMetaModelParams=this.noOfParams+2;
-		//this.calibrateMetaModel(currentParamNo);
+		this.scaleMean = new double[this.noOfMetaModelParams];
+		this.scaleSigma = new double[this.noOfMetaModelParams];
+		for(int i = 0;i<this.scaleSigma.length;i++)this.scaleSigma[i]=1;
+//		try {
+//			this.calibrateMetaModelWithAdam(currentParamNo);
+//		}catch(Exception e) {
+//			
+//		}
+		this.calibrateMetaModel(currentParamNo);
 		//this.calibrateMetaModelAnalytically(currentParamNo);
 		//this.calibrateMetaModelWithAdam(currentParamNo);
 		//this.calibrateMetaModelWithApache(currentParamNo);
-		this.calibrateMetaModelWithSmile(currentParamNo);
+		//this.calibrateMetaModelWithSmile(currentParamNo);
 		
 		this.params.clear();
 		this.simData.clear();
@@ -87,6 +98,8 @@ public class AnalyticLinearMetaModel extends MetaModelImpl {
 	}
 	
 	public void calibrateMetaModel(final int currentParamNo) {
+		
+	
 		Calcfc optimization=new Calcfc() {
 
 			@Override
@@ -221,7 +234,8 @@ public void calibrateMetaModelWithSmile(int currentParamNo) {
 			x.setRow(i, xrow);
 		}
 		DataFrame df = DataFrame.of(x.getData()).merge(DoubleVector.of("deflator", y));
-		LinearModel model = RidgeRegression.fit(Formula.lhs("deflator"), df, weights, new double[] {this.ridgeCoefficient}, new double[]{0.0});
+		//LinearModel model = RidgeRegression.fit(Formula.lhs("deflator"), df, weights, new double[] {this.ridgeCoefficient}, new double[]{0.0});
+		LinearModel model = LASSO.fit(Formula.lhs("deflator"), df);
         this.MetaModelParams[0] = model.intercept();
         int i = 0;
         for(double d:model.coefficients()) {
@@ -229,6 +243,21 @@ public void calibrateMetaModelWithSmile(int currentParamNo) {
         	i++;
         }
 	    
+	}
+	public Tuple<Double,Double> calcMeanAndSD(double[] a){
+		double sum = 0;
+		double sumSq = 0;
+		for(double d:a)sum+=d;
+		
+		double mean = sum/a.length;
+		for(double d:a)sumSq+=(d-mean)*(d-mean);
+		double sd = Math.sqrt(sumSq/a.length);
+		return new Tuple<>(mean,sd);
+	}
+	
+	public double[] applyScale(double[] a,double m,double sd) {
+		for(int i=0;i<a.length;i++)a[i] = (a[i]-m)/sd;
+		return a;
 	}
 	
 	public void calibrateMetaModelWithAdam(int currentParamNo) {
@@ -256,10 +285,23 @@ public void calibrateMetaModelWithSmile(int currentParamNo) {
 			x.setRow(i, xrow);
 		}
 	
+		DataFrame df = DataFrame.of(x.getData());
+		double[] center = df.toMatrix().colMeans();
+	    double[] scale = df.toMatrix().colSds();
+	    
+	    
+	    
+		for(int i = 0;i<scale.length;i++)if(scale[i]==0)scale[i]= 1;
+		this.scaleMean = center;
+		this.scaleSigma = scale;
+		Tuple<Double,Double> t = this.calcMeanAndSD(y);
+ 		this.scaleMeanY = t.getFirst();
+ 		this.scaleSigmaY = t.getSecond();
+ 		if(this.scaleSigmaY==0)this.scaleSigmaY = 1;
 		
-		
-		
-		RealVector Y = MatrixUtils.createRealVector(y);
+		double[][] aa = df.toMatrix().scale(center, scale).toArray();
+		x = MatrixUtils.createRealMatrix(aa);
+		RealVector Y = MatrixUtils.createRealVector(this.applyScale(y, this.scaleMeanY, this.scaleSigmaY));
 		RealVector b = MatrixUtils.createRealVector(new double[this.noOfMetaModelParams]);
 		b.setEntry(1, 1);
 		
@@ -269,10 +311,12 @@ public void calibrateMetaModelWithSmile(int currentParamNo) {
 //			System.out.println("Debug!!!");
 //		}
 		double[] delta = null;
-		MatrixBasedUnconstrainedAdam gd  = new MatrixBasedUnconstrainedAdam(this.noOfMetaModelParams);
+		MatrixBasedUnconstrainedAdam gd  = new MatrixBasedUnconstrainedAdam(this.noOfMetaModelParams,.02);
 		gd.setLimitFor2ndElement(new Tuple<Double,Double>(0.,3.));
 		double dCheck = Double.POSITIVE_INFINITY;
-		for(int i=0;i<300;i++) {
+		double[] bbest = null;
+		boolean updated = false;
+		for(int i=0;i<3000;i++) {
 			
 			delta= x.operate(b).subtract(Y).toArray();
 			double[] aug = new double[weights.length];
@@ -280,21 +324,28 @@ public void calibrateMetaModelWithSmile(int currentParamNo) {
 			RealVector g = x.transpose().operate(MatrixUtils.createRealVector(aug)).add(b.subtract(bIn).mapMultiply(ridgeCoefficient));//Activate this for ridge
 			//RealVector g = x.transpose().operate(MatrixUtils.createRealVector(aug)).add(b.subtract(bIn).map(v->Math.signum(v)).mapMultiply(ridgeCoefficient));//Activate this for lasso
 			//if(b.getEntry(1)<0)g.setEntry(1, g.getEntry(1)+b.getEntry(1)*this.positivityCoefficient);
-			b = gd.update(b, g);
+			
 			double newdCheck = MatrixUtils.createRealVector(delta).getL1Norm();
+			System.out.println(newdCheck);
 			if(newdCheck<=dCheck ) {
 				dCheck = newdCheck;
+				bbest = b.toArray();
 			}else {
 				//System.out.println("Debug!!!SF!!!");
 				dCheck = newdCheck;
 			}
-			if(g.getNorm()<0.00000001)break;
+			if(newdCheck<0.0001)break;
+			b = gd.update(b, g);
+			updated = true;
 		}
-		this.MetaModelParams = b.toArray();
+		this.MetaModelParams = bbest;
+		if(updated) {
+			System.out.println();
+		}
 		double e = simData.get(0)-this.calcMetaModel(analyticalData.get(0), params.get(0));
 		updateErrorT(Math.pow(e, 2));
 		if(Math.abs(e)>1.01) {
-			System.out.print("Error!!!");
+			System.out.println("Error!!!"+e);
 		}
 		this.zerothPredictoin = this.calcMetaModel(analyticalData.get(0), params.get(0));
 		this.anaValue = analyticalData.get(0);
@@ -303,14 +354,17 @@ public void calibrateMetaModelWithSmile(int currentParamNo) {
 
 	@Override
 	public double calcMetaModel(double analyticalModelPart, LinkedHashMap<String, Double> param) {
-		double modelOutput=this.MetaModelParams[0]+MetaModelParams[1]*(analyticalModelPart);
+		double modelOutput=this.MetaModelParams[0]+MetaModelParams[1]*(analyticalModelPart-this.scaleMean[1])/this.scaleSigma[1];
 		int i=1;
 		for(double d:param.values()) {
-			modelOutput+=this.MetaModelParams[i+1]*d;
+			modelOutput+=this.MetaModelParams[i+1]*(d-this.scaleMean[i+1])/this.scaleSigma[i+1];
 			i++;
 		}
-		
-		return modelOutput;
+		double out =modelOutput*this.scaleSigmaY+this.scaleMeanY;
+		if(out>6000) {
+			System.out.println("Debug!!!");
+		}
+		return out;
 		
 	}
 
@@ -324,14 +378,14 @@ public void calibrateMetaModelWithSmile(int currentParamNo) {
 	@Override
 	public double[] getGradientVector() {
 		double[] grad = new double[this.MetaModelParams.length-2];
-		for(int i = 2;i<this.MetaModelParams.length;i++)grad[i-2] = this.MetaModelParams[i];
+		for(int i = 2;i<this.MetaModelParams.length;i++)grad[i-2] = this.MetaModelParams[i]/this.scaleSigma[i];
 		return grad;
 	}
 
 
 	@Override
 	public Double getanaGradMultiplier() {
-		return this.MetaModelParams[1];
+		return this.MetaModelParams[1]/this.scaleSigma[1];
 	}
 //	public static void main(String[] args) {
 //		DataFrame df = DataFrame.of(new double[3][2]);

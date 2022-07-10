@@ -22,6 +22,7 @@ import org.matsim.pt.transitSchedule.api.TransitRoute;
 import org.matsim.vehicles.Vehicle;
 
 import com.google.inject.Inject;
+import com.google.inject.name.Named;
 
 import ust.hk.praisehk.metamodelcalibration.measurements.Measurement;
 import ust.hk.praisehk.metamodelcalibration.measurements.MeasurementType;
@@ -41,7 +42,7 @@ public class LinkCountEventHandler implements LinkEnterEventHandler, TransitDriv
 	private Scenario scenario;
 	
 	@Inject
-	public LinkCountEventHandler(Measurements outputMeasurements) {
+	public LinkCountEventHandler(@Named("CalibrationCounts") Measurements outputMeasurements) {
 		this.timeBean=outputMeasurements.getTimeBean();
 		this.outputMeasurements=outputMeasurements;
 		
