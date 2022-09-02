@@ -45,6 +45,7 @@ import ust.hk.praisehk.metamodelcalibration.analyticalModel.InternalParamCalibra
 import ust.hk.praisehk.metamodelcalibration.analyticalModel.TransitDirectLink;
 import ust.hk.praisehk.metamodelcalibration.analyticalModel.TransitLink;
 import ust.hk.praisehk.metamodelcalibration.matsimIntegration.SignalFlowReductionGenerator;
+import ust.hk.praisehk.metamodelcalibration.measurements.MTRLinkVolumeInfo;
 import ust.hk.praisehk.metamodelcalibration.measurements.Measurement;
 import ust.hk.praisehk.metamodelcalibration.measurements.MeasurementType;
 import ust.hk.praisehk.metamodelcalibration.measurements.Measurements;
@@ -100,7 +101,7 @@ public class CNLSUEModel implements AnalyticalModel{
 		//MATSim Input
 		private Map<String, AnalyticalModelNetwork> networks=new ConcurrentHashMap<>();
 		protected TransitSchedule ts;
-		private Scenario scenario;
+		protected Scenario scenario;
 		private Population population;
 		protected Map<String,FareCalculator> fareCalculator=new HashMap<>();
 		
@@ -112,7 +113,7 @@ public class CNLSUEModel implements AnalyticalModel{
 		//TimebeanId vs demands map
 		private Map<String,HashMap<Id<AnalyticalModelODpair>,Double>> Demand=new ConcurrentHashMap<>();//Holds ODpair based demand
 		private Map<String,HashMap<Id<AnalyticalModelODpair>,Double>> carDemand=new ConcurrentHashMap<>(); 
-		private CNLODpairs odPairs;
+		protected CNLODpairs odPairs;
 		private Map<String,Map<Id<TransitLink>,TransitLink>> transitLinks=new ConcurrentHashMap<>();
 			
 		private Population lastPopulation;
@@ -307,10 +308,7 @@ public class CNLSUEModel implements AnalyticalModel{
 			sg.activeGc=0;
 		}
 		this.fareCalculator=fareCalculator;
-		
 		this.ts = transitSchedule;
-
-		
 	
 		for(String timeBeanId:this.timeBeans.keySet()) {
 			this.getConsecutiveSUEErrorIncrease().put(timeBeanId, 0.);
@@ -549,6 +547,36 @@ public class CNLSUEModel implements AnalyticalModel{
 					m.putVolume(timeBeanId, count);
 				}
 			}
+		}
+		
+		//Collect the train link count
+		if(!this.emptyMeasurements) {
+			//Create the transit passenger count link
+			Map<String, Map<Id<Link>,Map<String,Double>>> timeBinTrPassengerCount = new HashMap<>();
+			
+			for(String timeBeanId:this.timeBeans.keySet()) {
+				Map<Id<Link>,Map<String,Double>> trPassengerCount = new HashMap<>();
+				this.networks.get(timeBeanId).getLinks().entrySet().forEach(l->{
+						if(l.getValue().getAllowedModes().contains("train")) {
+							CNLLink ll = (CNLLink)l.getValue();
+							trPassengerCount.put(l.getKey(),ll.getTransitPassengerVolumes());
+						}
+					});
+				timeBinTrPassengerCount.put(timeBeanId, trPassengerCount); 
+				
+			}
+			
+			for(Measurement m: this.measurementsToUpdate.getMeasurementsByType().get(MeasurementType.TransitPhysicalLinkVolume)) {
+				for(MTRLinkVolumeInfo s:(List<MTRLinkVolumeInfo>)m.getAttribute(Measurement.MTRLineRouteStopLinkInfosName)) {
+					m.getVolumes().entrySet().forEach(v->{
+						if(timeBinTrPassengerCount.get(v.getKey()).get(s.linkId).get(CNLTransitDirectLink.calcLineRouteId(s.lineId.toString(), s.routeId.toString()))!=null) {
+							v.setValue(v.getValue()+timeBinTrPassengerCount.get(v.getKey()).get(s.linkId).get(CNLTransitDirectLink.calcLineRouteId(s.lineId.toString(), s.routeId.toString())));
+						}
+					});
+				}
+			}
+		}else {
+			throw new IllegalArgumentException("Not implemented");
 		}
 
 

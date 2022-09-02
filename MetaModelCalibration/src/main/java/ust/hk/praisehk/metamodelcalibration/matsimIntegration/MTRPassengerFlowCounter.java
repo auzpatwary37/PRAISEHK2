@@ -11,10 +11,12 @@ import org.matsim.api.core.v01.events.LinkEnterEvent;
 import org.matsim.api.core.v01.events.PersonEntersVehicleEvent;
 import org.matsim.api.core.v01.events.PersonLeavesVehicleEvent;
 import org.matsim.api.core.v01.events.TransitDriverStartsEvent;
+import org.matsim.api.core.v01.events.VehicleLeavesTrafficEvent;
 import org.matsim.api.core.v01.events.handler.LinkEnterEventHandler;
 import org.matsim.api.core.v01.events.handler.PersonEntersVehicleEventHandler;
 import org.matsim.api.core.v01.events.handler.PersonLeavesVehicleEventHandler;
 import org.matsim.api.core.v01.events.handler.TransitDriverStartsEventHandler;
+import org.matsim.api.core.v01.events.handler.VehicleLeavesTrafficEventHandler;
 import org.matsim.api.core.v01.network.Link;
 import org.matsim.core.utils.collections.Tuple;
 import org.matsim.pt.transitSchedule.api.TransitLine;
@@ -27,7 +29,8 @@ import ust.hk.praisehk.metamodelcalibration.measurements.Measurement;
 import ust.hk.praisehk.metamodelcalibration.measurements.MeasurementType;
 import ust.hk.praisehk.metamodelcalibration.measurements.Measurements;
 
-public class MTRPassengerFlowCounter implements TransitDriverStartsEventHandler, LinkEnterEventHandler, PersonEntersVehicleEventHandler, PersonLeavesVehicleEventHandler {
+public class MTRPassengerFlowCounter implements TransitDriverStartsEventHandler, LinkEnterEventHandler, 
+		PersonEntersVehicleEventHandler, PersonLeavesVehicleEventHandler, VehicleLeavesTrafficEventHandler {
 	
 	private Measurements m;
 	private TransitSchedule ts;
@@ -58,6 +61,17 @@ public class MTRPassengerFlowCounter implements TransitDriverStartsEventHandler,
 	}
 	
 	@Override
+	public void reset(int iteration) {
+		
+		//Reset the measurement volume per iteration
+		for(Measurement mm:m.getMeasurementsByType().get(MeasurementType.TransitPhysicalLinkVolume)) {
+			for(String timeBeanId : timeBean.keySet()) {
+				mm.putVolume(timeBeanId, 0);
+			}
+		}
+	}
+	
+	@Override
 	public void handleEvent(LinkEnterEvent event) {
 		if(this.links.contains(event.getLinkId()) && this.passengerOnBoard.containsKey(event.getVehicleId())) {
 			String timeId = null;
@@ -77,7 +91,8 @@ public class MTRPassengerFlowCounter implements TransitDriverStartsEventHandler,
 
 	@Override
 	public void handleEvent(TransitDriverStartsEvent event) {
-		if(ts.getTransitLines().get(event.getTransitLineId()).getRoutes().get(event.getTransitRouteId()).getTransportMode().equals("train")) {
+		if(ts.getTransitLines().containsKey(event.getTransitLineId()) &&
+				ts.getTransitLines().get(event.getTransitLineId()).getRoutes().get(event.getTransitRouteId()).getTransportMode().equals("train")) {
 			this.passengerOnBoard.put(event.getVehicleId(), 0.);
 			this.vehicleToLineRouteMap.put(event.getVehicleId(), new Tuple<>(event.getTransitLineId(),event.getTransitRouteId()));
 		}
@@ -96,6 +111,12 @@ public class MTRPassengerFlowCounter implements TransitDriverStartsEventHandler,
 
 	public Measurements getMeasurements() {
 		return m;
+	}
+
+	@Override
+	public void handleEvent(VehicleLeavesTrafficEvent event) {
+		this.passengerOnBoard.remove(event.getVehicleId());
+		this.vehicleToLineRouteMap.remove(event.getVehicleId());
 	}
 
 }
