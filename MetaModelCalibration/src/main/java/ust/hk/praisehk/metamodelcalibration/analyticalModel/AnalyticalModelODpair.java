@@ -306,6 +306,7 @@ public class AnalyticalModelODpair {
 		for(String t:this.timeBean.keySet()) {
 			if(trip.getStartTime()>=this.timeBean.get(t).getFirst() && trip.getStartTime()<this.timeBean.get(t).getSecond()) {
 				timeId=t;
+				break;
 			}
 			
 		}

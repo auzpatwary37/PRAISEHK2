@@ -8,11 +8,13 @@ import java.util.Map.Entry;
 
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.events.LinkEnterEvent;
+import org.matsim.api.core.v01.events.LinkLeaveEvent;
 import org.matsim.api.core.v01.events.PersonEntersVehicleEvent;
 import org.matsim.api.core.v01.events.PersonLeavesVehicleEvent;
 import org.matsim.api.core.v01.events.TransitDriverStartsEvent;
 import org.matsim.api.core.v01.events.VehicleLeavesTrafficEvent;
 import org.matsim.api.core.v01.events.handler.LinkEnterEventHandler;
+import org.matsim.api.core.v01.events.handler.LinkLeaveEventHandler;
 import org.matsim.api.core.v01.events.handler.PersonEntersVehicleEventHandler;
 import org.matsim.api.core.v01.events.handler.PersonLeavesVehicleEventHandler;
 import org.matsim.api.core.v01.events.handler.TransitDriverStartsEventHandler;
@@ -29,7 +31,7 @@ import ust.hk.praisehk.metamodelcalibration.measurements.Measurement;
 import ust.hk.praisehk.metamodelcalibration.measurements.MeasurementType;
 import ust.hk.praisehk.metamodelcalibration.measurements.Measurements;
 
-public class MTRPassengerFlowCounter implements TransitDriverStartsEventHandler, LinkEnterEventHandler, 
+public class MTRPassengerFlowCounter implements TransitDriverStartsEventHandler, LinkLeaveEventHandler, 
 		PersonEntersVehicleEventHandler, PersonLeavesVehicleEventHandler, VehicleLeavesTrafficEventHandler {
 	
 	private Measurements m;
@@ -72,7 +74,7 @@ public class MTRPassengerFlowCounter implements TransitDriverStartsEventHandler,
 	}
 	
 	@Override
-	public void handleEvent(LinkEnterEvent event) {
+	public void handleEvent(LinkLeaveEvent event) {
 		if(this.links.contains(event.getLinkId()) && this.passengerOnBoard.containsKey(event.getVehicleId())) {
 			String timeId = null;
 			double time = event.getTime();
