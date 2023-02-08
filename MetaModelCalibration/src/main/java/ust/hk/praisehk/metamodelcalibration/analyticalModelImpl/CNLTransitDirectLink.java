@@ -21,10 +21,8 @@ import ust.hk.praisehk.metamodelcalibration.analyticalModel.AnalyticalModelNetwo
 import ust.hk.praisehk.metamodelcalibration.analyticalModel.TransitDirectLink;
 import ust.hk.praisehk.metamodelcalibration.analyticalModel.TransitLink;
 
-
-
 /**
- * 
+ * This is the direct link between a start stop and an end stop, 
  * @author Ashraf
  *
  */
@@ -32,13 +30,13 @@ import ust.hk.praisehk.metamodelcalibration.analyticalModel.TransitLink;
 public class CNLTransitDirectLink extends TransitDirectLink{
 	private static final Logger logger = Logger.getLogger(CNLTransitDirectLink.class);
 	private Scenario scenario;
+	
 	public CNLTransitDirectLink(String startStopId, String endStopId, Id<Link> startLinkId, Id<Link> endLinkId,
 			TransitSchedule ts, String lineId, String routeId, Scenario scenario) {
 		super(startStopId, endStopId, startLinkId, endLinkId, ts, lineId, routeId);
 		this.scenario=scenario;
 		this.TrLinkId=Id.create(startStopId.replaceAll("\\s+","")+"_"+endStopId.replaceAll("\\s+","")+"_"+
 		lineId.replaceAll("\\s+","")+"_"+routeId.replaceAll("\\s+",""),TransitLink.class);
-		
 	}
 	public CNLTransitDirectLink(String RouteDescription, Id<Link> startLinkId, Id<Link> endLinkId,
 			TransitSchedule ts,Scenario scenario){
@@ -49,7 +47,8 @@ public class CNLTransitDirectLink extends TransitDirectLink{
 	
 
 	//capacity of that link (60 by default)
-	protected double capacity=60;
+	protected double capacityPerVeh=60;
+	protected int totalSeatingCap = 0; //This is aggregated for all vehicles
 	protected double frequency=1;
 	//time difference between two vehicles in second. default 300s
 	protected double headway=300;
@@ -79,10 +78,13 @@ public class CNLTransitDirectLink extends TransitDirectLink{
 		return lineId+"_"+routeId;
 	}
 	public double getCapacity() {
-		return capacity;
+		return capacityPerVeh;
 	}
 	public double getHeadway() {
 		return headway;
+	}
+	public int getSeatingCap() {
+		return totalSeatingCap;
 	}
 	@Override
 	public Id<TransitLink> getTrLinkId() {
@@ -93,27 +95,26 @@ public class CNLTransitDirectLink extends TransitDirectLink{
 		Map<Id<Departure>,Departure>Departures= ts.getTransitLines().get(Id.create(lineId, TransitLine.class)).
 				getRoutes().get(Id.create(routeId, TransitRoute.class)).getDepartures();
 		int noofVehicle=0;
-		this.capacity =0;
+		this.capacityPerVeh =0;
+		this.totalSeatingCap = 0;
 		for(Departure d:Departures.values()) {
-			
-			
 			double time=d.getDepartureTime();
 			if(time==0)time++;
 			if(time>timeBeans.get(timeBeanId).getFirst() && time<=timeBeans.get(timeBeanId).getSecond()) {
 				noofVehicle++;
 				Id<Vehicle> vehicleId=d.getVehicleId();
 				VehicleType vt = scenario.getTransitVehicles().getVehicles().get(vehicleId).getType();
-				this.capacity+=vt.getCapacity().getSeats()+
-						vt.getCapacity().getStandingRoom();
+				this.capacityPerVeh += vt.getCapacity().getSeats() + vt.getCapacity().getStandingRoom();
+				this.totalSeatingCap += vt.getCapacity().getSeats();
 			}
 		}
 		this.frequency=noofVehicle;
 		if(noofVehicle==0) {
-			capacity=0;
+			capacityPerVeh=0;
 			headway=timeBeans.get(timeBeanId).getSecond()-timeBeans.get(timeBeanId).getFirst();
 		}else {
-			this.capacity=this.capacity/noofVehicle;
-			this.headway=(timeBeans.get(timeBeanId).getSecond()-timeBeans.get(timeBeanId).getFirst())/noofVehicle;
+			this.capacityPerVeh = this.capacityPerVeh/noofVehicle; //Why? Enoch. Feb 2023
+			this.headway = (timeBeans.get(timeBeanId).getSecond()-timeBeans.get(timeBeanId).getFirst())/noofVehicle;
 		}
 		
 		//Enoch: Even if the capacity is 0, it is fine. Feb 2022
@@ -122,12 +123,12 @@ public class CNLTransitDirectLink extends TransitDirectLink{
 //		}
 	}
 	
-	public void calcCapacityAndHeadway(Map<String,Map<String,Double>>vehicleCount,Map<String,Map<String,Double>>capacity,
-			Map<String, Tuple<Double, Double>> timeBeans,String timeBeanId) {
-		String key=this.linkList.get(0).toString()+"___"+this.lineId.toString()+"___"+this.routeId.toString();
-		this.capacity=capacity.get(timeBeanId).get(key);
-		this.headway=(timeBeans.get(timeBeanId).getSecond()-timeBeans.get(timeBeanId).getSecond())/(Double)vehicleCount.get(timeBeanId).get(key);
-	}
+//	public void calcCapacityAndHeadway(Map<String,Map<String,Double>>vehicleCount,Map<String,Map<String,Double>>capacity,
+//			Map<String, Tuple<Double, Double>> timeBeans,String timeBeanId) {
+//		String key=this.linkList.get(0).toString()+"___"+this.lineId.toString()+"___"+this.routeId.toString();
+//		this.capacity=capacity.get(timeBeanId).get(key);
+//		this.headway=(timeBeans.get(timeBeanId).getSecond()-timeBeans.get(timeBeanId).getSecond())/(Double)vehicleCount.get(timeBeanId).get(key);
+//	}
 	
 	public CNLTransitDirectLink cloneLink(CNLTransitDirectLink tL) {
 		return new CNLTransitDirectLink(tL.getStartStopId(),tL.getEndStopId(),tL.getStartingLinkId(),tL.getEndingLinkId(),tL.getTs(),tL.getLineId(),tL.getRouteId(),tL.getScenario());

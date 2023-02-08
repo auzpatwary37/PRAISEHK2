@@ -34,6 +34,8 @@ public abstract class TransitDirectLink extends TransitLink{
 		this.ts=ts;
 		this.lineId=lineId;
 		this.routeId=routeId;
+		this.mode = ts.getTransitLines().get(Id.create(this.lineId,TransitLine.class)).getRoutes()
+				.get(Id.create(this.routeId,TransitRoute.class)).getTransportMode();
 		Id<Link> strtLink=ts.getTransitLines().get(Id.create(this.lineId,TransitLine.class)).getRoutes()
 				.get(Id.create(this.routeId,TransitRoute.class)).getRoute().getStartLinkId();
 		Id<Link> endLink=ts.getTransitLines().get(Id.create(this.lineId,TransitLine.class)).getRoutes()
@@ -61,15 +63,13 @@ public abstract class TransitDirectLink extends TransitLink{
 		
 	}
 	
-	
-	
-	
 	//direct link parameters
 	
 	protected ArrayList<Id<Link>> linkList=new ArrayList<>();
 	protected String lineId;
 	protected String routeId;
 	protected TransitSchedule ts;
+	protected String mode;
 	//protected double distance=0;
 	
 	public ArrayList<Id<Link>> getLinkList() {
@@ -80,6 +80,9 @@ public abstract class TransitDirectLink extends TransitLink{
 	}
 	public String getRouteId() {
 		return routeId;
+	}
+	public String getMode() {
+		return mode;
 	}
 	public abstract double getLinkTravelTime(AnalyticalModelNetwork network,Tuple<Double,Double>timeBean,LinkedHashMap<String,Double>params,LinkedHashMap<String,Double>anaParams);
 	public TransitSchedule getTs() {

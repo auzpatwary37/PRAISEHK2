@@ -23,7 +23,8 @@ import ust.hk.praisehk.metamodelcalibration.analyticalModel.TransitTransferLink;
 public class CNLTransitTransferLink extends TransitTransferLink {
 	private double headway=0;
 	private double capacity;
-	private double currentOnboardPassenger=0;	
+	private double currentOnboardPassenger=0;
+	private double standingProbability = 0;
 	private final Id<TransitLink> trLinkId; 
 	private CNLTransitDirectLink nextdLink;
 	private Set<Id<TransitLink>> incidentLinkIds;
@@ -44,10 +45,6 @@ public class CNLTransitTransferLink extends TransitTransferLink {
 		}
 	}
 	
-
-	
-
-	
 	/**
 	 * the network is not needed that much for this function
 	 */
@@ -57,7 +54,7 @@ public class CNLTransitTransferLink extends TransitTransferLink {
 	}
 
 	/**
-	 * this method calculates waiting time depending on the following formulae
+	 * this method calculates waiting time and standing probability depending on the following formulae
 	 * 
 	 * waiting time=alpha/Frequency+1/Frequency*((PassengerTryingToBoard+PassengeronBoard)/(Frequency*Capacity))^beta
 	 * for default value of alpha and beta, BPR function alpha beta has been used. 
@@ -65,7 +62,7 @@ public class CNLTransitTransferLink extends TransitTransferLink {
 	 * returns 0 if this transfer link is the last one of the trip 
 	 */
 	@Override
-	public double getWaitingTime(LinkedHashMap<String,Double>params,LinkedHashMap<String,Double> anaParams,AnalyticalModelNetwork network) {
+	public double getWaitingTimeAndStandingPro(LinkedHashMap<String,Double>params,LinkedHashMap<String,Double> anaParams,AnalyticalModelNetwork network) {
 		
 		if(this.nextdLink!=null) {
 			headway=this.nextdLink.getHeadway();
@@ -79,6 +76,19 @@ public class CNLTransitTransferLink extends TransitTransferLink {
 			this.waitingTime=headway*anaParams.get(CNLSUEModel.TransferalphaName)+
 					headway*Math.pow((this.currentOnboardPassenger)/(capacity*noOfVehicles),anaParams.get(CNLSUEModel.TransferbetaName));
 			//can add this term : this.passangerCount+ to the current onborad passenger but I think it is overcounting. 
+			
+			if(currentOnboardPassenger > this.nextdLink.getSeatingCap()) {
+				this.standingProbability = 1;
+			}else if(this.passangerCount ==0 || this.nextdLink.getSeatingCap() > currentOnboardPassenger + this.passangerCount){
+				this.standingProbability = 0;
+			}else {
+				this.standingProbability = (this.nextdLink.getSeatingCap() - currentOnboardPassenger)/this.passangerCount;
+			}
+			
+			if(standingProbability > 0.8) {
+				standingProbability *= 1.55; // Adjustment for too much congestion
+			}
+			
 			if(Double.isNaN(this.waitingTime)||this.waitingTime==Double.POSITIVE_INFINITY) {
 				return this.waitingTime=3600;
 			}
@@ -91,11 +101,7 @@ public class CNLTransitTransferLink extends TransitTransferLink {
 			return 0;
 		}
 	}
-
-
-
-
-
+	
 	@Override
 	public Id<TransitLink> getTrLinkId() {
 		
@@ -106,8 +112,6 @@ public class CNLTransitTransferLink extends TransitTransferLink {
 		return new CNLTransitTransferLink(tl.getStartStopId(),tl.getEndStopId(),tl.getStartingLinkId(),tl.getEndingLinkId(),null,dlink);
 	}
 
-	
-
 	public Set<Id<TransitLink>> getIncidentLinkIds(AnalyticalModelNetwork network) {
 		if(incidentLinkIds==null) {
 			CNLLink l_gamma = ((CNLLink)network.getLinks().get(this.nextdLink.getLinkList().get(0)));
@@ -115,10 +119,10 @@ public class CNLTransitTransferLink extends TransitTransferLink {
 		}
 		return incidentLinkIds;
 	}
-
-
-
-
+	
+	public double getStandingProbability() {
+		return standingProbability;
+	}
 
 	public CNLTransitDirectLink getNextdLink() {
 		return nextdLink;

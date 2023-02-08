@@ -72,6 +72,8 @@ public interface AnalyticalModel {
 	public static final String ModeConstantCarName="ModeConstantCar";
 	public static final String MarginalUtilityofPerformName="MarginalUtilityofPerform";
 	public static final String CapacityMultiplierName="CapacityMultiplier";
+	public static final String StandingUtilityName = "StandingUtilitypt";
+	public static final String MarginalUtilityofTravelMetroName = "MarginalUtilityofTravelMetro";
 	
 	public Map<Integer, Measurements> calibrateInternalParams(Map<Integer, Measurements> simMeasurements,
 			Map<Integer, LinkedHashMap<String, Double>> params, LinkedHashMap<String, Double> initialParam,
