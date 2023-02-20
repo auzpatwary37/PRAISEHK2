@@ -1,7 +1,6 @@
 package ust.hk.praisehk.metamodelcalibration.analyticalModel;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -10,6 +9,7 @@ import java.util.Map.Entry;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.population.PlanElement;
+import org.matsim.api.core.v01.population.Route;
 import org.matsim.core.utils.collections.Tuple;
 /**
  * 
@@ -76,4 +76,18 @@ public interface AnalyticalModelRoute{
 	
 	public void setPlanElements(List<PlanElement> pes);
 	public List<PlanElement> getPlanElements();
+	
+	public Route getRoute();
+
+
+	/**
+	 * This is one of the most important and tricky function
+	 * Takes all the parameters as input and calculates the route utility
+	 * 
+	 * The current utility function: 
+	 * Will be designed later
+	 *  
+	 */
+	double calcRouteUtility(LinkedHashMap<String, Double> parmas, LinkedHashMap<String, Double> anaParmas,
+			Tuple<Double, Double> timeBean, Map<String, ? extends Object> additionalDataContainer);
 }

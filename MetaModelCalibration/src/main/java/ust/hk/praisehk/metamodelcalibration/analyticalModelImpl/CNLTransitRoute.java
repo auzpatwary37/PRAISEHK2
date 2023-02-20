@@ -218,7 +218,7 @@ public class CNLTransitRoute implements AnalyticalModelTransitRoute{
 //		return utility*anaParams.get(CNLSUEModel.LinkMiuName);
 //	}
 	
-	
+	@Override
 	public double calcRouteUtility(LinkedHashMap<String, Double> params,LinkedHashMap<String, Double> anaParams,AnalyticalModelNetwork network,Map<Id<TransitLink>,TransitLink>transitLinks,Map<String,FareCalculator>farecalc,Map<String,Object> AdditionalDataContainer,
 			Tuple<Double,Double> timeBean) {
 		routeInfoOut info=this.calcRouteTravelAndWaitingTime(network,transitLinks, timeBean, params, anaParams);

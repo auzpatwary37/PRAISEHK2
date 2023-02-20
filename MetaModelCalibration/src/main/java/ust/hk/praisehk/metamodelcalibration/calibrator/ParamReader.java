@@ -46,12 +46,14 @@ public class ParamReader {
 /**
  * This file reads params and create the ParameterLimits
  */
+	
+	public final static String MarginalUtilityOfTravelBikeParamName ="muTravelBike";
+	public final static String MarginalUtilityOfTravelBikeDistParamName = "muDistTravelBike";
+	//public final static String MarginalUtilityOfTravelBike
 	private final File paramFile;
 	private final String defaultFileLoc="src/main/resources/paramReaderTrial1.csv";
 	private ArrayList<String> subPopulationName=new ArrayList<>();
-	public final static String bikeModeConstParamName = "bikeModeConst";
-	public final static String bikeModeMarginalUtilityofTravelParamName = "bikeMUTravel";
-	public final static String bikeModeDistanceBasedMoneyCostParamName = "bikeDistanceBasedMoneyCost";
+	
 	//In No Code Format
 	private LinkedHashMap<String,Double>DefaultParam=new LinkedHashMap<>();
 	
@@ -317,9 +319,7 @@ public class ParamReader {
 			configOut.planCalcScore().getOrCreateScoringParameters(subPop).getOrCreateModeParams("pt").setConstant(params.get(subPop+" "+AnalyticalModel.ModeConstantPtname));
 			configOut.planCalcScore().getOrCreateScoringParameters(subPop).getOrCreateModeParams("car").setConstant(params.get(subPop+" "+AnalyticalModel.ModeConstantCarName));
 			configOut.planCalcScore().getOrCreateScoringParameters(subPop).setPerforming_utils_hr(params.get(subPop+" "+AnalyticalModel.MarginalUtilityofPerformName));
-			if(params.containsKey(subPop+" "+ParamReader.bikeModeConstParamName))configOut.planCalcScore().getOrCreateScoringParameters(subPop).getOrCreateModeParams("bike").setConstant(params.get(subPop+" "+ParamReader.bikeModeConstParamName));
-			if(params.containsKey(subPop+" "+ParamReader.bikeModeMarginalUtilityofTravelParamName))configOut.planCalcScore().getOrCreateScoringParameters(subPop).getOrCreateModeParams("bike").setMarginalUtilityOfTraveling(params.get(subPop+" "+ParamReader.bikeModeMarginalUtilityofTravelParamName));
-			if(params.containsKey(subPop+" "+ParamReader.bikeModeDistanceBasedMoneyCostParamName))configOut.planCalcScore().getOrCreateScoringParameters(subPop).getOrCreateModeParams("bike").setMonetaryDistanceRate(params.get(subPop+" "+ParamReader.bikeModeDistanceBasedMoneyCostParamName));
+			if(params.get(subPop+" "+ParamReader.MarginalUtilityOfTravelBikeParamName)!=null)configOut.planCalcScore().getOrCreateScoringParameters(subPop).getOrCreateModeParams("bike").setMarginalUtilityOfTraveling(params.get(subPop+" "+ParamReader.MarginalUtilityOfTravelBikeParamName));
 			}else {
 				configOut.planCalcScore().getOrCreateScoringParameters(subPop).getOrCreateModeParams("car").setMarginalUtilityOfTraveling(params.get(subPop+" "+AnalyticalModel.MarginalUtilityofTravelCarName));
 				configOut.planCalcScore().getOrCreateScoringParameters(subPop).getOrCreateModeParams("car").setMarginalUtilityOfDistance(params.get(subPop+" "+AnalyticalModel.MarginalUtilityofDistanceCarName));
@@ -328,6 +328,7 @@ public class ParamReader {
 				configOut.planCalcScore().getOrCreateScoringParameters(subPop).getOrCreateModeParams("walk").setMarginalUtilityOfTraveling(params.get(subPop+" "+AnalyticalModel.MarginalUtilityOfWalkingName));
 				configOut.planCalcScore().getOrCreateScoringParameters(subPop).getOrCreateModeParams("walk").setMonetaryDistanceRate(params.get(subPop+" "+AnalyticalModel.DistanceBasedMoneyCostWalkName));
 				configOut.planCalcScore().getOrCreateScoringParameters(subPop).setPerforming_utils_hr(params.get(subPop+" "+AnalyticalModel.MarginalUtilityofPerformName));
+				if(params.get(subPop+" "+ParamReader.MarginalUtilityOfTravelBikeParamName)!=null)configOut.planCalcScore().getOrCreateScoringParameters(subPop).getOrCreateModeParams("bike").setMarginalUtilityOfTraveling(params.get(subPop+" "+ParamReader.MarginalUtilityOfTravelBikeParamName));
 			}
 		}
 		}else {
@@ -344,9 +345,7 @@ public class ParamReader {
 			configOut.planCalcScore().getOrCreateModeParams("pt").setConstant(params.get(AnalyticalModel.ModeConstantPtname));
 			configOut.planCalcScore().getOrCreateModeParams("car").setConstant(params.get(AnalyticalModel.ModeConstantCarName));
 			configOut.planCalcScore().setPerforming_utils_hr(params.get(AnalyticalModel.MarginalUtilityofPerformName));
-			if(params.containsKey(ParamReader.bikeModeConstParamName))configOut.planCalcScore().getOrCreateModeParams("bike").setConstant(params.get(ParamReader.bikeModeConstParamName));
-			if(params.containsKey(ParamReader.bikeModeMarginalUtilityofTravelParamName))configOut.planCalcScore().getOrCreateModeParams("bike").setMarginalUtilityOfTraveling(params.get(ParamReader.bikeModeMarginalUtilityofTravelParamName));
-			if(params.containsKey(ParamReader.bikeModeDistanceBasedMoneyCostParamName))configOut.planCalcScore().getOrCreateModeParams("bike").setMonetaryDistanceRate(params.get(ParamReader.bikeModeDistanceBasedMoneyCostParamName));
+			if(params.get(ParamReader.MarginalUtilityOfTravelBikeParamName)!=null)configOut.planCalcScore().getOrCreateModeParams("bike").setMarginalUtilityOfTraveling(params.get(ParamReader.MarginalUtilityOfTravelBikeParamName));
 		}
 		if(params.containsKey(AnalyticalModel.CapacityMultiplierName)) {
 			configOut.qsim().setFlowCapFactor(params.get(AnalyticalModel.CapacityMultiplierName));

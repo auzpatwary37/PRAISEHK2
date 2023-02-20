@@ -21,6 +21,7 @@ import ust.hk.praisehk.metamodelcalibration.analyticalModel.AnalyticalModelRoute
 
 public class CNLRoute implements AnalyticalModelRoute{
 
+	private Route r;
 	private Id<AnalyticalModelRoute> routeId;
 	private double travelTime=0;
 	private double distanceTravelled=0;
@@ -32,6 +33,7 @@ public class CNLRoute implements AnalyticalModelRoute{
 	private List<PlanElement> planElements;
 	
 	public CNLRoute(Route r) {
+		this.r = r;
 		String[] part=r.getRouteDescription().split(" ");
 		for(String s:part) {
 			links.add(Id.createLinkId(s.trim()));
@@ -82,6 +84,43 @@ public class CNLRoute implements AnalyticalModelRoute{
 	public double getRouteDistance() {
 		
 		return this.distanceTravelled;
+	}
+	
+	/**
+	 * This is one of the most important and tricky function
+	 * Takes all the parameters as input and calculates the route utility
+	 * 
+	 * The current utility function: 
+	 * Will be designed later
+	 *  
+	 */
+	
+	@Override
+	public double calcRouteUtility(LinkedHashMap<String, Double> parmas,LinkedHashMap<String, Double> anaParmas,Tuple<Double,Double>timeBean,Map<String, ? extends Object> additionalDataContainer) {
+		
+		AnalyticalModelNetwork network = (AnalyticalModelNetwork)additionalDataContainer.get("network");
+		double MUTravelTime=parmas.get(CNLSUEModel.MarginalUtilityofTravelCarName)/3600.0-parmas.get(CNLSUEModel.MarginalUtilityofPerformName)/3600.0;
+		double ModeConstant;
+		if(parmas.get(CNLSUEModel.ModeConstantCarName)==null) {
+			ModeConstant=0;
+		}else {
+			ModeConstant=parmas.get(CNLSUEModel.ModeConstantCarName);
+		}
+		Double MUMoney=parmas.get(CNLSUEModel.MarginalUtilityofMoneyName);
+		if(MUMoney==null) {
+			MUMoney=1.;
+		}
+		Double DistanceBasedMoneyCostCar=parmas.get(CNLSUEModel.DistanceBasedMoneyCostCarName);
+		if(DistanceBasedMoneyCostCar==null) {
+			DistanceBasedMoneyCostCar=0.;
+		}
+		double MUDistanceCar=parmas.get(CNLSUEModel.MarginalUtilityofDistanceCarName);
+		
+		this.RouteUtility=ModeConstant+
+				this.getTravelTime(network,timeBean,parmas,anaParmas)*MUTravelTime+
+				(MUDistanceCar+MUMoney*DistanceBasedMoneyCostCar)*this.getRouteDistance();
+				
+ 		return this.RouteUtility*anaParmas.get(CNLSUEModel.LinkMiuName);
 	}
 	
 	/**
@@ -255,5 +294,9 @@ public class CNLRoute implements AnalyticalModelRoute{
 	@Override
 	public List<PlanElement> getPlanElements() {
 		return this.planElements;
+	}
+	
+	public Route getRoute() {
+		return this.r;
 	}
 }
