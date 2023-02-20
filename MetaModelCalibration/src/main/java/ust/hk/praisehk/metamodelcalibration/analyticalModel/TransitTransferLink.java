@@ -78,7 +78,7 @@ public abstract class TransitTransferLink extends TransitLink{
 	 * @return: waiting time in seconds
 	 * 
 	 */
-	public abstract double getWaitingTime(LinkedHashMap<String,Double>params,LinkedHashMap<String,Double> anaParams,AnalyticalModelNetwork Network);
+	public abstract double getWaitingTimeAndStandingPro(LinkedHashMap<String,Double>params,LinkedHashMap<String,Double> anaParams,AnalyticalModelNetwork Network);
 	
 	
 	

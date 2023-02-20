@@ -2,6 +2,7 @@ package ust.hk.praisehk.metamodelcalibration.analyticalModel;
 
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -257,8 +258,9 @@ public abstract class AnalyticalModelODpairs {
 				for(Trip t:(ArrayList<Trip>)tripchain.getTrips()) {
 					t.setSubPopulationName(s);
 				}
-				trips.addAll( tripchain.getTrips());
-				trips.forEach(t->t.setPersonId(person.getId()));
+				Collection<Trip> tripsList = tripchain.getTrips();
+				tripsList.forEach(t->t.setPersonId(person.getId()));
+				trips.addAll(tripsList);
 			}
 		}
 		logger.info("Number of Trips = "+trips.size());

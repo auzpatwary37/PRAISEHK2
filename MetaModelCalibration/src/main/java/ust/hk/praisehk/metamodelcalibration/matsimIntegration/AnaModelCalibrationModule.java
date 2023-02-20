@@ -3,6 +3,7 @@ package ust.hk.praisehk.metamodelcalibration.matsimIntegration;
 import java.util.LinkedHashMap;
 
 import org.matsim.core.controler.AbstractModule;
+import org.matsim.pt.transitSchedule.api.TransitSchedule;
 
 import com.google.inject.Singleton;
 import com.google.inject.name.Names;
@@ -20,6 +21,7 @@ public class AnaModelCalibrationModule extends AbstractModule{
 	private boolean generateRoutesAndOD=true;
 	private paramContainer currentParam;
 	private Measurements outputMeasurements;
+	private TransitSchedule ts;
 	
 	public AnaModelCalibrationModule(MeasurementsStorage countData,AnalyticalModel sueAssignment,String FileLoc) {
 		this.storage=countData;
@@ -34,6 +36,15 @@ public class AnaModelCalibrationModule extends AbstractModule{
 		this.currentParam=new paramContainer(currentParam);
 		this.outputMeasurements=this.storage.getCalibrationMeasurements().clone();
 		}
+	public AnaModelCalibrationModule(MeasurementsStorage countData,AnalyticalModel sueAssignment,String FileLoc,LinkedHashMap<String,Double> currentParam,boolean generateRouteAndOD, TransitSchedule ts) {
+		this.storage=countData;
+		this.sueAssignment=sueAssignment;
+		this.fileLoc=FileLoc;
+		this.generateRoutesAndOD=generateRouteAndOD;
+		this.currentParam=new paramContainer(currentParam);
+		this.outputMeasurements=this.storage.getCalibrationMeasurements().clone();
+		this.ts = ts;
+		}
 	
 	public void install() {
 		
@@ -41,6 +52,8 @@ public class AnaModelCalibrationModule extends AbstractModule{
 		AverageOccupancyEventHandler ao=new AverageOccupancyEventHandler(this.outputMeasurements);
 		TravelTimeEventHandler tt=new TravelTimeEventHandler(this.outputMeasurements);
 		//SmartCardEntryAndExitEventHandler sc=new SmartCardEntryAndExitEventHandler(this.outputMeasurements);
+		MTRPassengerFlowCounter mtrCounter = new MTRPassengerFlowCounter(this.outputMeasurements, ts);
+		
 		
 		bind(MeasurementsStorage.class).toInstance(this.storage);
 		bind(Measurements.class).annotatedWith(Names.named("Output Measurements")).toInstance(this.outputMeasurements);
@@ -50,6 +63,8 @@ public class AnaModelCalibrationModule extends AbstractModule{
 		this.addEventHandlerBinding().toInstance(lc);
 		bind(LinkCountEventHandler.class).toInstance(lc);
 		this.addEventHandlerBinding().toInstance(ao);
+		bind(MTRPassengerFlowCounter.class).toInstance(mtrCounter);
+		this.addEventHandlerBinding().toInstance(mtrCounter);
 		bind(AverageOccupancyEventHandler.class).toInstance(ao);
 		this.addEventHandlerBinding().toInstance(tt);
 		bind(TravelTimeEventHandler.class).toInstance(tt);
