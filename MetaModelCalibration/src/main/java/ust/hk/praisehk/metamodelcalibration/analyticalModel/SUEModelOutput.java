@@ -3,12 +3,12 @@ package ust.hk.praisehk.metamodelcalibration.analyticalModel;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.network.Link;
-import org.matsim.pt.transitSchedule.api.TransitStopFacility;
 
 public class SUEModelOutput {
 	
@@ -17,6 +17,7 @@ public class SUEModelOutput {
 	private Map<String,Map<Id<Link>,Map<String,Double>>> trainCount;
 	private Map<String,Map<String,Double>> trainTransfers;
 	
+	
 	private Map<String,Map<Id<Link>,Double>> linkTravelTime;
 	private Map<String,Map<Id<TransitLink>,Double>>trLinkTravelTime;
 	
@@ -24,16 +25,39 @@ public class SUEModelOutput {
 	
 	private Map<String,Double> MaaSPackageUsage;
 	
+	private List<String> variables;
+	
 	private Map<String,Map<Id<Link>,Double>> linkFlowWithoutPT = null;
 	
 	private Map<String,Map<Id<TransitLink>,Double>> transitDirectLinkTT = null;
 	private Map<String,Map<Id<TransitLink>,Double>> transitTransferLinkTT = null;
+	
+	private Map<String,Map<Id<Link>,double[]>> linkVolumeGrad;
+	private Map<String,Map<Id<TransitLink>,double[]>> linkTransitVolumeGrad;
+	private Map<String,Map<Id<Link>,Map<String,double[]>>> trainCountGrad;
+	private Map<String,Map<String,double[]>> trainTransfersGrad;
+	
+	
+	private Map<String,Map<Id<Link>,double[]>> linkTravelTimeGrad;
+	private Map<String,Map<Id<TransitLink>,double[]>>trLinkTravelTimeGrad;
+	
+	private Map<String,Map<Id<Link>,double[]>> averagePtOccupancyOnLinkGrad;
+	
+	private Map<String,double[]> MaaSPackageUsageGrad;
+	
+	private Map<String,Map<Id<Link>,double[]>> linkFlowWithoutPTGrad = null;
+	
+	private Map<String,Map<Id<TransitLink>,double[]>> transitDirectLinkTTGrad = null;
+	private Map<String,Map<Id<TransitLink>,double[]>> transitTransferLinkTTGrad = null;
+	
+	
 	private double autoFlow = 0;
 	private double transitFlow = 0;
 	private double activities = 0;
 	
 	
 	private Map<String,Map<String,Map<String,Double>>> MaaSSpecificFareLinkFlow;
+	private Map<String,Map<String,Map<String,double[]>>> MaaSSpecificFareLinkFlowGrad;
 	
 	//private Map<String,Map<Id<TransitStopFacility>,Double>> smartCardEntry;
 	
@@ -175,8 +199,120 @@ public class SUEModelOutput {
 		FareLinkVolume = fareLinkVolume;
 
 	}
-
 	
+	public List<String> getVariables() {
+		return variables;
+	}
+
+	public void setVariables(List<String> variables) {
+		this.variables = variables;
+	}
+
+	public Map<String, Map<Id<Link>, double[]>> getLinkVolumeGrad() {
+		return linkVolumeGrad;
+	}
+
+	public Map<String, Map<Id<TransitLink>, double[]>> getLinkTransitVolumeGrad() {
+		return linkTransitVolumeGrad;
+	}
+
+	public Map<String, Map<Id<Link>, Map<String, double[]>>> getTrainCountGrad() {
+		return trainCountGrad;
+	}
+
+	public Map<String, Map<String, double[]>> getTrainTransfersGrad() {
+		return trainTransfersGrad;
+	}
+
+	public Map<String, Map<Id<Link>, double[]>> getLinkTravelTimeGrad() {
+		return linkTravelTimeGrad;
+	}
+
+	public Map<String, Map<Id<TransitLink>, double[]>> getTrLinkTravelTimeGrad() {
+		return trLinkTravelTimeGrad;
+	}
+
+	public Map<String, Map<Id<Link>, double[]>> getAveragePtOccupancyOnLinkGrad() {
+		return averagePtOccupancyOnLinkGrad;
+	}
+
+	public Map<String, double[]> getMaaSPackageUsageGrad() {
+		return MaaSPackageUsageGrad;
+	}
+
+	public Map<String, Map<Id<Link>, double[]>> getLinkFlowWithoutPTGrad() {
+		return linkFlowWithoutPTGrad;
+	}
+
+	public Map<String, Map<Id<TransitLink>, double[]>> getTransitDirectLinkTTGrad() {
+		return transitDirectLinkTTGrad;
+	}
+
+	public Map<String, Map<Id<TransitLink>, double[]>> getTransitTransferLinkTTGrad() {
+		return transitTransferLinkTTGrad;
+	}
+
+	public Map<String, Map<String, Map<String, double[]>>> getMaaSSpecificFareLinkFlowGrad() {
+		return MaaSSpecificFareLinkFlowGrad;
+	}
+
+	public void setLinkVolume(Map<String, Map<Id<Link>, Double>> linkVolume) {
+		this.linkVolume = linkVolume;
+	}
+
+	public void setLinkTransitVolume(Map<String, Map<Id<TransitLink>, Double>> linkTransitVolume) {
+		this.linkTransitVolume = linkTransitVolume;
+	}
+
+	public void setLinkVolumeGrad(Map<String, Map<Id<Link>, double[]>> linkVolumeGrad) {
+		this.linkVolumeGrad = linkVolumeGrad;
+	}
+
+	public void setLinkTransitVolumeGrad(Map<String, Map<Id<TransitLink>, double[]>> linkTransitVolumeGrad) {
+		this.linkTransitVolumeGrad = linkTransitVolumeGrad;
+	}
+
+	public void setTrainCountGrad(Map<String, Map<Id<Link>, Map<String, double[]>>> trainCountGrad) {
+		this.trainCountGrad = trainCountGrad;
+	}
+
+	public void setTrainTransfersGrad(Map<String, Map<String, double[]>> trainTransfersGrad) {
+		this.trainTransfersGrad = trainTransfersGrad;
+	}
+
+	public void setLinkTravelTimeGrad(Map<String, Map<Id<Link>, double[]>> linkTravelTimeGrad) {
+		this.linkTravelTimeGrad = linkTravelTimeGrad;
+	}
+
+	public void setTrLinkTravelTimeGrad(Map<String, Map<Id<TransitLink>, double[]>> trLinkTravelTimeGrad) {
+		this.trLinkTravelTimeGrad = trLinkTravelTimeGrad;
+	}
+
+	public void setAveragePtOccupancyOnLinkGrad(Map<String, Map<Id<Link>, double[]>> averagePtOccupancyOnLinkGrad) {
+		this.averagePtOccupancyOnLinkGrad = averagePtOccupancyOnLinkGrad;
+	}
+
+	public void setMaaSPackageUsageGrad(Map<String, double[]> maaSPackageUsageGrad) {
+		MaaSPackageUsageGrad = maaSPackageUsageGrad;
+	}
+
+	public void setLinkFlowWithoutPTGrad(Map<String, Map<Id<Link>, double[]>> linkFlowWithoutPTGrad) {
+		this.linkFlowWithoutPTGrad = linkFlowWithoutPTGrad;
+	}
+
+	public void setTransitDirectLinkTTGrad(Map<String, Map<Id<TransitLink>, double[]>> transitDirectLinkTTGrad) {
+		this.transitDirectLinkTTGrad = transitDirectLinkTTGrad;
+	}
+
+	public void setTransitTransferLinkTTGrad(Map<String, Map<Id<TransitLink>, double[]>> transitTransferLinkTTGrad) {
+		this.transitTransferLinkTTGrad = transitTransferLinkTTGrad;
+	}
+
+	public void setMaaSSpecificFareLinkFlowGrad(
+			Map<String, Map<String, Map<String, double[]>>> maaSSpecificFareLinkFlowGrad) {
+		MaaSSpecificFareLinkFlowGrad = maaSSpecificFareLinkFlowGrad;
+	}
+
 	public void writeTrainCountsAndTransfers(String folderLoc, String optionalTimeBean) {
 		File file = new File(folderLoc);
 		if(!file.isDirectory())file.mkdir();

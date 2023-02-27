@@ -38,7 +38,7 @@ public abstract class AnalyticalModelODpairs {
 	
 	private static final Logger logger = Logger.getLogger(AnalyticalModelODpairs.class);
 	private Config config=ConfigUtils.createConfig();
-	private Scenario scenario;
+	protected Scenario scenario;
 	protected final Network network;
 	private Population population;
 	private Map<Id<AnalyticalModelODpair>,AnalyticalModelODpair> ODpairset=new HashMap<>();

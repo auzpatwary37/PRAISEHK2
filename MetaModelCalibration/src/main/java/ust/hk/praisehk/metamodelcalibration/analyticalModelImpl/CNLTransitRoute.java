@@ -52,9 +52,9 @@ import ust.hk.praisehk.metamodelcalibration.analyticalModel.TransitTransferLink;
  */
 public class CNLTransitRoute implements AnalyticalModelTransitRoute{
 	
-	private final Logger logger=Logger.getLogger(CNLTransitRoute.class);
+	protected final Logger logger=Logger.getLogger(CNLTransitRoute.class);
 	
-	private TransitSchedule transitSchedule;
+	protected TransitSchedule transitSchedule;
 	private Scenario scenario;
 	private Id<AnalyticalModelTransitRoute> trRouteId;
 	private double routeTravelTime=0;
@@ -710,6 +710,10 @@ public class CNLTransitRoute implements AnalyticalModelTransitRoute{
 	public List<PlanElement> getPlanElements() {
 		return this.planElements;
 	}
+
+
+
+	
 	
 	
 	

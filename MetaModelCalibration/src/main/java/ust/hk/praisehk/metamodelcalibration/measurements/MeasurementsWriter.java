@@ -2,6 +2,8 @@ package ust.hk.praisehk.metamodelcalibration.measurements;
 
 import java.io.FileOutputStream;
 import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
 
 import javax.xml.parsers.DocumentBuilder;
@@ -26,6 +28,16 @@ public class MeasurementsWriter extends DefaultHandler{
 		this.m=m;
 	}
 
+	private static String arrayToString(double[] v) {
+		String s = "";
+		String sep = "";
+		for(double b:v) {
+			s = s+sep+b;
+			sep = ",";
+		}
+		return s;
+	}
+	
 	public void write(String fileLoc) {
 		try {
 			DocumentBuilderFactory documentBuilderFactory = DocumentBuilderFactory.newInstance();
@@ -44,7 +56,12 @@ public class MeasurementsWriter extends DefaultHandler{
 				TimeBeans.appendChild(TimeBean);
 			}
 			rootEle.appendChild(TimeBeans);
-			
+			if(m.getAttribute(	Measurements.variablesAttributeName)!=null) {
+				Element variables = document.createElement(Measurements.variablesAttributeName);
+				List<String> var = (List<String>) m.getAttribute(Measurements.variablesAttributeName);
+				for(int i = 0;i<var.size();i++)variables.setAttribute(Integer.toString(i), var.get(i));
+				rootEle.appendChild(variables);
+			}
 			for(Measurement mm:m.getMeasurements().values()) {
 				Element measurement=document.createElement("Measurement");
 				measurement.setAttribute("MeasurementId", mm.getId().toString());
@@ -62,6 +79,10 @@ public class MeasurementsWriter extends DefaultHandler{
 					volume.setAttribute("TimeBeanId", e.getKey());
 					volume.setAttribute("PCUVolume", Double.toString(e.getValue()));
 					if(mm.getSD().get(e.getKey())==null)mm.putSD(e.getKey(), 0);
+					if(mm.getAttribute(Measurement.gradientAttributeName)!=null) {
+						Map<String,double[]> gradients = (Map<String, double[]>) mm.getAttribute(Measurement.gradientAttributeName);
+						volume.setAttribute(Measurement.gradientAttributeName, arrayToString(gradients.get(e.getKey())));
+					}
 					volume.setAttribute("SD", Double.toString(mm.getSD().get(e.getKey())));
 					Volumes.appendChild(volume);
 				}
@@ -81,6 +102,7 @@ public class MeasurementsWriter extends DefaultHandler{
 					}
 				}
 				measurement.appendChild(linkIds);
+				
 				
 				for(String s:mm.getAttributes().keySet()) {
 					if(measurement.getAttribute(s)==null) {

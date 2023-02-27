@@ -34,7 +34,15 @@ public class Measurements {
 	private final Map<String,Tuple<Double,Double>> timeBean;
 	private Map<Id<Measurement>,Measurement> measurements=new HashMap<>();
 	private Map<MeasurementType,List<Measurement>> measurementsByType=new HashMap<>();
-	
+	private Map<String,Object> attributes=new HashMap<>();
+	//The variables should be in List<String> formatting. 
+	public static final String variablesAttributeName = "Variables";
+	public void setAttribute(String attributeName, Object attribute) {
+		this.attributes.put(attributeName, attribute);
+	}
+	public Object getAttribute(String attributeName) {
+		return this.attributes.get(attributeName);
+	}
 	
 	private Measurements(Map<String,Tuple<Double,Double>> timeBean) {
 		this.timeBean=timeBean;

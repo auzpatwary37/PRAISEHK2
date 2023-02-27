@@ -37,6 +37,7 @@ public interface AnalyticalModelTransitRoute{
 	 */
 	public double calcRouteUtility(LinkedHashMap<String,Double> params,
 			LinkedHashMap<String,Double> AnaParam,AnalyticalModelNetwork network,Map<Id<TransitLink>,TransitLink>transitLinks, Map<String,FareCalculator> farecalc,Map<String,Object> AdditionalDataContainer, Tuple<Double,Double>timeBean);
+	
 
 	
 	/**

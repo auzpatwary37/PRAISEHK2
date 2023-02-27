@@ -90,4 +90,10 @@ public interface AnalyticalModelRoute{
 	 */
 	double calcRouteUtility(LinkedHashMap<String, Double> parmas, LinkedHashMap<String, Double> anaParmas,
 			Tuple<Double, Double> timeBean, Map<String, ? extends Object> additionalDataContainer);
+	
+	/**
+	 * This gives the travel time of the route 
+	 * @return
+	 */
+	public double getTravelTime(AnalyticalModelNetwork network,Tuple<Double,Double>timeBean,LinkedHashMap<String,Double>params,LinkedHashMap<String,Double>anaParams, Map<String,Object>additionalDataContainer);
 }

@@ -3,19 +3,19 @@ package ust.hk.praisehk.metamodelcalibration.measurements;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.parsers.SAXParserFactory;
 
-import org.xml.sax.*;
-import org.xml.sax.helpers.DefaultHandler;
 import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.network.Link;
 import org.matsim.core.utils.collections.Tuple;
-
-import de.xypron.jcobyla.Calcfc;
+import org.xml.sax.Attributes;
+import org.xml.sax.SAXException;
+import org.xml.sax.helpers.DefaultHandler;
 
 public class MeasurementsReader extends DefaultHandler {
 	
@@ -23,6 +23,13 @@ public class MeasurementsReader extends DefaultHandler {
 	private Map<String,Tuple<Double,Double>> timeBeans=null;
 	private Id<Measurement>mId;
 	private ArrayList<Id<Link>>linkIds;
+	
+	private static double[] stringToArray(String s) {
+		String[] part = s.split(",");
+		double[] d = new double[part.length];
+		for(int i=0; i<part.length;i++)d[i]=Double.parseDouble(part[i]);
+		return d;
+	}
 	
 	@Override 
 	public void startElement(String uri, String localName, String qName, Attributes attributes) {
@@ -81,6 +88,18 @@ public class MeasurementsReader extends DefaultHandler {
 			String sd = attributes.getValue("SD");
 			if(sd==null)sd = Double.toString(0);
 			this.m.getMeasurements().get(this.mId).putSD(attributes.getValue("TimeBeanId"), Double.parseDouble(sd));
+			if(attributes.getValue(Measurement.gradientAttributeName)!=null) {
+				if(this.m.getMeasurements().get(this.mId).getAttribute(Measurement.gradientAttributeName)==null)this.m.getMeasurements().get(this.mId).setAttribute(Measurement.gradientAttributeName, new HashMap<>());
+				((Map<String,double[]>) this.m.getMeasurements().get(this.mId).getAttribute(Measurement.gradientAttributeName)).put(attributes.getValue("TimeBeanId"),stringToArray(attributes.getValue(Measurement.gradientAttributeName)));
+			}
+		}
+		
+		if(qName.equalsIgnoreCase(Measurements.variablesAttributeName)) {
+			List<String> var = new ArrayList<>();
+			for (int i = 0;i<attributes.getLength();i++){
+				var.add(attributes.getValue(i));
+			}
+			this.m.setAttribute(Measurements.variablesAttributeName, var);
 		}
 		
 	}

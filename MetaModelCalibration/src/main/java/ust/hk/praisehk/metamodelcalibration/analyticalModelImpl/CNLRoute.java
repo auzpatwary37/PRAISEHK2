@@ -10,9 +10,9 @@ import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.population.PlanElement;
 import org.matsim.api.core.v01.population.Route;
+import org.matsim.core.population.routes.NetworkRoute;
 import org.matsim.core.utils.collections.Tuple;
 
-import ust.hk.praisehk.metamodelcalibration.Utils.TruncatedNormal;
 import ust.hk.praisehk.metamodelcalibration.analyticalModel.AnalyticalModelNetwork;
 import ust.hk.praisehk.metamodelcalibration.analyticalModel.AnalyticalModelODpair;
 import ust.hk.praisehk.metamodelcalibration.analyticalModel.AnalyticalModelRoute;
@@ -26,7 +26,7 @@ public class CNLRoute implements AnalyticalModelRoute{
 	private double travelTime=0;
 	private double distanceTravelled=0;
 	private ArrayList<Id<Link>>links=new ArrayList<>();
-	private double RouteUtility=0;
+	protected double RouteUtility=0;
 	private Map<Id<Link>,Double> linkReachTime=new HashMap<>();
 	private final Id<AnalyticalModelRoute> oldRouteId;
 	public static final String routeIdSubscript = "_r_";
@@ -34,10 +34,9 @@ public class CNLRoute implements AnalyticalModelRoute{
 	
 	public CNLRoute(Route r) {
 		this.r = r;
-		String[] part=r.getRouteDescription().split(" ");
-		for(String s:part) {
-			links.add(Id.createLinkId(s.trim()));
-			}
+		this.links.add(r.getStartLinkId());
+		((NetworkRoute)r).getLinkIds().forEach(l->this.links.add(l));
+		this.links.add(this.r.getEndLinkId());
 		this.distanceTravelled=r.getDistance();
 		this.routeId=Id.create(r.getRouteDescription(), AnalyticalModelRoute.class);
 		this.oldRouteId = Id.create(r.getRouteDescription(), AnalyticalModelRoute.class);
@@ -298,5 +297,13 @@ public class CNLRoute implements AnalyticalModelRoute{
 	
 	public Route getRoute() {
 		return this.r;
+	}
+
+	@Override
+	public double getTravelTime(AnalyticalModelNetwork network, Tuple<Double, Double> timeBean,
+			LinkedHashMap<String, Double> params, LinkedHashMap<String, Double> anaParams,
+			Map<String, Object> additionalDataContainer) {
+		
+		return this.getTravelTime(network, timeBean, params, anaParams);
 	}
 }

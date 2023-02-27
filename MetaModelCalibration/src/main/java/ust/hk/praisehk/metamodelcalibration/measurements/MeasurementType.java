@@ -6,6 +6,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import org.apache.commons.math3.linear.MatrixUtils;
+import org.apache.commons.math3.linear.RealVector;
 import org.apache.log4j.Logger;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.network.Link;
@@ -32,9 +34,12 @@ public enum MeasurementType {
 	 * this take care of the case if the measurement type is link volume
 	 */
 	linkVolume{
+		
 		@Override
 		public void updateMeasurement(SUEModelOutput modelOut,AnalyticalModel sue,Object otherDataContainer,Measurement m) {
 			Map<String,Map<Id<Link>,Double>>linkVolumes=modelOut.getLinkVolume();
+			Map<String,Map<Id<Link>,double[]>> linkVolumeGradient = modelOut.getLinkVolumeGrad();
+			Map<String,double[]> grad = new HashMap<>();
 			@SuppressWarnings("unchecked")
 			ArrayList<Id<Link>> linkList=(ArrayList<Id<Link>>)m.getAttribute(Measurement.linkListAttributeName);
 			if(linkList.isEmpty()) {
@@ -51,6 +56,7 @@ public enum MeasurementType {
 			}
 			for(String s:m.getVolumes().keySet()) {
 				double volume=0;
+				RealVector volumeGrad = null;
 				for(Id<Link>linkId:linkList) {
 					try {
 						if(linkVolumes.get(s)==null) {
@@ -59,16 +65,30 @@ public enum MeasurementType {
 						if(linkVolumes.get(s).get(linkId)==null) {
 							throw new IllegalArgumentException("linkVolumes does not contain volume information");
 						}
+						
 						volume+=linkVolumes.get(s).get(linkId);
+						
+						if(linkVolumeGradient.get(s).get(linkId)==null) {
+							System.out.println("Gradients are not present. Only updating the volume.");
+						}else {
+							if(volumeGrad == null)volumeGrad = MatrixUtils.createRealVector(linkVolumeGradient.get(s).get(linkId));
+							else volumeGrad = volumeGrad.add(MatrixUtils.createRealVector(linkVolumeGradient.get(s).get(linkId)));
+						}
 					}catch(Exception e) {
 						System.out.println("Illegal Argument Excepton. Could not update measurements. Volumes are missing for measurement Id: "+m.getId()+" timeBeanId: "
 								+s+" linkId: "+linkId);
 					}
 					
 				}
+				grad.put(s, volumeGrad.toArray());
 				m.getVolumes().put(s, volume);
+				
+			}
+			if(grad.size()!=0) {
+				m.setAttribute(m.gradientAttributeName, grad);
 			}
 		}
+		
 
 		@Override
 		public void writeAttribute(Element melelement,Measurement m) {

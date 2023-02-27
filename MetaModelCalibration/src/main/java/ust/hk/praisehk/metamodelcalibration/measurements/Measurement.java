@@ -22,6 +22,10 @@ public class Measurement {
 	 */
 	public static final String linkListAttributeName="LINK_LIST";
 	public static final String transitLineAttributeName="TRANSIT_LINE";
+	public static final String gradientAttributeName = "Gradients";
+	
+	//expect gradients of Map<String,double[]> same as volume. 
+	
 	public static final String transitRouteAttributeName="Transit_Route";
 	public static final String transitBoardingStopAtrributeName="transit_boarding_stop";
 	public static final String transitAlightingStopAttributeName="transit_alighting_stop";
@@ -39,6 +43,8 @@ public class Measurement {
 	private static final Logger logger=Logger.getLogger(Measurement.class);
 	private Coord coord=null;
 	private final MeasurementType measurementType;
+	
+	
 	
 	public Coord getCoord() {
 		return coord;
