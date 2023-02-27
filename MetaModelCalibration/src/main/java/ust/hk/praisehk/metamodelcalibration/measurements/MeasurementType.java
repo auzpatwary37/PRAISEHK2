@@ -85,7 +85,7 @@ public enum MeasurementType {
 				
 			}
 			if(grad.size()!=0) {
-				m.setAttribute(m.gradientAttributeName, grad);
+				m.setAttribute(Measurement.gradientAttributeName, grad);
 			}
 		}
 		
@@ -327,7 +327,6 @@ public enum MeasurementType {
 			if(fareLinks==null) {
 				throw new IllegalArgumentException("No fare links in the fare link cluster");
 			}
-			for(FareLink fl:fareLinks) {	
 			if(m.getVolumes().size()==0) {
 				//System.out.println("MeasurementId: "+m.getId().toString()+" Volume is empty!!! Updating volume for all time beans");
 				for(String s: m.getTimeBean().keySet()) {
@@ -336,7 +335,7 @@ public enum MeasurementType {
 					}
 				}
 			}
-			String key = fl.toString();
+			
 			Map<String,Map<String,Double>>fareLinkVolume = modelOut.getFareLinkVolume();
 			if(fareLinkVolume==null) {
 				fareLinkVolume = new HashMap<>();
@@ -346,25 +345,41 @@ public enum MeasurementType {
 				modelOut.setFareLinkVolume(fareLinkVolume);
 			}
 			
+			Map<String,double[]> grad = new HashMap<>();
+			
 			for(String s:m.getVolumes().keySet()) {
-				double volume=0;
-				try {
-					if(fareLinkVolume.get(s)==null) {
-						//throw new IllegalArgumentException("linkVolumes does not contain volume information");
-					}
-					if(fareLinkVolume.get(s).get(key)==null) {
-						//throw new IllegalArgumentException("linkVolumes does not contain volume information");
-					}
-					volume+=modelOut.getFareLinkVolume().get(s).get(key);
-				}catch(Exception e) {
-					//System.out.println("Illegal Argument Excepton. Could not update measurements. Volumes are missing for measurement Id: "+m.getId()+" timeBeanId: "
-					//		+s+" fareLinkId: "+key);
-				}
-				m.getVolumes().put(s, volume+m.getVolumes().get(s));
-				}
-			}
+				double volume = 0;
+				double[] volumeGrad = null;
 				
+				for(FareLink fl:fareLinks) {	
+					String key = fl.toString();
+					try {
+						if(fareLinkVolume.get(s)==null) {
+							//throw new IllegalArgumentException("linkVolumes does not contain volume information");
+						}
+						if(fareLinkVolume.get(s).get(key)==null) {
+							//throw new IllegalArgumentException("linkVolumes does not contain volume information");
+						}
+						volume+=modelOut.getFareLinkVolume().get(s).get(key);
+						if(modelOut.getFareLinkVolumeGradient()!=null) {
+							if(volumeGrad==null) {
+								volumeGrad = MatrixUtils.createRealVector(modelOut.getFareLinkVolumeGradient().get(s).get(key)).toArray();
+							}else {
+								volumeGrad = MatrixUtils.createRealVector(modelOut.getFareLinkVolumeGradient().get(s).get(key)).add(MatrixUtils.createRealVector(volumeGrad)).toArray();
+							}
+						}
+					}catch(Exception e) {
+						//System.out.println("Illegal Argument Excepton. Could not update measurements. Volumes are missing for measurement Id: "+m.getId()+" timeBeanId: "
+						//		+s+" fareLinkId: "+key);
+					}
+					
+					}
+				m.getVolumes().put(s, volume);
+				grad.put(s, volumeGrad);
+				}
+			m.setAttribute(Measurement.gradientAttributeName, grad);
 			}
+		
 		
 
 		@Override

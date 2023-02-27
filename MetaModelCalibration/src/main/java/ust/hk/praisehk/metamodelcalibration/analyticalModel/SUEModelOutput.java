@@ -3,12 +3,14 @@ package ust.hk.praisehk.metamodelcalibration.analyticalModel;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.network.Link;
+import org.matsim.core.utils.collections.Tuple;
 
 public class SUEModelOutput {
 	
@@ -63,6 +65,8 @@ public class SUEModelOutput {
 	
 	private Map<String,Map<String,Double>>FareLinkVolume;
 	
+	private Map<String,Map<String,double[]>>FareLinkVolumeGrad;
+	
 	public SUEModelOutput(Map<String,Map<Id<Link>,Double>> linkVolume,Map<String,Map<Id<TransitLink>,Double>> linkTransitVolume,Map<String,Map<Id<Link>,Double>> linkTravelTime,Map<String,Map<Id<TransitLink>,Double>>trLinkTravelTime, Map<String,Map<String,Double>> fareLinkVolume) {
 		this.linkVolume=linkVolume;
 		this.linkTransitVolume=linkTransitVolume;
@@ -115,6 +119,9 @@ public class SUEModelOutput {
 		return FareLinkVolume;
 	}
 
+	public Map<String, Map<String, double[]>> getFareLinkVolumeGradient() {
+		return FareLinkVolumeGrad;
+	}
 	public Map<String, Double> getMaaSPackageUsage() {
 		return MaaSPackageUsage;
 	}
@@ -197,6 +204,10 @@ public class SUEModelOutput {
 	}
 	public void setFareLinkVolume(Map<String, Map<String, Double>> fareLinkVolume) {
 		FareLinkVolume = fareLinkVolume;
+
+	}
+	public void setFareLinkVolumeGrad(Map<String, Map<String, double[]>> fareLinkVolumeGrad) {
+		FareLinkVolumeGrad = fareLinkVolumeGrad;
 
 	}
 	
@@ -365,5 +376,27 @@ public class SUEModelOutput {
 		}
 	}
 	
+	public static <T> Tuple<Map<String,Map<Id<T>,Double>>,Map<String,Map<Id<T>,double[]>>> splitMap(Map<String,Map<Id<T>,Tuple<Double,double[]>>> input){
+		Map<String,Map<Id<T>,Double>> first = new HashMap<>();
+		Map<String,Map<Id<T>,double[]>> second = new HashMap<>();
+		
+		input.entrySet().forEach(e->{
+			first.put(e.getKey(), new HashMap<>());
+			second.put(e.getKey(), new HashMap<>());
+			e.getValue().entrySet().forEach(ee->{
+				first.get(e.getKey()).put(ee.getKey(), ee.getValue().getFirst());
+				second.get(e.getKey()).put(ee.getKey(), ee.getValue().getSecond());
+			});
+		});
+		
+		return new Tuple<>(first,second);
+		
+	}
+	
+	public void setLinkVolumeAndGradient(Map<String, Map<Id<Link>, Tuple<Double,double[]>>> linkVolumeAndGradient) {
+		Tuple<Map<String, Map<Id<Link>, Double>>, Map<String, Map<Id<Link>, double[]>>> aux = splitMap(linkVolumeAndGradient);
+		this.setLinkVolume(aux.getFirst());
+		this.setLinkVolumeGrad(aux.getSecond());
+	}
 	
 }
