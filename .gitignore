@@ -1,0 +1,9 @@
+# Build output
+target/
+
+# Calibration run artifacts written by the legacy code into the working directory
+config_Intermediate.xml
+iterLogger.csv
+
+# OS
+.DS_Store

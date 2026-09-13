@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+
+	<!--
+		PRAISEHK modernization aggregator.
+
+		Historical context: PRAISEHK was buildable ONLY inside Eclipse, because
+		MetaModelCalibration/.classpath referenced a sibling Eclipse project
+		`/MATSim-HK` (kind="src"), and one of the jars it needed
+		(MATSim-HK-11.0.jar, containing transitFareAndHandler.*) was never
+		committed. `mvn compile` therefore failed from a clean clone.
+
+		This aggregator makes the build self-contained:
+		  - matsim-hk          : the Hong Kong MATSim extension fork (legacy reference)
+		  - MetaModelCalibration: PRAISEHK calibration / SUE / measurements core
+
+		See docs/modernization/DEPENDENCIES.md and
+		docs/modernization/PRAISE_MATSIMHK_RELATIONSHIP.md.
+	-->
+	<groupId>ust.hk.praisehk</groupId>
+	<artifactId>praisehk-parent</artifactId>
+	<version>0.0.1-SNAPSHOT</version>
+	<packaging>pom</packaging>
+
+	<name>PRAISEHK</name>
+	<description>PRAISEHK analytical SUE / measurement / meta-model calibration toolkit</description>
+
+	<properties>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+	</properties>
+
+	<modules>
+		<module>matsim-hk</module>
+		<module>MetaModelCalibration</module>
+	</modules>
+
+</project>
