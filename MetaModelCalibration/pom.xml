@@ -370,14 +370,20 @@
 		     obtain from an untracked jar / an Eclipse project reference are now
 		     VENDORED into this module under
 
-		         ust.hk.praisehk.metamodelcalibration.transit
 		         ust.hk.praisehk.metamodelcalibration.transit.fare
+		             FareCalculator.java
+		             FareLink.java
 
-		     Only the eight classes actually required to compile were brought in
-		     (RouteHelper, TransitStop, FareCalculator, MTRFareCalculator,
-		     ZonalFareCalculator, TransferDiscountCalculator, FareLink,
-		     TransitFareHandler). The HK fork itself is no longer a build
-		     dependency; see docs/modernization/PRAISE_MATSIMHK_RELATIONSHIP.md.
+		     Exactly TWO classes were needed. The fork's transitive closure was
+		     measured at 39 files / 11,024 LOC, but only FareCalculator (21 active
+		     references) and FareLink (31) have any active use; the other four
+		     referenced classes were import-only and the remaining 33 closure
+		     files are unused. The fork is therefore no longer a build dependency
+		     at all, and six further classes (MTRFareCalculator,
+		     ZonalFareCalculator, TransitStop, TransitFareHandler,
+		     TransferDiscountCalculator, RouteHelper) were deliberately NOT
+		     vendored.
+		     See docs/modernization/PRAISE_MATSIMHK_RELATIONSHIP.md.
 		-->
 
 

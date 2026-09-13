@@ -121,7 +121,7 @@ differentiation/     ◀── NEW boundary; from ODEstimation
   gradient-checking/ seeded gradient fire test
 
 od-estimation/       ◀── ODUtils parameterisation, OD optimizers
-matsim-adapter/      ◀── matsimIntegration/*, MATSim-HK fare/transit adapters
+matsim-adapter/      ◀── matsimIntegration/*, and the vendored transit.fare contract
 ```
 
 **Binding design principles**
@@ -146,14 +146,21 @@ matsim-adapter/      ◀── matsimIntegration/*, MATSim-HK fare/transit adapt
 
 ## 5. Build & test infrastructure (as of this PR)
 
-* Aggregator `pom.xml`; modules built in order.
+* **Single Maven module.** There is no aggregator: `MetaModelCalibration/pom.xml` is the only POM.
+  All commands are run from `MetaModelCalibration/`.
 * JUnit 5 + `junit-vintage-engine`; surefire 3.2.5 with the legacy nondeterministic test excluded.
 * Fixtures live in `src/test/java/.../fixtures/` and are data + in-memory network builders only.
 * No test requires: Hong Kong data, absolute paths, MATLAB, network access, `Math.random()`, or
   `HashMap` iteration order.
-* Offline verification: `mvn -o -B test` at the root.
+* Offline verification: `cd MetaModelCalibration && mvn -o -B clean test`
+  → BUILD SUCCESS, 82 tests, 0 failures, zero compiler diagnostics.
 
 ## 6. Delivery roadmap (small, behaviour-protected PRs)
+
+Two tracks. Track B (ODEstimation) is **independent of** Track A and must not be deferred behind it:
+it is the gate for Track C.
+
+### Track A — PRAISEHK characterization
 
 | PR | Content | Status |
 |---|---|---|
@@ -164,9 +171,39 @@ matsim-adapter/      ◀── matsimIntegration/*, MATSim-HK fare/transit adapt
 | 5 | Calibrator/trust-region deterministic state-machine tests (incl. CAL-1…CAL-8) | planned |
 | 6 | Link/route/transit analytical unit tests (oracle values) | planned |
 | 7 | Small-network SUE characterization (fixtures B/C/D completed: PT route construction, MSA, conservation) | planned |
-| 8 | ODEstimation build repair (declare PRAISEHK dep) + sensitivity harness + finite-difference oracle | planned |
-| 9 | MATSim-HK core extraction + `FareLink`/`FareCalculator` characterization | planned |
-| 10+ | Architectural extraction and dependency replacement, one family at a time | planned |
+
+### Track B — ODEstimation build repair + derivative validation (the gate)
+
+| PR | Content | Status |
+|---|---|---|
+| 8 | ODEstimation build repair (declare the PRAISEHK dependency) + `ParameterOrdering` determinism tests + leaf derivative oracles + reusable finite-difference oracle + seeded gradient fire test | **gate — start as early as possible; may run in parallel with Track A** |
+| 9 | Fare-calculation decision: implement `FareCalculator` against the vendored two-class `transit.fare` contract with oracle tests, **or** delete the commented-out MTR path in `CNLTransitRoute` (REVIEW_REQUIRED FARE-3); then formalise the fare/transit adapter boundary | planned |
+
+### Track C — architectural extraction
+
+| PR | Content | Status |
+|---|---|---|
+| 10+ | Architectural extraction and dependency replacement, one family at a time | **blocked by Track B** |
+
+### Gate: no static-SUE consolidation before derivative validation
+
+No `StaticSUEEvaluator` may be created, and no Track C architectural extraction may begin, until all
+of the following are green (tracked in `TEST_MATRIX.md` §5):
+
+1. deterministic `ParameterOrdering` / `MapToArray` index tests, including exact key-set equality;
+2. OD parameter-incidence derivative tests;
+3. BPR derivative oracle (`dt/dv = t0·α·β·v^(β−1)/c^β`);
+4. route-logit derivative oracle;
+5. mode-choice derivative conservation (`Σ ∂P_mode/∂θ = 0`);
+6. route-flow and link-flow sensitivity tests;
+7. a reusable central finite-difference oracle evaluated at several perturbation sizes;
+8. a seeded gradient fire test.
+
+Rationale: the sensitivity engine constrains the SUE boundary, so the one-canonical-SUE decision must
+not outrun derivative validation. Note also that PR 9 in an earlier draft named "MATSim-HK core
+extraction + `FareLink`/`FareCalculator` characterization"; that is obsolete — `FareLink` is already
+characterized in this PR and the fork is no longer a dependency, so PR 9 is now the fare-calculation
+and adapter-boundary decision above.
 
 ## 7. Known architectural debt (summary; details in `REVIEW_REQUIRED.md`)
 

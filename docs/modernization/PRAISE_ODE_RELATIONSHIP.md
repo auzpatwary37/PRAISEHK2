@@ -10,13 +10,46 @@ be preserved.
 | Repository | Branch | Commit | Location |
 |---|---|---|---|
 | PRAISEHK2 | `ODEstimationMatsim` | `77f93f25ed0332061953dc22e88cfc37120a1fb9` | `github.com/auzpatwary37/PRAISEHK2` |
-| ODEstimation | `MATSimCalibrationReorganize` | `ff1005432d74769bfbc6476c0ab83f7f1b99b603` | `github.com/auzpatwary37/ODEstimation` |
-| MATSim-HK | `MAAS` | `7ada92ecdb4193b692e2b4acb8ea4e03bffb348b` | local-only fork, `gitlab.com/leeenoch1005/MATSim-HK` |
+| ODEstimation | `MATSimCalibrationReorganize` (**primary**) + `MATSimCalibration` (**secondary**) | `ff1005432d74769bfbc6476c0ab83f7f1b99b603` / see below | `github.com/auzpatwary37/ODEstimation` |
+| MATSim-HK | `MAAS` | `7ada92ecdb4193b692e2b4acb8ea4e03bffb348b` | local-only fork; **no longer a build dependency** (see `PRAISE_MATSIMHK_RELATIONSHIP.md`) |
 
-`MATSimCalibrationReorganize` (2024-03-26) was chosen as the ODEstimation reference
-because it is the newest branch and is the only one containing `analyticalModel/GradientUtils.java`,
-`analyticalModel/Clip.java` and the multi-time OD optimizers. **This branch choice is an
-assumption to confirm** — the task brief did not name an ODEstimation branch.
+## ODEstimation branch selection (resolved)
+
+The task brief did not name an ODEstimation branch, so the branches were compared explicitly rather
+than assumed.
+
+| Branch | Last commit | `ODDifferentiableSUEModel` | `GradientUtils` / `Clip` | `ODUtils` | Multi-time OD optimizers | `ParamCalibratorFunction` |
+|---|---|---|---|---|---|---|
+| `master` | 2021-08-03 | 2,251 lines | absent | 367 lines | absent | absent |
+| `MATSimCalibration` | 2023-02-14 | 2,687 lines | absent | 716 lines | absent | **present (137 lines)** |
+| `MATSimCalibrationReorganize` | 2024-03-26 | 2,811 lines | **present (202 / 25 lines)** | 753 lines | **present** (539 + 245) | absent |
+
+Lineage (evidence: `git merge-base --is-ancestor`):
+
+* `master` **is** an ancestor of `MATSimCalibration`.
+* `MATSimCalibration` and `MATSimCalibrationReorganize` are **siblings, not ancestors** — their merge
+  base is `187e0516b664b60c4fcdb46ced6dd72430f967b1`, and neither is an ancestor of the other.
+  **Reorganize did not build on MATSimCalibration's changes.**
+
+**Decision: `MATSimCalibrationReorganize` is the primary reference**, because it is the only branch
+that (a) extracts the derivative mathematics into a separately testable unit
+(`analyticalModel/GradientUtils`), (b) adds `Clip`, and (c) contains the multi-time OD optimizers
+(`ODAdditionOptimizerMultipleTime`) and the direct-scaling work — 13 source/test files absent from
+`MATSimCalibration`. Verified: Reorganize's `ODDifferentiableSUEModel` **delegates** its four gradient
+computations to `GradientUtils` (lines 1923, 1935, 2140, 2158), whereas `MATSimCalibration` computes
+the same expressions **inline** — the same mathematics, refactored. The extraction is what makes the
+derivatives unit-testable in isolation, which is why Reorganize is the right basis for the
+derivative work.
+
+**`MATSimCalibration` is retained as a secondary reference** for the two files it uniquely contains —
+`core/ParamCalibratorFunction.java` (137 lines, a COBYLA `Calcfc` that calibrates parameters against
+`ObjectiveCalculator.TypeMeasurementAndTimeSpecific`, i.e. the ODE-side analogue of PRAISEHK's
+`OptimizationFunction`) and its test `analyticalModel/ParamCalibrate.java`. These are **absent from
+Reorganize** and must not be silently lost when the unified calibration core is designed.
+
+So: one primary reference for differentiation, plus one named gap to re-read when the parameter
+calibration boundary is defined. Any future claim of the form "ODE does X" must state which branch it
+came from.
 
 ---
 
@@ -169,8 +202,37 @@ Evidence:
   ```
   ⇒ a missing variable silently contributes a zero gradient coordinate; an extra variable is
   silently ignored. This is a correctness hazard for gradient-based optimization.
-* This is the single most important ordering contract to make explicit and immutable; the
-  modern target needs `ParameterOrdering` as a first-class immutable value.
+
+### HARD PRECONDITION — no derivative result is trustworthy until ordering is pinned
+
+This is not a "cleanup risk"; it invalidates results while producing numerically plausible vectors.
+Explicitly:
+
+> **No gradient-validation result, finite-difference comparison, or derivative-based conclusion in
+> this modernization is trustworthy until (a) the parameter-name ↔ array-index mapping is
+> deterministic, and (b) the key set is checked for exact equality (missing keys must fail, not
+> silently become `0`).**
+
+Two independent failure modes have to be closed:
+
+1. **Non-deterministic ordering.** If `gradientKeys` is backed by a `HashMap`/`HashSet`, the same
+   parameter vector can produce different coordinate assignments between runs. A finite-difference
+   comparison would then compare derivatives along *different* coordinate axes and could pass or fail
+   at random.
+2. **Silent key-set mismatch.** `getMatrix` writes `0` for any key absent from the map and ignores
+   extras, with the dimension guard commented out. A wrong-sized or misnamed parameter set therefore
+   yields a *valid-looking* zero in the wrong coordinate.
+
+Consequences for the plan:
+
+* The legacy characterization harness must **first pin whatever ordering the current code actually
+  uses**, then assert exact key-set equality, before any derivative oracle is written. This is item 1
+  of the Track B gate in `ARCHITECTURE.md` §6.
+* The modern target needs `ParameterOrdering` as a first-class **immutable** value: one explicit,
+  serialisable ordering shared by `MapToArray`, the OD variable naming, the gradient vectors and the
+  optimizer — with construction-time validation that the key set matches exactly.
+* `PRAISEHK`'s own `Utils/MapToArray` has the same class of hazard and must be pinned by the same
+  tests when the two are unified.
 
 ---
 

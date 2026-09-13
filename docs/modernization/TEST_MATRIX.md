@@ -163,8 +163,8 @@ declaration). `FareLink`'s grammar is a serialization contract for `MeasurementT
 | link-flow aggregation `v_a = Σ δ_ar f_r` | — | P | — | — | — | P |
 | finite-difference oracle harness (h ∈ 1e-4,1e-5,1e-6) | — | — | — | — | — | P (phase 0 of the ODE PR) |
 | seeded gradient fire test | — | — | — | — | — | P |
-| `MapToArray` variable ordering determinism | — | — | — | — | — | P (**critical**) |
-| `gradMultiplier` / `Clip` effect on the model derivative | — | — | — | — | — | P |
+| `MapToArray` variable ordering determinism | — | — | — | — | — | P — **HARD PRECONDITION**: no derivative result is trustworthy until this is deterministic *and* exact key-set equality is asserted (`PRAISE_ODE_RELATIONSHIP.md` §4) |
+| `gradMultiplier` / `Clip` effect on the model derivative | — | — | — | — | — | P — must be characterized as **optimizer transformation**, separately from the model derivative (see §8) |
 
 ## 6. Build / harness
 
@@ -185,3 +185,42 @@ declaration). `FareLink`'s grammar is a serialization contract for `MeasurementT
 * Do **not** gate on code-coverage percentage.
 * Add `mvn dependency:analyze` once the pom is cleaned, to catch undeclared/load-bearing deps.
 * Static checks only after the build is reproducibly green.
+
+Gate sequencing: no static-SUE consolidation and no architectural extraction may begin until the
+Track B checks in §5 (differentiation) are green — see `ARCHITECTURE.md` §6.
+
+## 8. Test-design rules (binding for all derivative work)
+
+These are rules, not notes. They exist because a legacy *stabilizer* can otherwise be accidentally
+"validated" as if it were part of the mathematical derivative.
+
+### 8.1 Keep the three derivative layers separate
+
+| Layer | What it is | Must be tested as |
+|---|---|---|
+| **ModelDerivative** | the physical quantity `dy/dθ` — exact, **unclipped and unscaled** | the reference the others are compared against |
+| **ObjectiveDerivative** | chain rule `dL/dθ = (dL/dy)·(dy/dθ)` | separately, against the objective it differentiates |
+| **OptimizerTransformation** | `gradMultiplier`, `timeClip`, `flowClip`, `maxAbsGrad`/`minAbsGrad`, L1 rescaling, Adam/GD updates, trust-region logic | each characterized **individually**, and shown to be the only thing that changes |
+
+**Consequences:**
+
+* A central finite-difference check of the model response must be compared against the **unclipped,
+  unscaled** model sensitivity. If the implementation only exposes the transformed value, the test
+  must recover or bypass the transformation — otherwise the stabilizer is being validated as
+  mathematics.
+* Clipping is a *hard truncation*: a derivative at the clip boundary is not the derivative. Tests must
+  state which regime they are in (interior vs clipped) and must not compare across the boundary.
+* Trust-region acceptance (`rho`) must be tested as optimizer behaviour, never as a derivative oracle.
+
+### 8.2 Parameter ordering is a precondition, not a test
+
+Per `PRAISE_ODE_RELATIONSHIP.md` §4: no gradient-validation result is trustworthy until the
+parameter-name ↔ index mapping is deterministic **and** exact key-set equality is asserted. A
+finite-difference comparison run against a `HashMap`-ordered gradient is meaningless even when it
+passes. Ordering tests come **first**, before any derivative oracle.
+
+### 8.3 Legacy-equivalence and independent oracle are different tests
+
+Characterization proves what the code does; the oracle proves what the mathematics says. Both are
+required for numerical code. When they disagree, the discrepancy is recorded in `REVIEW_REQUIRED.md`
+and **the equation is not changed** until reviewed.
