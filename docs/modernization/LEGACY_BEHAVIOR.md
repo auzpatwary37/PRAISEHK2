@@ -84,10 +84,27 @@ else:
 * `getOtherMoneyCost()` returns `0` (future expansion).
 * `clone()` does **not** copy `travelTime`, `linkReachTime` or `RouteUtility` (fresh state).
 
+## 3b. `transit/fare/` — vendored fare contract `[V]` `[T]`
+
+Two classes vendored verbatim from the Hong Kong MATSim fork (package declaration aside) because
+PRAISEHK depends on their **contract** but the fork is no longer a build dependency. Provenance and
+the reduction argument: `PRAISE_MATSIMHK_RELATIONSHIP.md`.
+
+| Class | Responsibility | Notes |
+|---|---|---|
+| `FareCalculator` `[V]` | Interface for fare schemes. Methods: `getMinFare(route, line, from[, to])`, `getFares(route, line, from, to)`, `getFare(route, line, from, fromOccurrence, to, toOccurrence)`, `setFareFactor(double)`. | Used by PRAISEHK only as `Map<String, FareCalculator>` (keyed by mode, e.g. `"train"`, `"bus"`). **No implementation exists in this module** — the map is empty unless a caller supplies one, so `AnalyticalModelTransitRoute.getFare(...)` has no live fare source here. `[U]` and must be characterised before the transit utility is touched. |
+| `FareLink` `[V]` `[T]` | Identifies a fare observation so that fare measurements can be aggregated. Two grammars, separated by `___`: <br>`NetworkWideFare : type___boardingStop___alightingStop___mode` <br>`InVehicleFare   : type___transitLine___transitRoute___boardingStop___alightingStop___mode` <br>Also holds the XML attribute-name constants (`FareLinkAttributeName = "fareLink"`, `FareTransactionName = "fare"`) used by `MeasurementType`/`MeasurementsReader`/`MeasurementsWriter`. | Pinned by `FareLinkTest` (10 tests). Parsing is **not escaped and not length-checked**: a truncated description throws a raw `ArrayIndexOutOfBoundsException` (FARE-1), and an id containing `___` silently corrupts the parse, discarding the tail (FARE-2). `MeasurementType.fareLinkVolume` constructs a `FareLink` from the measurement id when the attribute is absent, so measurement ids must be valid fare descriptions. |
+
+**Deliberately not vendored** (zero active references in PRAISEHK — import-only): `MTRFareCalculator`,
+`ZonalFareCalculator`, `TransitStop`, `TransitFareHandler`, `TransferDiscountCalculator`, `RouteHelper`
+and the 31 further files of the fork's transitive closure (`createBus/*`, `running/RunUtils`,
+`networkFromSaturn/CreateNetworkUtils`, `withinDay/EquivalentStopForFare`, the dynamic transit router).
+See `PRAISE_MATSIMHK_RELATIONSHIP.md` §4.
+
 ## 4. `analyticalModelImpl/CNLTransitRoute` and transit links — `[U]` mostly
 
-* `CNLTransitRoute` (755 LOC) computes the transit utility from fare (`dynamicTransitRouter.fareCalculators.FareCalculator`,
-  `transitFareAndHandler.FareLink`), in-vehicle time, waiting time, transfer penalties, walking
+* `CNLTransitRoute` (755 LOC) computes the transit utility from fare (`transit.fare.FareCalculator`,
+  `transit.fare.FareLink`), in-vehicle time, waiting time, transfer penalties, walking
   distance and money, using `MarginalUtilityofTravelpt`, `MarginalUtilityofWaiting`,
   `UtilityOfLineSwitch`, `MarginalUtilityofWalking`, `DistanceBasedMoneyCostWalk`,
   `MarginalUtilityOfDistancePt`, `Transferalpha`/`Transferbeta` (standing/transfer crowding terms).

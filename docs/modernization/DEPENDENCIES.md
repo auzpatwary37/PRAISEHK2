@@ -31,15 +31,15 @@ Usage counts are `grep -rl "^import <pkg>" MetaModelCalibration/src/main/java | 
 | `junit:junit` | 4.12 | test | legacy JUnit 4 tests | legacy harness | keep as long as JUnit 4 tests remain |
 | **NEW** `org.junit.jupiter:junit-jupiter` | 5.10.2 | test | new deterministic tests | modern harness | added in this PR |
 | **NEW** `org.junit.vintage:junit-vintage-engine` | 5.10.2 | test | runs the JUnit 4 tests | bridge | added in this PR |
-| **NEW** module `MATSim-HK:MATSim-HK` | 11.0 | compile | 6+ | HK fare calculators / transit router / `FareLink` | replaces the untracked JAR |
 | **NEW** `cz.cvut.fit:jcool-core` | 1.0 | **system** (`systemPath` → `src/main/resources/jcool-core.jar`) | `AnalyticalModelOptimizerImpl`, `HessianObjective` | `ObjectiveFunction`, `Point`, `Gradient`, `Hessian`, `CentralDifferenceHessian` | **genuinely unavailable** in any public repo; `system` scope keeps the build offline-reproducible |
+| **REMOVED** `MATSim-HK:MATSim-HK` | 11.0 | ~~compile~~ | 2 vendored classes now provide `FareCalculator` + `FareLink` | HK fare calculators / dynamic transit router / `FareLink` | **eliminated**: only 2 of the 39-file closure were actually used; both vendored under `ust.hk.praisehk.metamodelcalibration.transit.fare` with no new third-party dependency. See `PRAISE_MATSIMHK_RELATIONSHIP.md` |
 
 ## B. Vendored JARs in `MetaModelCalibration/src/main/resources`
 
 | JAR | Size | Used? | Provenance / verdict |
 |---|---|---|---|
 | `jcool-core.jar` | 36 KB | **yes** (declared `system`) | jCool optimization toolkit, `cz.cvut.fit.jcool`; no longer maintained/published. Keep until the two classes are ported. |
-| `MATSim-HK-0.11.0.jar`, `MATSim-HK-0.11.0-sources.jar`, `MATSim-HK-0.10.0-SNAPSHOT.jar` | 0.35–0.62 MB | **no** | older packages of the HK fork; `0.11.0` does **not** contain `transitFareAndHandler`. Superseded by the `matsim-hk` module. Provenance understood → removal candidates, **but not in this PR**. |
+| `MATSim-HK-0.11.0.jar`, `MATSim-HK-0.11.0-sources.jar`, `MATSim-HK-0.10.0-SNAPSHOT.jar` | 0.35–0.62 MB | **no** | older packages of the HK fork; `0.11.0` does **not** contain `transitFareAndHandler`. Now entirely unnecessary: only 2 classes were ever needed and they are vendored as source. Provenance understood → removal candidates, **but not in this PR**. |
 | `ea.jar` | **26 MB** | **no** | MATLAB JavaBuilder runtime. |
 | `javabuilder.jar` | 0.45 MB | **no** | MATLAB JavaBuilder runtime. |
 | `OptimDemo1.jar`, `OptimDemo2.jar` | 32 KB each | **no** | MATLAB-generated optimization components (`OptimDemo1.Optimizer`). |

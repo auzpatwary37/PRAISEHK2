@@ -7,8 +7,8 @@ Legend: **C** = characterization test (pins legacy behaviour), **O** = independe
 (hand-computed / mathematically independent), **B** = boundary/edge test, **I** = integration test.
 `—` = absent. `P` = planned (this roadmap).
 
-Snapshot: **72 deterministic tests, 0 failures, ~9 s**, runnable offline
-(`mvn -o test` at the repository root).
+Snapshot: **82 deterministic tests, 0 failures, ~9 s**, runnable offline
+(`mvn -o test` in `MetaModelCalibration`).
 
 ---
 
@@ -103,6 +103,25 @@ Snapshot: **72 deterministic tests, 0 failures, ~9 s**, runnable offline
 | `maasSpecificFareLinkVolume` | — | — | — | — | — | P |
 | `smartCardEntryAndExit` | — | — | — | — | — | P |
 
+## 3b. Vendored transit fare contract (`transit.fare`)
+
+`FareCalculator` and `FareLink` were vendored from the HK MATSim fork (verbatim except the package
+declaration). `FareLink`'s grammar is a serialization contract for `MeasurementType`, so it is pinned.
+
+| Component / behaviour | C | O | B | I | Tests | Notes |
+|---|---|---|---|---|---|---|
+| `FareLink` NetworkWideFare parse | ✔ | ✔ | — | — | `FareLinkTest.parsesNetworkWideFare` | `type___board___alight___mode` |
+| `FareLink` NetworkWideFare round trip | ✔ | ✔ | — | — | `networkWideFareRoundTrips` | |
+| `FareLink` InVehicleFare parse | ✔ | ✔ | — | — | `parsesInVehicleFare` | `type___line___route___board___alight___mode` |
+| `FareLink` InVehicleFare round trip | ✔ | ✔ | — | — | `inVehicleFareRoundTrips` | |
+| `FareLink` unknown type rejected | ✔ | ✔ | — | — | `rejectsUnknownType` | |
+| `FareLink` truncated description | ✔ | — | ✔ | — | `truncatedDescriptionThrowsAIOOBE` | **FARE-1** (raw AIOOBE) |
+| `FareLink` from measurement id | ✔ | — | ✔ | — | `measurementIdMustBeAValidFareDescription` | what `MeasurementType` does |
+| `FareLink` constructor validation | ✔ | ✔ | ✔ | — | `fullConstructorValidates` | type/stop/mode combinations |
+| `FareLink` serialization constants | ✔ | — | — | — | `serialisationConstantsAreStable` | feeds XML writer/reader |
+| `FareLink` separator collision | ✔ | — | ✔ | — | `separatorIsNotEscaped` | **FARE-2** |
+| `FareCalculator` contract | — | — | — | — | — | P — no implementation exists in this module (**UNVERIFIED**, see MATSimHK doc §5.5) |
+
 ## 4. Calibration / meta-models / parameters
 
 | Component / algorithm | C | O | B | I | Tests | Notes |
@@ -151,7 +170,7 @@ Snapshot: **72 deterministic tests, 0 failures, ~9 s**, runnable offline
 
 | Behaviour | Status | Evidence |
 |---|---|---|
-| Clean clone builds offline | ✔ | `mvn -o test` at root; `MATSim-HK` + `MetaModelCalibration` reactor |
+| Clean clone builds offline | ✔ | `mvn -o test` in `MetaModelCalibration`; the MATSim-HK fork is no longer a build dependency |
 | No Hong Kong production data required | ✔ | all fixtures in-memory; only `paramReaderTrial1.csv` values copied as literals |
 | No absolute filesystem paths in tests | ✔ | `@TempDir` used; legacy absolute-path helper excluded |
 | No MATLAB required | ✔ | MATLAB jars unused; `MatlabOptimizer` returns null |
@@ -162,7 +181,7 @@ Snapshot: **72 deterministic tests, 0 failures, ~9 s**, runnable offline
 
 ## 7. CI quality gate (planned)
 
-* `mvn -o -B test` (deterministic, offline) — the primary gate.
+* `mvn -o -B test` (deterministic, offline) — the primary gate, run in `MetaModelCalibration`.
 * Do **not** gate on code-coverage percentage.
 * Add `mvn dependency:analyze` once the pom is cleaned, to catch undeclared/load-bearing deps.
 * Static checks only after the build is reproducibly green.

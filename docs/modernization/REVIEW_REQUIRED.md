@@ -16,6 +16,46 @@ No formula, tolerance, optimizer constant or weighting was modified in this PR.
 
 ---
 
+## `transit.fare` (vendored from the HK MATSim fork)
+
+### FARE-1 — `VERIFIED` — `FareLink(String)` throws a raw `ArrayIndexOutOfBoundsException` on a truncated description
+* **Where:** `FareLink(String fareLinkDescription)` splits on `"___"` and indexes `part[1..3]` or
+  `part[1..5]` with no length check.
+* **Legacy:** `new FareLink("NetworkWideFare___STOP_A")` and
+  `new FareLink("InVehicleFare___LINE_1___ROUTE_1")` throw `ArrayIndexOutOfBoundsException` rather than
+  a diagnostic `IllegalArgumentException`.
+* **Expected:** reject malformed input with a message naming the expected grammar.
+* **Evidence:** `FareLinkTest.truncatedDescriptionThrowsAIOOBE`.
+* **Risk:** `MeasurementType.fareLinkVolume` calls `new FareLink(m.getId().toString())` when the
+  `fareLink` attribute is absent, so any measurement whose id is not a valid fare description aborts
+  measurement extraction with an obscure error.
+  Evidence: `FareLinkTest.measurementIdMustBeAValidFareDescription`.
+* **Proposed resolution:** validate the token count and throw `IllegalArgumentException`. Do this only
+  after the fare-measurement pipeline has characterization tests, because the grammar is also a
+  serialization contract for `MeasurementsReader`/`Writer`.
+
+### FARE-2 — `VERIFIED` — the `___` separator is neither escaped nor validated
+* **Where:** `FareLink.seperator = "___"`; parsing and `toString()` both use it raw.
+* **Legacy:** an id containing `"___"` produces extra tokens; the parser silently reads the first
+  fields and **discards the tail**. Example: `NetworkWideFare___A___B___STOP___X___bus` parses with
+  `mode = "STOP"` and drops `X___bus` — no error, wrong result.
+* **Expected:** either escape the separator, or validate that the token count is exact.
+* **Evidence:** `FareLinkTest.separatorIsNotEscaped`.
+* **Proposed resolution:** add an exact token-count check so silent truncation becomes a failure.
+
+### FARE-3 — `READ` — dead fare code and dead imports removed with the fork
+* `MTRFareCalculator`, `ZonalFareCalculator`, `TransitStop`, `TransitFareHandler`,
+  `TransferDiscountCalculator`, `RouteHelper` had **zero** active references in PRAISEHK; the imports
+  of four of them were removed. The three usages of `MTRFareCalculator` in `CNLTransitRoute`
+  (lines ~317–332) were already commented out.
+* `AnalyticalModelTransitRoute.getFare(...)` accepts `Map<String, FareCalculator>` and
+  `List<FareLink>`, but **no `FareCalculator` implementation exists in this module**, so fare
+  calculation has no live source. This must be characterized before the transit utility is touched.
+* If MTR fare calculation was meant to be re-enabled, it must now be re-implemented against the
+  two-class `transit.fare` contract (with oracle tests), not re-imported from the fork.
+
+---
+
 ## ObjectiveCalculator (`calibrator/ObjectiveCalculator.java`)
 
 ### OBJ-1 — `VERIFIED` — AADT objective accumulates station counts *across* measurements
@@ -411,10 +451,12 @@ No formula, tolerance, optimizer constant or weighting was modified in this PR.
   `assertEquals(m, m2)` on `Measurements`, which has no `equals` override. Excluded and documented.
 * `AppTest` is an empty JUnit 3 `assertTrue(true)`.
 
-### CC-2 — `VERIFIED` — 3 non-UTF-8 bytes in the imported fork
-* `matsim-hk/src/main/java/createBus/BusDataExtractor.java` lines 339 (`0xA1`, `0xAF`) and 449
-  (`0x92`) are unmappable as UTF-8; javac emits them as `[ERROR]` diagnostics while the build still
-  succeeds. See `PRAISE_MATSIMHK_RELATIONSHIP.md` §5.
+### CC-2 — `VERIFIED` — 3 non-UTF-8 bytes in the HK fork source (external, no longer vendored)
+* The fork's `createBus/BusDataExtractor.java` (lines 339: `0xA1`, `0xAF`; line 449: `0x92`) is
+  unmappable as UTF-8; javac emits `[ERROR]` diagnostics while the build still succeeds.
+* **This file is no longer part of this repository** — the fork is not a build dependency, and
+  `BusDataExtractor` was never used by PRAISEHK. Recorded because it will resurface if the fork is
+  ever re-imported. See `PRAISE_MATSIMHK_RELATIONSHIP.md` §5.
 
 ### CC-3 — `READ` — `Measurements` has no `equals`/`hashCode`
 * Container and element equality is by reference only, which is why `MeasurementCreator`'s

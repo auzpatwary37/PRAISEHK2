@@ -17,27 +17,31 @@ Modernization work happens on feature branches created from it.
 
 ```
 PRAISEHK2/
-├── pom.xml                  Maven aggregator (praisehk-parent)
-├── matsim-hk/               Hong Kong MATSim extension fork (legacy reference; transit router + fares)
 ├── MetaModelCalibration/    PRAISEHK core: analytical SUE, measurements, objectives,
 │                            calibrator, meta-models, MATSim integration
-└── docs/modernization/      Forensic audit, behaviour catalogue, test matrix, defects
+├── docs/modernization/      Forensic audit, behaviour catalogue, test matrix, defects
+└── README.md
 ```
+
+The Hong Kong MATSim fork (`MATSim-HK`) is **no longer a build dependency**. The two classes PRAISEHK
+actually needed from it — `FareCalculator` and `FareLink` — are vendored under
+`ust.hk.praisehk.metamodelcalibration.transit.fare`, byte-for-byte identical to the fork apart from
+their `package` declaration. See
+[`PRAISE_MATSIMHK_RELATIONSHIP.md`](docs/modernization/PRAISE_MATSIMHK_RELATIONSHIP.md).
 
 ## Build and test
 
 Requirements: JDK 17. The build is self-contained and works **offline** once dependencies are cached.
 
 ```bash
+cd MetaModelCalibration
 mvn -B test          # full deterministic test suite
 mvn -o -B test       # same, offline (no network access)
 mvn -B -DskipTests test-compile
 ```
 
-`matsim-hk` is a real source module in this reactor (it was previously an untracked JAR plus an
-Eclipse project reference, which is why `mvn compile` never worked from a clean clone).
-`MetaModelCalibration/src/main/resources/jcool-core.jar` is declared with `system` scope because it
-is not published anywhere. See `docs/modernization/DEPENDENCIES.md`.
+`MetaModelCalibration/src/main/resources/jcool-core.jar` is declared with `system` scope because it is
+not published anywhere. See `docs/modernization/DEPENDENCIES.md`.
 
 Test rules — every test must be deterministic and must **not** require:
 
@@ -62,7 +66,7 @@ scheduled for replacement.
 | [`DEPENDENCIES.md`](docs/modernization/DEPENDENCIES.md) | every dependency, its users, provenance, verdict, upgrade order |
 | [`REVIEW_REQUIRED.md`](docs/modernization/REVIEW_REQUIRED.md) | suspected defects recorded **without** fixing them |
 | [`PRAISE_ODE_RELATIONSHIP.md`](docs/modernization/PRAISE_ODE_RELATIONSHIP.md) | relationship to the `ODEstimation` repository; identification of the actual differentiation method |
-| [`PRAISE_MATSIMHK_RELATIONSHIP.md`](docs/modernization/PRAISE_MATSIMHK_RELATIONSHIP.md) | relationship to the local-only `MATSim-HK` fork; how the build dependency is now modelled |
+| [`PRAISE_MATSIMHK_RELATIONSHIP.md`](docs/modernization/PRAISE_MATSIMHK_RELATIONSHIP.md) | how the `MATSim-HK` fork dependency was audited and removed; what was vendored and what was not |
 
 ## Development rule
 

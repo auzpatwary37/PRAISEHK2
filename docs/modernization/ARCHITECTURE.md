@@ -23,8 +23,12 @@ Root cause and remedy: `PRAISE_MATSIMHK_RELATIONSHIP.md`, `DEPENDENCIES.md`.
 
 ```
 PRAISEHK2/
-├── pom.xml                         # NEW aggregator: ust.hk.praisehk:praisehk-parent
-├── docs/modernization/             # NEW audit + TDD foundation
+├── MetaModelCalibration/           # single Maven module again (no aggregator needed)
+│   ├── pom.xml                     # + junit5/surefire, + jcool system dep; MATSim-HK dependency REMOVED
+│   └── src/{main,test}/java/ust/hk/praisehk/metamodelcalibration/
+│       ├── transit/fare/           # NEW: 2 vendored classes (FareCalculator, FareLink)
+│       └── ...                     # unchanged packages
+├── docs/modernization/             # NEW: audit + TDD foundation
 │   ├── ARCHITECTURE.md
 │   ├── LEGACY_BEHAVIOR.md
 │   ├── TEST_MATRIX.md
@@ -32,31 +36,31 @@ PRAISEHK2/
 │   ├── REVIEW_REQUIRED.md
 │   ├── PRAISE_MATSIMHK_RELATIONSHIP.md
 │   └── PRAISE_ODE_RELATIONSHIP.md
-├── matsim-hk/                      # NEW module: HK MATSim fork (legacy reference, verbatim)
-│   ├── pom.xml
-│   └── src/main/java/{dynamicTransitRouter, transitFareAndHandler, population, createBus, ...}
-└── MetaModelCalibration/
-    ├── pom.xml                     # + parent, + junit5/surefire, + matsim-hk dep, + jcool system dep
-    └── src/{main,test}/java/ust/hk/praisehk/metamodelcalibration/...
+└── README.md
 ```
 
-Reactor order: `matsim-hk` → `MetaModelCalibration`. Verified: `mvn -o -B test` → BUILD SUCCESS,
-72 tests, 0 failures, offline.
+Build: `cd MetaModelCalibration && mvn -o -B clean test` → BUILD SUCCESS, 82 tests, 0 failures, offline.
 
-Toolchain: JDK 17 (the only JDK present) compiling `MetaModelCalibration` with
-`<release>13</release>` and `matsim-hk` with source/target 17. Java 13 is not installed, so the
-`release 13` target is the compatibility contract; this should be revisited deliberately.
+The Hong Kong MATSim fork was first imported as a 153-file module, then reduced: the dependency
+closure was measured at 39 files / 11k LOC, but only **two** of those classes have any active use in
+PRAISEHK (`FareCalculator`, `FareLink`). Those two are vendored verbatim (package declaration aside),
+and the fork is no longer part of the build. Details in `PRAISE_MATSIMHK_RELATIONSHIP.md`.
 
-## 2. Package architecture (MetaModelCalibration, 88 main classes / ~17.9k LOC)
+Toolchain: JDK 17 (the only JDK present) compiling with `<release>13</release>`. Java 13 is not
+installed, so the `release 13` target is the compatibility contract; this should be revisited
+deliberately.
+
+## 2. Package architecture (MetaModelCalibration, 90 main classes / ~18k LOC)
 
 | Package | LOC (approx) | Responsibility | Depends on |
 |---|---|---|---|
+| `transit.fare` | ~230 | **vendored fare contract**: `FareCalculator` (interface used as `Map<String,FareCalculator>` by the transit utility) and `FareLink` (fare-observation identity + parsing, consumed by `MeasurementType`). Verbatim from the HK fork apart from the package declaration — see `PRAISE_MATSIMHK_RELATIONSHIP.md`. | MATSim only |
 | `analyticalModel` | ~3.4k | **interfaces + shared state**: `AnalyticalModel`, `AnalyticalModelLink/Network/Route/TransitRoute/ODpair(s)`, `SUEModelOutput`, `Trip`, `TripChain`, `TransitLink/DirectLink/TransferLink`, `TimeUtils`, `InternalParamCalibratorFunction` | MATSim core |
-| `analyticalModelImpl` | ~4.6k | **the SUE engine**: `CNLLink`, `CNLRoute`, `CNLTransitRoute`, `CNLTransitDirectLink`, `CNLTransitTransferLink`, `CNLNetwork`, `CNLODpairs`, `CNLSUEModel` (1672 LOC), `CNLSUEModelSubPop`, `SUEModelContTime` (1411 LOC), `SUEModelContTimeSubPop`, `CNLTripChain` | `analyticalModel`, MATSim-HK fare/transit |
-| `measurements` | ~1.6k | **observations**: `Measurement`, `Measurements`, `MeasurementType` (544 LOC enum mixing observation semantics + extraction + gradients + XML), `MeasurementsReader/Writer`, `MTRLinkVolumeInfo` | `analyticalModel`, MATSim-HK `FareLink` |
+| `analyticalModelImpl` | ~4.6k | **the SUE engine**: `CNLLink`, `CNLRoute`, `CNLTransitRoute`, `CNLTransitDirectLink`, `CNLTransitTransferLink`, `CNLNetwork`, `CNLODpairs`, `CNLSUEModel` (1672 LOC), `CNLSUEModelSubPop`, `SUEModelContTime` (1411 LOC), `SUEModelContTimeSubPop`, `CNLTripChain` | `analyticalModel`, `transit.fare` |
+| `measurements` | ~1.6k | **observations**: `Measurement`, `Measurements`, `MeasurementType` (544 LOC enum mixing observation semantics + extraction + gradients + XML), `MeasurementsReader/Writer`, `MTRLinkVolumeInfo` | `analyticalModel`, `transit.fare` |
 | `calibrator` | ~2.9k | **calibration**: `Calibrator`, `CalibratorImpl` (842 LOC, trust region), `AnalyticalModelOptimizer{,Impl}`, `ObjectiveCalculator`, `OptimizationFunction` + 8 objective/decision variants, `ParamReader` | `analyticalModel`, `matamodels`, `measurements`, jcobyla, jcool |
 | `matamodels` | ~2.0k | **surrogates**: `MetaModel`, `MetaModelImpl`, `AnalyticLinearMetaModel`, `AnalyticalQuadraticMetaModel`, `LinearMetaModel`, `QuadraticMetaModel`, `GradientBasedMetaModel`, `GradientBaseOptimizedMetaModel`, `GradientOptimizedMetaModel`, `SimAndAnalyticalGradientCalculator`, `MatrixBasedUnconstrainedAdam/GD` | `measurements`, jcobyla, ND4J, Smile, commons-math3 |
-| `matsimIntegration` | ~1.9k | **MATSim boundary**: event handlers (`LinkCount`, `LinkPCUCount`, `AverageOccupancy`, `FareLinkVolumeCount`, `TravelTime`, `SmartCardEntryAndExit`, `MTRPassengerFlowCounter`), modules, `SimRun`, `SignalFlowReductionGenerator`, `RoutesAndODGenerator*`, `MeasurementsStorage` | MATSim, Guice, MATSim-HK |
+| `matsimIntegration` | ~1.9k | **MATSim boundary**: event handlers (`LinkCount`, `LinkPCUCount`, `AverageOccupancy`, `FareLinkVolumeCount`, `TravelTime`, `SmartCardEntryAndExit`, `MTRPassengerFlowCounter`), modules, `SimRun`, `SignalFlowReductionGenerator`, `RoutesAndODGenerator*`, `MeasurementsStorage` | MATSim, Guice |
 | `Utils` | ~1.1k | `MapToArray`, `Tuple`, `TruncatedNormal`, `LinkVehicleCompReader`, `Matlab*` (dead), `Trial` | mixed, MATLAB (dead) |
 
 Dependency direction is downward-only in the intended sense:
@@ -69,18 +73,18 @@ of the couplings the target architecture must break.
 
 ```
                   (source imports)                 (source imports)
-  ODEstimation  ──────────────────▶  PRAISEHK  ◀──────────────  (none)
-       │                                 ▲
-       │ (pom, declared)                 │ (module dep, this PR)
-       ▼                                 │
-   MATSim-HK  ◀──────────────────────────┘
+  ODEstimation  ──────────────────▶  PRAISEHK  ◀──────────────  MATSim-HK (reference only)
+                                                  └─ vendored: 2 classes (transit.fare)
 ```
 
 * **ODEstimation → PRAISEHK**: hard source dependency (30+ imported classes), **not declared** in
   `ODEstimation/pom.xml`. Evidence in `PRAISE_ODE_RELATIONSHIP.md` §1.
-* **PRAISEHK → MATSim-HK**: now a declared Maven module dependency.
-* **ODEstimation → MATSim-HK**: declared (`MATSim-HK:11.0`).
-* MATSim version split: PRAISEHK/MATSim-HK on `15.0-SNAPSHOT`; ODEstimation on `14.0-SNAPSHOT`.
+* **PRAISEHK → MATSim-HK**: **no longer a build edge.** The 39-file transitive closure was reduced to
+  the 2 classes actually used, which are now vendored as source in `transit.fare`. The fork remains a
+  local reference implementation only.
+* **ODEstimation → MATSim-HK**: declared (`MATSim-HK:11.0`). Once ODEstimation is buildable, the same
+  vendoring question should be asked of it.
+* MATSim version split: PRAISEHK on `15.0-SNAPSHOT`; ODEstimation on `14.0-SNAPSHOT`.
 
 This means the historical "circular relationship" is **not** a source cycle between ODEstimation and
 PRAISEHK; it is the absence of declared build edges, which forced both projects to compile only
