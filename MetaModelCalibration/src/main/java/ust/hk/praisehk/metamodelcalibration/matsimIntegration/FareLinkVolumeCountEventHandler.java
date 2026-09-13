@@ -14,7 +14,7 @@ import org.matsim.core.utils.collections.Tuple;
 
 import com.google.inject.Inject;
 
-import transitFareAndHandler.FareLink;
+import ust.hk.praisehk.metamodelcalibration.transit.fare.FareLink;
 import ust.hk.praisehk.metamodelcalibration.measurements.Measurement;
 import ust.hk.praisehk.metamodelcalibration.measurements.MeasurementType;
 import ust.hk.praisehk.metamodelcalibration.measurements.Measurements;

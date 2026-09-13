@@ -15,7 +15,7 @@ import org.matsim.core.utils.collections.Tuple;
 import org.matsim.pt.transitSchedule.api.TransitSchedule;
 import org.matsim.vehicles.Vehicles;
 
-import dynamicTransitRouter.fareCalculators.FareCalculator;
+import ust.hk.praisehk.metamodelcalibration.transit.fare.FareCalculator;
 import ust.hk.praisehk.metamodelcalibration.analyticalModel.AnalyticalModelNetwork;
 import ust.hk.praisehk.metamodelcalibration.analyticalModel.AnalyticalModelODpair;
 import ust.hk.praisehk.metamodelcalibration.analyticalModel.TransitLink;

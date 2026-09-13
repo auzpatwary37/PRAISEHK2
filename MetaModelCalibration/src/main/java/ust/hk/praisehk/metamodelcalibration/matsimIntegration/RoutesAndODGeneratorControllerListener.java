@@ -9,7 +9,7 @@ import org.matsim.core.controler.listener.ShutdownListener;
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
 
-import dynamicTransitRouter.fareCalculators.FareCalculator;
+import ust.hk.praisehk.metamodelcalibration.transit.fare.FareCalculator;
 import ust.hk.praisehk.metamodelcalibration.analyticalModel.AnalyticalModel;
 
 

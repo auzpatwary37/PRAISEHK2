@@ -37,7 +37,7 @@ import com.google.common.collect.Lists;
 
 import de.xypron.jcobyla.Cobyla;
 import de.xypron.jcobyla.CobylaExitStatus;
-import dynamicTransitRouter.fareCalculators.FareCalculator;
+import ust.hk.praisehk.metamodelcalibration.transit.fare.FareCalculator;
 import ust.hk.praisehk.metamodelcalibration.analyticalModel.AnalyticalModel;
 import ust.hk.praisehk.metamodelcalibration.analyticalModel.AnalyticalModelLink;
 import ust.hk.praisehk.metamodelcalibration.analyticalModel.AnalyticalModelNetwork;

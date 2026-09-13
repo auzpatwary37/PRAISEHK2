@@ -18,7 +18,7 @@ import org.junit.jupiter.api.Test;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.network.Link;
 
-import transitFareAndHandler.FareLink;
+import ust.hk.praisehk.metamodelcalibration.transit.fare.FareLink;
 import ust.hk.praisehk.metamodelcalibration.analyticalModel.SUEModelOutput;
 import ust.hk.praisehk.metamodelcalibration.fixtures.TimeBeans;
 

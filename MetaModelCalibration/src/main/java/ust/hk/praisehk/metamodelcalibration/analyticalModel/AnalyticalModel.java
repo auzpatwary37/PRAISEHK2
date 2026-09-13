@@ -9,7 +9,7 @@ import org.matsim.api.core.v01.population.Population;
 import org.matsim.core.utils.collections.Tuple;
 import org.matsim.pt.transitSchedule.api.TransitSchedule;
 
-import dynamicTransitRouter.fareCalculators.FareCalculator;
+import ust.hk.praisehk.metamodelcalibration.transit.fare.FareCalculator;
 import ust.hk.praisehk.metamodelcalibration.measurements.Measurements;
 
 

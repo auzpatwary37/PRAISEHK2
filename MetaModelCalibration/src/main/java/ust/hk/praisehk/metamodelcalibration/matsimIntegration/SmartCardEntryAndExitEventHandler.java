@@ -36,8 +36,7 @@ import org.matsim.vehicles.Vehicle;
 
 import com.google.inject.name.Named;
 
-import dynamicTransitRouter.fareCalculators.FareCalculator;
-import dynamicTransitRouter.transfer.TransferDiscountCalculator;
+import ust.hk.praisehk.metamodelcalibration.transit.fare.FareCalculator;
 import ust.hk.praisehk.metamodelcalibration.measurements.Measurement;
 import ust.hk.praisehk.metamodelcalibration.measurements.MeasurementType;
 import ust.hk.praisehk.metamodelcalibration.measurements.Measurements;

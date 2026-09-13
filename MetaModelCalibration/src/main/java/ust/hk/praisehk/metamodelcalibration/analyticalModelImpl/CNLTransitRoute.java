@@ -26,9 +26,8 @@ import org.matsim.pt.transitSchedule.api.TransitRoute;
 import org.matsim.pt.transitSchedule.api.TransitSchedule;
 import org.matsim.pt.transitSchedule.api.TransitStopFacility;
 
-import dynamicTransitRouter.fareCalculators.FareCalculator;
-import dynamicTransitRouter.fareCalculators.MTRFareCalculator;
-import transitFareAndHandler.FareLink;
+import ust.hk.praisehk.metamodelcalibration.transit.fare.FareCalculator;
+import ust.hk.praisehk.metamodelcalibration.transit.fare.FareLink;
 import ust.hk.praisehk.metamodelcalibration.analyticalModel.AnalyticalModelNetwork;
 import ust.hk.praisehk.metamodelcalibration.analyticalModel.AnalyticalModelODpair;
 import ust.hk.praisehk.metamodelcalibration.analyticalModel.AnalyticalModelTransitRoute;

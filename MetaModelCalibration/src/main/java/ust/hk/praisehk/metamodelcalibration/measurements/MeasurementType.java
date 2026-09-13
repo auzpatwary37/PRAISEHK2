@@ -17,8 +17,7 @@ import org.matsim.pt.transitSchedule.api.TransitRoute;
 import org.w3c.dom.Element;
 import org.xml.sax.Attributes;
 
-import dynamicTransitRouter.TransitStop;
-import transitFareAndHandler.FareLink;
+import ust.hk.praisehk.metamodelcalibration.transit.fare.FareLink;
 import ust.hk.praisehk.metamodelcalibration.analyticalModel.AnalyticalModel;
 import ust.hk.praisehk.metamodelcalibration.analyticalModel.AnalyticalModelNetwork;
 
