@@ -7,7 +7,7 @@ Legend: **C** = characterization test (pins legacy behaviour), **O** = independe
 (hand-computed / mathematically independent), **B** = boundary/edge test, **I** = integration test.
 `—` = absent. `P` = planned (this roadmap).
 
-Snapshot: **106 deterministic tests, 0 failures, ~9 s**, runnable offline
+Snapshot: **130 deterministic tests, 0 failures, ~9 s**, runnable offline
 (`mvn -o test` in `MetaModelCalibration`), enforced in CI on every PR into the trunk.
 
 ---
@@ -132,11 +132,14 @@ declaration). `FareLink`'s grammar is a serialization contract for `MeasurementT
 
 | Component / algorithm | C | O | B | I | Tests | Notes |
 |---|---|---|---|---|---|---|
-| `ParamReader` valid file, bounds, codes | — | — | — | — | — | P (phase 5) |
-| `ParamReader` missing file fallback | — | — | — | — | — | P (**PARAM-1**) |
-| `ParamReader` malformed CSV / missing columns | — | — | — | — | — | P (**PARAM-2**) |
-| `ScaleUp` / `ScaleDown` / `ScaleUpLimit` | — | — | — | — | — | P (**PARAM-5/6**) |
-| `SetParamToConfig` disk round trip | — | — | — | — | — | P (**PARAM-3**) |
+| `ParamReader` parse: bounds / value / code keys / inclusion | ✔ | ✔ | ✔ | — | `ParamReaderTest.Parsing.readsBoundsValueAndInclusion`, `emptySubPopulationIsExcludedAndIdIsTheParamName`, `allIsExcludedFromSubPopulations` | **PARAM-2b**; maps keyed by CSV **Code** |
+| `ParamReader` missing file fallback | ✔ | — | ✔ | — | `MissingFile.missingFileSilentlyFallsBack` (CWD-relative; guarded by an assumption) | **PARAM-1** |
+| `ParamReader` malformed CSV | ✔ | — | ✔ | — | `Malformed.tooFewColumnsThrows`, `nonNumericThrows`, `trailingEmptyIncludeFlagThrows`, `firstLineIsAlwaysDiscarded`, `emptyFileIsAccepted` | **PARAM-2** |
+| `ParamReader` duplicate codes | ✔ | ✔ | ✔ | — | `Parsing.duplicateCodeInconsistency`, `duplicateCodeLaterRowIncluded` | **PARAM-4** (general vs initial maps disagree) |
+| `ScaleUp` / `ScaleDown` / `ScaleUpLimit` | ✔ | ✔ | ✔ | — | `Scaling.scaleUp`, `scaleDown`, `scaleUpLimit`, `scaleUpOmitsAbsentCodes`, `scaleUpAlreadyScaledIsIdentity`, `scaleUpUnknownInput`, `scaleDownNoOverlapReturnsInput`, `scaleDownPartialOverlapEmitsNullKey` | **PARAM-5**, **PARAM-6** |
+| `generateSubPopSpecificParam` | ✔ | ✔ | ✔ | — | `SubPopExtraction.extractsMatchingEntries`, `matchingKeyWithoutSpaceThrows` | **PARAM-5** |
+| `SetParamToConfig` CWD disk round trip + value application | ✔ | ✔ | ✔ | ✔ | `SetParamToConfigTests.writesConfigToCwdAndAppliesValues` | **PARAM-3** |
+| `getDefaultTimeBean` | ✔ | ✔ | — | — | `DefaultTimeBean.fiveCanonicalPeriods` | 5 HK periods, boundaries pinned |
 | `AnalyticLinearMetaModel` `y = β0 + βA·A(x) + βᵀx` | — | P | — | — | — | P (phase 6); oracle = weighted ridge |
 | `AnalyticLinearMetaModel` weighting | — | — | — | — | — | P |
 | `AnalyticLinearMetaModel` 5 fitting paths equivalence | — | — | — | — | — | P (**MODEL-2**) |

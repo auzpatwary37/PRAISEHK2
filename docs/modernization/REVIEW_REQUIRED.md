@@ -389,31 +389,64 @@ No formula, tolerance, optimizer constant or weighting was modified in this PR.
 
 ## ParamReader (`calibrator/ParamReader.java`)
 
-### PARAM-1 — `READ` — silent fallback to a **relative** default path
-* `new ParamReader(fileLoc)`: if `fileLoc` does not exist, `this.paramFile = new File("src/main/resources/paramReaderTrial1.csv")` with **no warning**. The path is relative to the process CWD, so the same call succeeds or fails depending on where the JVM was launched. A missing *requested* file silently yields the wrong parameters.
+All six items below are now `VERIFIED` by `ParamReaderTest` (23 tests). Correction to an earlier draft:
+the internal maps are keyed by the CSV **Code** column and the `id` column is ignored entirely, which
+matters for every reading of this class.
 
-### PARAM-2 — `READ` — raw `split(",")` parsing
-* `line.split(",")` drops trailing empty fields, so a row with empty trailing columns makes
-  `part[6]`/`part[7]` throw `ArrayIndexOutOfBoundsException`. No header validation; no quoted-field
-  handling despite `commons-csv` being declared (and unused).
+### PARAM-1 — `VERIFIED` — silent fallback to a **relative** default path
+* `new ParamReader(fileLoc)`: if `fileLoc` does not exist, `this.paramFile = new File("src/main/resources/paramReaderTrial1.csv")` with **no warning and no exception**. The path is relative to the process CWD, so the same call loads the bundled sample parameters or silently yields **empty maps**, depending on where the JVM was launched. A missing *requested* file therefore produces the wrong parameter set rather than an error.
+* **Evidence:** `ParamReaderTest.MissingFile.missingFileSilentlyFallsBack` — asserting `getDefaultFileLoc()` is the relative path, then (guarded by an assumption so the test is honest off the module dir) that the bundled file's codes `1` and `14` are loaded.
+* **Note:** `paramReaderTrial1.csv` leaves the SubPopulation column empty on every row, so the fallback also yields an **empty** sub-population list.
 
-### PARAM-3 — `READ` — `SetParamToConfig` writes to disk and reloads
-* `new ConfigWriter(config).write("config_Intermediate.xml"); Config configOut = ConfigUtils.loadConfig("config_Intermediate.xml");` — a relative path, a filesystem round trip, and a classpath/encoding dependency inside what should be a pure transformation. Also `System.out.println(config.isLocked())` prints state on every call.
+### PARAM-2 — `VERIFIED` — raw `split(",")` parsing, and the `id` column is discarded
+* `line.split(",")` removes trailing empty fields, so a row ending in an empty column makes
+  `part[7]` throw `ArrayIndexOutOfBoundsException`; a short row fails earlier at `part[5]`. No
+  header validation, no quoted-field handling, and no use of the declared-but-unused `commons-csv`.
+* `String paramId=part[2];` is **immediately overwritten** in both branches of the following
+  `if/else`, so the `id` column is dead input: `paramId` is always rebuilt as `subPopulation + " " + parameterName` (or just `parameterName` when the sub-population is empty).
+* **Evidence:** `Malformed.tooFewColumnsThrows`, `nonNumericThrows`, `trailingEmptyIncludeFlagThrows`,
+  `Parsing.idColumnIsIgnored`.
+* **PARAM-2b — `VERIFIED` — the first line is discarded unconditionally:** the constructor calls
+  `bf.readLine()` to skip a header with no validation, so a headerless file silently loses its first
+  data row. Evidence: `Malformed.firstLineIsAlwaysDiscarded`.
 
-### PARAM-4 — `READ` — duplicate parameter codes silently overwrite
-* `DefaultParam.put(part[6], …)`, `paramLimit.put(part[6], …)`, `initialParam.put(part[6], …)` are keyed by the **Code** column (not `paramName`/`paramId`). Duplicate codes collapse last-wins with no warning. `subParamAndLimit.csv` legitimately repeats codes (e.g. code `3`, `4`, `8`, `13` across sub-populations), and `ParamReader`'s internal maps key on code, so cross-sub-population codes collide by design.
+### PARAM-3 — `VERIFIED` — `SetParamToConfig` writes to disk and reloads
+* `new ConfigWriter(config).write("config_Intermediate.xml"); Config configOut = ConfigUtils.loadConfig("config_Intermediate.xml");` — a **CWD-relative** path, a filesystem round trip and a parse dependency inside what should be a pure transformation. The Config does reach the caller with the values applied.
+* **Evidence:** `SetParamToConfigTests.writesConfigToCwdAndAppliesValues` asserts the file appears in the CWD, that `qsim().getFlowCapFactor()` equals the CSV's `CapacityMultiplier`, and deletes the file afterwards so the working tree is left clean.
+* Minor: `System.out.println(config.isLocked())` prints on every call.
 
-### PARAM-5 — `READ` — `ScaleDown` can emit `null` values
-* `ScaleDown` returns early (input unchanged) when no key is in `ParamNoCode`. Otherwise it does
-  `scaledDownParam.put(this.ParamNoCode.get(s), param.get(s))` for **every** key `s`, so keys absent
-  from `ParamNoCode` produce a `null` key with a non-null value. `generateSubPopSpecificParam` then
-  does `s.split(" ")[1]` → `ArrayIndexOutOfBoundsException` for any key without a space.
+### PARAM-4 — `VERIFIED` — a duplicated code is inconsistent between the general and initial maps
+* `DefaultParam`, `paramLimit`, `initialParam` and `initialParamLimit` are keyed by the **Code**
+  column (not `paramName`/`paramId`). On a duplicate code the values and bounds are **last-wins**, but
+  `initialParam` is only *written* when `IncludeIninitialParam` is true — it is never removed — so a
+  later `FALSE` row leaves the **first** row's value in place, and `initialParamLimit` keeps the
+  bounds captured at the first row's time. The general map and the initial map therefore **disagree**
+  about the same code.
+* `subParamAndLimit.csv` legitimately repeats codes across sub-populations (e.g. `3`, `4`, `8`, `13`),
+  and the maps key on code, so cross-sub-population codes collide by design.
+* **Evidence:** `Parsing.duplicateCodeInconsistency` (value/bounds 150/(100,200) from the last row vs
+  initial value/bounds 5/(0,10) from the first), `duplicateCodeLaterRowIncluded`.
 
-### PARAM-6 — `READ` — `ScaleUp`/`ScaleUpLimit` dispatch on `containsAll` and can misroute
-* `if (this.ParamNoCode.values()).containsAll(trialParam.keySet())` then an empty body; the
-  `else if` / `else` branches handle the rest. When `allowUnkownParamaeterWhileScalingUp == false`
-  an unrecognised input throws — but when it is `true` the method silently passes unknown
-  parameters through, which is a configuration-dependent behaviour change.
+### PARAM-5 — `VERIFIED` — `ScaleDown` can emit a `null` key; `generateSubPopSpecificParam` can throw
+* `ScaleDown` returns the input unchanged when **no** key overlaps `ParamNoCode`, but otherwise maps
+  **every** key through `paramNoCode.get(s)`, so a partially-overlapping input yields an entry with a
+  **`null` key**. Downstream `ScaleUp`/`ScaleUpLimit` then iterate `ParamNoCode`, so the null-keyed
+  entry is silently dropped — but it has already been inserted into a map handed to callers.
+* `generateSubPopSpecificParam` selects keys by `s.contains(subPopName) || s.contains("All")` and then
+  does `s.split(" ")[1]`, so a matching key with no space (`"All"` itself, or a bare sub-population
+  name) throws `ArrayIndexOutOfBoundsException`.
+* **Evidence:** `Scaling.scaleDownNoOverlapReturnsInput`, `scaleDownPartialOverlapEmitsNullKey`,
+  `SubPopExtraction.matchingKeyWithoutSpaceThrows`, `extractsMatchingEntries`.
+
+### PARAM-6 — `VERIFIED` — `ScaleUp` dispatch on `containsAll`, and the unknown-parameter switch
+* `if ((this.ParamNoCode.values()).containsAll(trialParam.keySet())) { }` has an **empty body**, so the
+  "all keys are codes" case falls through to the loop; the `else if` handles "already scaled" and
+  returns the input; the `else` throws unless `allowUnkownParamaeterWhileScalingUp` is true, in which
+  case unknown keys are passed through unchanged. Behaviour therefore depends on a mutable flag.
+* `ScaleUp` also **omits** codes that are absent from the input rather than defaulting them
+  (the defaulting line is commented out), so a partial input silently yields a partial parameter map.
+* **Evidence:** `Scaling.scaleUp`, `scaleUpOmitsAbsentCodes`, `scaleUpAlreadyScaledIsIdentity`,
+  `scaleUpUnknownInput`.
 
 ---
 
