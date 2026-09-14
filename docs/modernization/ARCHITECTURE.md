@@ -41,9 +41,9 @@ PRAISEHK2/
 └── README.md
 ```
 
-Build: `cd MetaModelCalibration && mvn -o -B clean test` → BUILD SUCCESS, 157 tests, 0 failures, offline.
-Build: `cd MetaModelCalibration && mvn -o -B clean test` → BUILD SUCCESS, 158 tests, 0 failures, offline.
-Build: `cd MetaModelCalibration && mvn -o -B clean test` → BUILD SUCCESS, 153 tests, 0 failures, offline.
+Build: `mvn -o -B clean test` from the repository root, or `cd MetaModelCalibration && mvn -o -B
+clean test` → BUILD SUCCESS, **181 tests (1 skipped), 0 failures**, offline. Both invocations are
+verified equivalent.
 
 The Hong Kong MATSim fork was first imported as a 153-file module, then reduced: the dependency
 closure was measured at 39 files / 11k LOC, but only **two** of those classes have any active use in
@@ -177,9 +177,7 @@ matsim-adapter/      ◀── matsimIntegration/*, and the vendored transit.far
   `Proxy.NO_PROXY`, or its own proxy configuration. Hard isolation, if required, needs enforcement
   outside the JVM (network namespace, firewall, or a no-egress container) and is **not** in place.
 * Offline verification: `cd MetaModelCalibration && mvn -o -B clean test`
-  → BUILD SUCCESS, 157 tests, 0 failures, zero compiler diagnostics.
-  → BUILD SUCCESS, 158 tests, 0 failures, zero compiler diagnostics.
-  → BUILD SUCCESS, 153 tests, 0 failures, zero compiler diagnostics.
+  → BUILD SUCCESS, **181 tests (1 skipped), 0 failures**, zero compiler diagnostics.
 
 ## 6. Delivery roadmap (small, behaviour-protected PRs)
 

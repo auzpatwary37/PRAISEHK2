@@ -13,14 +13,13 @@ The C/O distinction is load-bearing for the next phase: oracle-backed semantics 
 by a redesign, whereas characterized defects are free to be fixed deliberately (with a migration
 decision). A row must not be marked `O` merely because a test exists.
 
-Snapshot: **157 deterministic tests, 0 failures, ~9 s**, runnable offline
-Snapshot: **158 deterministic tests, 0 failures, ~9 s**, runnable offline
-Snapshot: **153 deterministic tests, 0 failures, ~9 s**, runnable offline
+Snapshot: **181 tests (1 skipped), 0 failures, ~9 s**, runnable offline
 (`mvn -o test` in `MetaModelCalibration`), enforced in CI on every PR into the trunk.
 
-Merge-order note: this count is for the trust-region branch, which is based on the trunk *before* the
-meta-model-oracle PR. That PR adds a further 13 tests (one of them `@Disabled` by design, see MODEL-5),
-after which the total is 171. Only this snapshot line and the count in `ARCHITECTURE.md` overlap.
+How the count is composed: **158** on the trunk after the meta-model oracle merged, **+14** from the
+trust-region state machine (one `@Disabled` by design, see MODEL-5), **+9** from the clone/CSV
+characterization gaps. This snapshot line and the two counts in `ARCHITECTURE.md` are the only
+hand-maintained numbers; a deliberate change to any of them must be visible in the same PR.
 
 ---
 
