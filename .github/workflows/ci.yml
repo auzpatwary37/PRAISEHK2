@@ -4,9 +4,14 @@ name: deterministic-tests
 # to it.
 #
 # Design notes:
-#  * The build has NO root POM - MetaModelCalibration is the only module, so all
-#    Maven invocations set working-directory. A bare `mvn test` at the repo root
-#    fails by design.
+#  * TEMPORARY CI SCOPE. All Maven invocations set working-directory to
+#    MetaModelCalibration. A root reactor POM now exists, so this is no longer forced;
+#    it is kept because the harness historically pinned the CWD there. Before a SECOND
+#    module is added this gate MUST move to the reactor root, otherwise a new module
+#    could be added and never be exercised by the required check. Moving it is safe:
+#    Surefire pins workingDirectory to ${project.basedir}, which is still the module
+#    directory under reactor execution (verified: a root-level run reports 0 skipped).
+#    See docs/modernization/ARCHITECTURE.md section 5.
 #  * `mvn` (not `mvn -o`) is used: a fresh runner has an empty ~/.m2, so the build
 #    must be allowed to download dependencies once; the cache below makes later
 #    runs fast. The mission's "no network" rule applies to the TESTS, which
