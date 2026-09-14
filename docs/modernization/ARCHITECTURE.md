@@ -158,8 +158,18 @@ matsim-adapter/      ◀── matsimIntegration/*, and the vendored transit.far
 
 ## 6. Delivery roadmap (small, behaviour-protected PRs)
 
+The **PR numbers below are roadmap ordinals, not GitHub PR numbers** — GitHub numbering diverges
+because the CI workflow landed as its own GitHub PR (`#4`) and does not appear in this roadmap.
+
 Two tracks. Track B (ODEstimation) is **independent of** Track A and must not be deferred behind it:
 it is the gate for Track C.
+
+### Infrastructure
+
+| Item | Content | Status |
+|---|---|---|
+| CI | `.github/workflows/ci.yml` — deterministic suite on every PR into the trunk, plus a guard that fails if fewer than 80 tests report | done |
+| Protection | `modernization/main` requires the `mvn -B clean test (JDK 17)` check (strict); force-push and deletion disallowed | done |
 
 ### Track A — PRAISEHK characterization
 
