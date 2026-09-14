@@ -656,8 +656,13 @@ matters for every reading of this class.
 ### CAL-6 — `VERIFIED` — `drawRandomPoint` uses `Math.random()`
 * Non-seedable; makes random restarts and any test that reaches them nondeterministic. The modern
   target must inject a seeded RNG.
-* **Evidence:** `CalibratorImplStateMachineTest.DrawRandomPoint.boundsRespectedButNondeterministic` —
-  the point respects the bounds and is keyed by the CSV **Code** column, but repeated draws differ.
+* **Evidence:** `CalibratorImplStateMachineTest.DrawRandomPoint.boundsRespectedAndKeyedByCode` — the
+  point respects the bounds and is keyed by the CSV **Code** column. The test deliberately does **not**
+  assert that two draws differ: that would make a "deterministic" suite depend on `Math.random()` and
+  could fail by chance. Non-seedability is **source-established** — the production path calls
+  `Math.random()` and offers no seed or RNG parameter — rather than proven by comparing draws. This
+  distinction is the same one the C/`O` legend insists on: a test that exists is not a test that
+  proves the property in its name.
 
 ### CAL-7 — `READ` — `parallelStream()` over measurements while mutating maps
 * `createMetaModel` (instance method) does

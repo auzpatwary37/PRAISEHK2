@@ -177,37 +177,18 @@ declaration). `FareLink`'s grammar is a serialization contract for `MeasurementT
 | scaling fields inert in the live path | ✔ | ✔ | — | — | `scalingFieldsAreIdentity` | **MODEL-4** |
 | constructor requires iteration key 0 | ✔ | — | ✔ | — | `constructorRequiresIterationZero` | **MODEL-1** |
 | static `errorT` | — | — | — | — | — | **MODEL-3**, record-only (unobservable: no getter) |
-| `LinearMetaModel`, `QuadraticMetaModel`, `AnalyticalQuadraticMetaModel` | — | P | — | — | — | P |
-| `GradientBasedMetaModel` (I/II/III), `SimAndAnalyticalGradientCalculator` | — | P | — | — | — | P; the gradient calculator must be distinguished from analytic derivatives |
-| `CalibratorImpl` trust ratio / accept / reject | — | P | — | — | — | P (phase 7) |
-| `AnalyticLinearMetaModel` `y = β0 + βA·A(x) + βᵀx` | — | P | — | — | — | P (phase 6); oracle = weighted ridge |
-| `AnalyticLinearMetaModel` weighting | — | — | — | — | — | P |
-| `AnalyticLinearMetaModel` 5 fitting paths equivalence | — | — | — | — | — | P (**MODEL-2**) |
-| `AnalyticLinearMetaModel` dense-index assumption | — | — | P | — | — | P (**MODEL-1**) |
-| `AnalyticLinearMetaModel` static `errorT` | — | — | P | — | — | P (**MODEL-3**) |
-| `LinearMetaModel`, `QuadraticMetaModel` | — | P | — | — | — | P |
-| `AnalyticalQuadraticMetaModel` | — | P | — | — | — | P |
-| `GradientBasedMetaModel` (I/II/III) | — | — | — | — | — | P |
-| `SimAndAnalyticalGradientCalculator` | — | P | — | — | — | P; must be distinguished from analytic derivatives |
+| other meta-model families: `LinearMetaModel`, `QuadraticMetaModel`, `AnalyticalQuadraticMetaModel`, `GradientBasedMetaModel` (I/II/III), `SimAndAnalyticalGradientCalculator` | — | P | — | — | — | not yet characterized. The gradient calculator must be kept distinct from analytic derivatives, and `SimAndAnalyticalGradientCalculator` is not the same object as the analytic derivative used by the ODEstimation work |
 | `CalibratorImpl` constructor / tunables | ✔ | — | — | — | `CalibratorImplStateMachineTest.Construction.tunablesArePinned`, `maxTrRadiusIgnoresTheConfiguredInitialRadius` | **CAL-1** |
 | `CalibratorImpl` iteration 0 (no acceptance test) | ✔ | — | — | ✔ | `StateMachine.iterationZeroHasNoAcceptanceTest` | also asserts the legacy `0th Objective Value` stdout report |
-| acceptance policy: accept vs reject | ✔ | — | ✔ | ✔ | `StateMachine.improvedObjectiveIsAccepted` (asserts only "not shrunk"), `worsenedObjectiveIsRejected` (`25 -> 22.5`), `radiusIsFlooredAtMinTrRadius` | **CAL-2**; the two ACCEPTED sub-branches (grow on `rho >= 0.01` vs hold below it) are **not** distinguished - `rho` is not settable from outside. **CAL-3** pending |
+| acceptance policy: accept vs reject | ✔ | — | ✔ | ✔ | `StateMachine.improvedObjectiveIsAccepted` (asserts only "not shrunk"), `worsenedObjectiveIsRejected` (`25 -> 22.5`) | **CAL-2**; the two ACCEPTED sub-branches (grow on `rho >= 0.01` vs hold below it) are **not** distinguished - `rho` is not settable from outside. **CAL-3** pending |
+| trust-radius floor (`minTrRadius`) | ✔ | ✔ | ✔ | — | `StateMachine.radiusIsFlooredAtMinTrRadius` | `O` for the clamp: `max(minTrRadius, TrRadius * 0.9)` computed against a raised floor, so the shrink is not applied below the bound |
 | internal-recalibration result application | ✔ | — | ✔ | ✔ | `StateMachine.internalCalibrationResultIsDiscarded`, `counterRestartsAfterTheTrigger` | **CAL-11**: the callback fires and the counter resets, but the recalibrated measurements are **discarded** |
-| trust-radius floor (`minTrRadius`) | ✔ | ✔ | ✔ | — | `StateMachine.radiusIsFlooredAtMinTrRadius` | `max(24, 22.5)` |
-| consecutive rejection -> internal parameter calibration | ✔ | — | ✔ | ✔ | `StateMachine.consecutiveRejectionTriggersInternalCalibration` | trigger reached and counter reset |
 | `updateAnalyticalMeasurement` gate | ✔ | — | ✔ | — | `UpdateAnalyticalMeasurement.*` (4 tests) | **CAL-5** |
-| `drawRandomPoint` bounds + nondeterminism | ✔ | — | ✔ | — | `DrawRandomPoint.boundsRespectedButNondeterministic` | **CAL-6** |
+| `drawRandomPoint` bounds + keying | ✔ | — | ✔ | — | `DrawRandomPoint.boundsRespectedAndKeyedByCode` | **CAL-6**; asserts bounds and the CSV-`Code` key set only. Non-seedability is a **source-established** property (`Math.random()`, no seed parameter), deliberately **not** asserted by comparing random draws |
 | `calcAverageMetaParamsChange` k=0 / missing old fit | ✔ | ✔ | ✔ | — | `AverageMetaParamsChange.noMetaModelsYieldsNaN`, `missingOldMetaModelThrows` | **CAL-8**; NaN silently disables the restart |
 | optimizer start vector partially initialised | — | — | — | — | — | **CAL-10**, record-only (start vector not observable) |
 | acceptance when `rho` is NaN/Inf/negative | — | — | P | — | — | **CAL-3**; `rho` depends on the fitted meta-model prediction and cannot be set from outside |
 | `parallelStream` determinism, `createMetaModel` null gradients | — | — | P | — | — | **CAL-4**, **CAL-7** |
-| `CalibratorImpl` `maxTrRadius` init bug | — | — | P | — | — | P (**CAL-1**) |
-| `CalibratorImpl` NaN / Inf / zero predicted reduction | — | — | P | — | — | P (**CAL-3**) |
-| `createMetaModel` null gradient handling | — | — | P | — | — | P (**CAL-4**) |
-| `updateAnalyticalMeasurement` gate | — | — | P | — | — | P (**CAL-5**) |
-| `drawRandomPoint` seeded RNG | — | — | P | — | — | P (**CAL-6**) |
-| `parallelStream` determinism | — | — | P | — | — | P (**CAL-7**) |
-| `calcAverageMetaParamsChange` k=0 | — | — | P | — | — | P (**CAL-8**) |
 
 ## 5. Differentiation (ODEstimation) — blocked
 

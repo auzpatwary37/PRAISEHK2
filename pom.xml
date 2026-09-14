@@ -26,8 +26,15 @@
 		     here rather than another repository to wire up by hand.
 
 		The single module builds identically whether invoked from here or from its own
-		directory; CI continues to run inside `MetaModelCalibration` deliberately, so
-		the test working directory stays pinned (see the surefire configuration there).
+		directory, and both invocations were verified to run the full suite with 0 skipped
+		(a root-level reactor run still executes each module with ${project.basedir} as
+		the working directory, so the CWD-dependent assertions in the module are covered).
+
+		CI currently runs inside `MetaModelCalibration` rather than from here. That is
+		TEMPORARY legacy scope, not a technical requirement of the test working directory:
+		the required check should move to the reactor root before a second module is added,
+		so it cannot silently stop seeing new modules. See the workflow header and
+		docs/modernization/ARCHITECTURE.md section 5.
 	-->
 	<groupId>ust.hk.praisehk</groupId>
 	<artifactId>praisehk-reactor</artifactId>

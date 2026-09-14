@@ -333,9 +333,9 @@ class CalibratorImplStateMachineTest {
 	class DrawRandomPoint {
 
 		@Test
-		@DisplayName("REVIEW_REQUIRED CAL-6: the point respects the bounds, is keyed by CODE, and uses "
-				+ "Math.random() so it is not reproducible")
-		void boundsRespectedButNondeterministic(@TempDir Path dir) throws IOException {
+		@DisplayName("REVIEW_REQUIRED CAL-6: the point respects the bounds and is keyed by CODE; that the "
+				+ "RNG is non-injectable is established from the source, NOT asserted here")
+		void boundsRespectedAndKeyedByCode(@TempDir Path dir) throws IOException {
 			CalibratorImpl c = calibrator(dir, false, 25.0, 4);
 			LinkedHashMap<String, Tuple<Double, Double>> limits = new LinkedHashMap<>();
 			limits.put("1", new Tuple<>(-300.0, -100.0));
@@ -348,10 +348,9 @@ class CalibratorImplStateMachineTest {
 			assertTrue(p.get("1") >= -300.0 && p.get("1") <= -100.0);
 			assertTrue(p.get("2") >= -0.02 && p.get("2") <= -0.001);
 
-			// NOTE (MEDIUM 3): this test deliberately does NOT assert that two runtime draws differ.
-			// That would make the "deterministic" suite depend on Math.random() and could fail by
-			// chance. The non-injectable RNG is established from the source (see CAL-6) and by the
-			// absence of any seed parameter, not by comparing random outcomes.
+			// This test deliberately does NOT assert that two draws differ: that would make the
+			// "deterministic" suite depend on Math.random() and could fail by chance. Non-seedability
+			// (Math.random(), no seed parameter) is a source-established property - see CAL-6.
 			for (int i = 0; i < 20; i++) {
 				LinkedHashMap<String, Double> q = c.drawRandomPoint(limits);
 				assertTrue(q.get("1") >= -300.0 && q.get("1") <= -100.0);
