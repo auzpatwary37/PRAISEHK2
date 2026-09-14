@@ -260,6 +260,64 @@ No formula, tolerance, optimizer constant or weighting was modified in this PR.
   `m.getVolumes().entrySet().forEach(v -> v.setValue(...))` — unguarded and a mutation during
   iteration of a `ConcurrentHashMap` (safe for the map, but the inner map may be absent).
 
+### MEAS-10 — `VERIFIED` — `TransitPhysicalLinkVolume` is not idempotent: it ADDS to the existing volume
+* **Where:** `MeasurementType.TransitPhysicalLinkVolume.updateMeasurement`:
+  `v.setValue(v.getValue() + modelOut.getTrainCount()...)`.
+* **Legacy:** the extractor accumulates into `m.getVolumes()` instead of replacing it. Calling it
+  twice on the same measurement **double-counts** (30 → 60). Every other extractor in
+  `MeasurementType` replaces the volume.
+* **Expected:** an extractor should be idempotent for a fixed model output, or the accumulation should
+  be explicit and paired with a reset.
+* **Evidence:** `MeasurementTypeTransitAndFareTest.TransitPhysicalLinkVolumeTests.isNotIdempotent`.
+* **Risk:** silent over-counting if a measurement container is re-used across iterations without
+  `resetMeasurements()`. `Measurements.updateMeasurements` does not reset first.
+* **Related — MEAS-10b `VERIFIED`:** a missing `MTRLineRouteStopLinkInfosName` attribute or a missing
+  train-count map is dereferenced without a guard (`NullPointerException`);
+  evidence `missingAttributeThrows`, `missingTrainCountThrows`. A line/route absent from the model
+  output, by contrast, contributes nothing silently (`unknownLineRouteContributesNothing`).
+
+### MTR-1 — `VERIFIED` — `MTRLinkVolumeInfo(String)` throws a raw `ArrayIndexOutOfBoundsException`
+* **Where:** `MTRLinkVolumeInfo(String s)` splits on `"___"` and indexes `part[0..3]` with no length
+  check.
+* **Legacy:** `new MTRLinkVolumeInfo("LINE_1___ROUTE_1")` throws `ArrayIndexOutOfBoundsException`.
+* **Expected:** a diagnostic `IllegalArgumentException` naming the
+  `line___route___stop___link` grammar.
+* **Evidence:** `MeasurementTypeTransitAndFareTest.MtrLinkVolumeInfoTests.truncatedDescriptionThrowsAIOOBE`.
+* **Risk:** the grammar is a serialization contract — `TransitPhysicalLinkVolume.writeAttribute`
+  emits comma-joined records in exactly this format and `parseAttribute` re-parses them, so a
+  malformed record aborts measurement deserialization.
+
+### MEAS-11 — `VERIFIED` — `maasSpecificFareLinkVolume` reads the correct container (contrast with MEAS-4)
+* **Where:** `MeasurementType.maasSpecificFareLinkVolume.updateMeasurement`.
+* **Legacy:** unlike `fareLinkVolume` (MEAS-4, whose MaaS fallback is dead code), this variant reads
+  `getMaaSSpecificFareLinkFlow()` directly and returns the true value; an unknown MaaS package or
+  fare-link key silently yields `0`.
+* **Evidence:** `MeasurementTypeTransitAndFareTest.MaasSpecificFareLinkVolumeTests.readsMaasSpecificFlow`,
+  `unknownPackageYieldsZero`, `correctContainerIsUsed`.
+* **Additional guards missing (`VERIFIED`):** a null `MaaSPackageAttributeName` is dereferenced
+  (`missingMaasAttributeThrows`), and an **empty** volume map dereferences
+  `getFareLinkVolume()` during initialisation, so a null `FareLinkVolume` throws
+  (`emptyVolumesThrowsWhenFareLinkVolumeIsNull`).
+
+### MEAS-12 — `VERIFIED` — `smartCardEntry` and `smartCardEntryAndExit` extraction is a NO-OP
+* **Where:** both `updateMeasurement` bodies are empty.
+* **Legacy:** calling `updateMeasurement` leaves any pre-existing volume untouched; these types are
+  produce-side only (populated by the MATSim event handlers), not model-output-derived.
+* **Evidence:** `MeasurementTypeTransitAndFareTest.SmartCardTests.smartCardEntryUpdateIsNoOp`,
+  `smartCardEntryAndExitUpdateIsNoOp`.
+* **Expected:** this is plausibly deliberate (the data comes from smart-card events, not from the SUE),
+  but it means `Measurements.updateMeasurements` silently skips them. Confirm intent and document it
+  in the type's contract rather than leaving an empty method.
+
+### MEAS-13 — `VERIFIED` — smart-card attribute round trip is asymmetric for `train`
+* **Where:** `smartCardEntryAndExit.writeAttribute`/`parseAttribute`.
+* **Legacy:** for `mode != "train"` the line id and route id are written and read back; for
+  `mode == "train"` they are deliberately omitted, so a round trip yields `null` for both.
+* **Evidence:** `MeasurementTypeTransitAndFareTest.SmartCardTests.smartCardEntryAndExitRoundTrip`.
+* **Expected:** consistent with the network-wide fare scheme (a train fare has no line/route), but the
+  asymmetry must be intentional and documented — a `train` measurement cannot carry line/route
+  identity through serialization at all.
+
 ---
 
 ## CNLLink (`analyticalModelImpl/CNLLink.java`)

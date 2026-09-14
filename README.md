@@ -65,6 +65,7 @@ scheduled for replacement.
 | [`TEST_MATRIX.md`](docs/modernization/TEST_MATRIX.md) | mathematical-behaviour coverage: characterization / oracle / boundary / integration per equation |
 | [`DEPENDENCIES.md`](docs/modernization/DEPENDENCIES.md) | every dependency, its users, provenance, verdict, upgrade order |
 | [`REVIEW_REQUIRED.md`](docs/modernization/REVIEW_REQUIRED.md) | suspected defects recorded **without** fixing them |
+| [`OBJECTIVE_PURITY_PLAN.md`](docs/modernization/OBJECTIVE_PURITY_PLAN.md) | why the objective must become a pure function, the impurity inventory, and the ordered, purity-preserving vs behaviour-changing steps |
 | [`PRAISE_ODE_RELATIONSHIP.md`](docs/modernization/PRAISE_ODE_RELATIONSHIP.md) | relationship to the `ODEstimation` repository; identification of the actual differentiation method |
 | [`PRAISE_MATSIMHK_RELATIONSHIP.md`](docs/modernization/PRAISE_MATSIMHK_RELATIONSHIP.md) | how the `MATSim-HK` fork dependency was audited and removed; what was vendored and what was not |
 

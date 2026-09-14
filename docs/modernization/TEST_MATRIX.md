@@ -7,8 +7,8 @@ Legend: **C** = characterization test (pins legacy behaviour), **O** = independe
 (hand-computed / mathematically independent), **B** = boundary/edge test, **I** = integration test.
 `—` = absent. `P` = planned (this roadmap).
 
-Snapshot: **82 deterministic tests, 0 failures, ~9 s**, runnable offline
-(`mvn -o test` in `MetaModelCalibration`).
+Snapshot: **100 deterministic tests, 0 failures, ~9 s**, runnable offline
+(`mvn -o test` in `MetaModelCalibration`), enforced in CI on every PR into the trunk.
 
 ---
 
@@ -99,9 +99,11 @@ Snapshot: **82 deterministic tests, 0 failures, ~9 s**, runnable offline
 | `fareLinkVolumeCluster` missing fares | ✔ | — | ✔ | — | `fareLinkVolumeClusterRequiresFareLinks` | |
 | `MaaSPacakgeUsage` literal `"All"` key | ✔ | — | ✔ | — | `maasPackageUsageWritesAllLiteralKey` | **MEAS-8** |
 | `averagePTOccumpancy` missing map | ✔ | — | ✔ | — | `averagePtOccupancyThrowsWhenAbsent` | **MEAS-9** |
-| `TransitPhysicalLinkVolume` | — | — | — | — | — | P (**MEAS-9b**) |
-| `maasSpecificFareLinkVolume` | — | — | — | — | — | P |
-| `smartCardEntryAndExit` | — | — | — | — | — | P |
+| `TransitPhysicalLinkVolume` sums train counts | ✔ | ✔ | ✔ | — | `MeasurementTypeTransitAndFareTest` (ORACLE); `isNotIdempotent`, `unknownLineRouteContributesNothing`, `missingAttributeThrows`, `missingTrainCountThrows` | **MEAS-10** (non-idempotent) |
+| `TransitPhysicalLinkVolume` XML round trip | ✔ | — | — | ✔ | `roundTripsThroughXml`, `transitPhysicalLinkVolumeWriteAttributeFormat` | |
+| `MTRLinkVolumeInfo` `___` grammar | ✔ | ✔ | ✔ | — | `MtrLinkVolumeInfoTests.roundTrips`, `truncatedDescriptionThrowsAIOOBE` | **MTR-1** |
+| `maasSpecificFareLinkVolume` reads MaaS flow | ✔ | ✔ | ✔ | ✔ | `MaasSpecificFareLinkVolumeTests.readsMaasSpecificFlow`, `correctContainerIsUsed`, `unknownPackageYieldsZero`, `missingMaasAttributeThrows`, `emptyVolumesThrowsWhenFareLinkVolumeIsNull`, `roundTripsThroughXml` | **MEAS-11**; contrast **MEAS-4** |
+| `smartCardEntry` / `smartCardEntryAndExit` | ✔ | — | ✔ | ✔ | `SmartCardTests.*` (no-op extraction, asymmetric train round trip) | **MEAS-12**, **MEAS-13** |
 
 ## 3b. Vendored transit fare contract (`transit.fare`)
 
