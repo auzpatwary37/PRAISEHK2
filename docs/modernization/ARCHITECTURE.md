@@ -154,6 +154,15 @@ matsim-adapter/      ◀── matsimIntegration/*, and the vendored transit.far
   repository root and so the planned multi-module system has a place to grow. CI still runs inside
   `MetaModelCalibration/` deliberately, because the surefire working directory is pinned there.
 * JUnit 5 + `junit-vintage-engine`; surefire 3.2.5 with the legacy nondeterministic test excluded.
+* **CI scope rule (temporary by design).** The required build/test gate currently runs *inside*
+  `MetaModelCalibration`. That is harmless while the reactor has one module, but it must not become
+  accidental architecture: hard-coding `cd MetaModelCalibration` would let a future module be added to
+  the reactor and never be exercised by the required check. **Before the second module is added, move
+  the required gate to the reactor root.** That move is safe: Surefire pins
+  `<workingDirectory>${project.basedir}</workingDirectory>`, and `${project.basedir}` is still the
+  module directory when the module is built from the reactor — verified by running `mvn -o -B test`
+  from the repository root, which reports **0 skipped**, so `ParamReader`'s CWD-dependent
+  characterization still runs its substantive assertion (PARAM-1).
 * Fixtures live in `src/test/java/.../fixtures/` and are data + in-memory network builders only.
 * No test requires: Hong Kong data, absolute paths, MATLAB, network access, `Math.random()`, or
   `HashMap` iteration order.
@@ -174,6 +183,7 @@ it is the gate for Track C.
 |---|---|---|
 | CI | `.github/workflows/ci.yml` — deterministic suite on every PR into the trunk, plus a guard that fails if fewer than 80 tests report | done |
 | Protection | `modernization/main` requires the `mvn -B clean test (JDK 17)` check (strict); force-push and deletion disallowed | done |
+| CI scope | move the required gate from `MetaModelCalibration` to the reactor root — **required before the second module is added** | pending |
 
 ### Track A — PRAISEHK characterization
 

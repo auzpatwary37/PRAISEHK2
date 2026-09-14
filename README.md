@@ -41,9 +41,8 @@ mvn -B -DskipTests test-compile
 ```
 
 There is a reactor POM at the repository root, so Maven can be run from the top level; `cd
-MetaModelCalibration` works identically. Tests are network-free by construction: surefire sets
-`-Dmatsim.preferLocalDtds=true` and an invalid proxy, so any test that attempts an HTTP(S) connection
-fails fast. See `MetaModelCalibration/pom.xml` for the reasoning.
+MetaModelCalibration` works identically, because the Surefire harness pins the test working directory
+to the module either way.
 
 `MetaModelCalibration/src/main/resources/jcool-core.jar` is declared with `system` scope because it is
 not published anywhere. See `docs/modernization/DEPENDENCIES.md`.
