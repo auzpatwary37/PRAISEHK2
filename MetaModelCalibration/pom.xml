@@ -97,6 +97,18 @@
 				<artifactId>maven-surefire-plugin</artifactId>
 				<version>3.2.5</version>
 				<configuration>
+					<!--
+					     Pin the test working directory explicitly.
+
+					     ParamReader's missing-file fallback is a CWD-relative path
+					     ("src/main/resources/paramReaderTrial1.csv"), so the test that
+					     characterizes it is only meaningful if the CWD is known. This is
+					     already surefire's default, but making it explicit means the
+					     environment is declared rather than accidental - and the CWD
+					     dependency of the PRODUCTION code is documented here as well as in
+					     REVIEW_REQUIRED.md (PARAM-1).
+					-->
+					<workingDirectory>${project.basedir}</workingDirectory>
 					<excludes>
 						<exclude>**/AnalyticLinearMetaModelTest.java</exclude>
 						<exclude>**/MeasurementCreator.java</exclude>

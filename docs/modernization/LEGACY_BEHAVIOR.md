@@ -224,19 +224,40 @@ zero-denominator and accumulation policies are inconsistent.
   `k` (CAL-8); `drawRandomPoint` uses `Math.random()` (CAL-6).
 * `OptimizerName` defaults to `AnalyticalModelOptimizer.TROptimizerName`.
 
-## 10. `calibrator/ParamReader` `[V]`
+## 10. `calibrator/ParamReader` `[V]` `[T]`
 
 * Parses `SubPopulation,Parameter Name,id,Lower Limit,UpperLimit,CurretValue,Code,IncludeIninitialParam`
-  (header misspelled in the source and in the CSV).
+  (header misspelled in the source and in the CSV). The **first line is always discarded as a header**,
+  with no validation — a headerless file silently loses its first data row (PARAM-2b).
 * Builds, all keyed by the **Code** column `part[6]`: `DefaultParam`, `paramLimit`,
   `initialParam`, `initialParamLimit`; plus `paramName` (list) and `ParamNoCode`
-  (`subPopName + " " + paramName → code`).
-* `ScaleUp(code→value)` → `paramName→value`; `ScaleDown` the reverse; `ScaleUpLimit`; `All` handling;
-  `generateSubPopSpecificParam`; `SetParamToConfig(config, params)` writes the MATSim `Config` to
+  (`subPopName + " " + paramName → code`). The `id` column (`part[2]`) is assigned and then
+  **immediately overwritten** in both branches of the following `if/else`, so it is dead input.
+* `ScaleUp(code→value)` → `paramName→value` (codes absent from the input are omitted, not defaulted);
+  `ScaleDown` the reverse; `ScaleUpLimit`; `All` handling; `generateSubPopSpecificParam`;
+  `SetParamToConfig(config, params)` writes the MATSim `Config` to a **CWD-relative**
   `config_Intermediate.xml` and reloads it; `setDefaultParams`.
-* Defects: silent relative-path fallback (PARAM-1), raw `split(",")` (PARAM-2), disk round trip
-  (PARAM-3), duplicate-code collapse (PARAM-4), `ScaleDown` null keys (PARAM-5), `containsAll`
-  dispatch (PARAM-6).
+* An unrecognised input throws from `ScaleUp`/`ScaleUpLimit` unless the mutable
+  `allowUnkownParamaeterWhileScalingUp` flag is set, in which case unknown keys pass through.
+* Defects (all now `VERIFIED`): silent relative-path fallback (PARAM-1), raw `split(",")` plus the dead
+  `id` column (PARAM-2/2b), disk round trip (PARAM-3), duplicate-code inconsistency between the
+  general and initial maps (PARAM-4), `ScaleDown` null keys and `generateSubPopSpecificParam`
+  `split(" ")[1]` (PARAM-5), `containsAll` dispatch (PARAM-6), order-dependent collapse of
+  conflicting scoped values (PARAM-7), GV-branch parameter omissions (PARAM-8), and the second
+  `setDefaultParams` application path (PARAM-9).
+* **Shared-code semantics — the production case.** A single code is deliberately reused across
+  sub-populations, so `ParamNoCode` is a **many-to-one alias/group relation**, exactly as the class
+  javadoc states ("same code parameters will be treated as one parameter"). Consequences, all pinned:
+  `ScaleUp({code: v})` **fans out** the one canonical value to every scoped name; `SetParamToConfig`
+  therefore writes the same value into each sharing sub-population's `ScoringParameterSet`; and
+  `ScaleDown` **collapses** them back, so conflicting scoped values cannot both be represented and the
+  survivor depends on iteration order (PARAM-7). A typed redesign **must** be able to express this
+  relation, or it will silently change behaviour.
+* `SetParamToConfig` has three materially different branches: **no sub-population** (bare parameter
+  names), **non-GV** (all 13 scoring fields), and **GV** (matched by the *substring* `"GV"`; writes
+  car/walk/performing but deliberately omits PT travel, PT distance cost, waiting, line switch and the
+  mode constants, leaving the CSV values unapplied). `setDefaultParams` is a separate path that reads
+  bare names and never touches `qsim`.
 * `getDefaultTimeBean()` returns the five canonical Hong Kong periods
   (`BeforeMorningPeak`, `MorningPeak`, `AfterMorningPeak`, `EveningPeak`, `AfterEveningPeak`) — this
   is what the test fixtures mirror.

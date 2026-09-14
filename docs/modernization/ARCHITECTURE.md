@@ -40,7 +40,7 @@ PRAISEHK2/
 └── README.md
 ```
 
-Build: `cd MetaModelCalibration && mvn -o -B clean test` → BUILD SUCCESS, 106 tests, 0 failures, offline.
+Build: `cd MetaModelCalibration && mvn -o -B clean test` → BUILD SUCCESS, 144 tests, 0 failures, offline.
 
 The Hong Kong MATSim fork was first imported as a 153-file module, then reduced: the dependency
 closure was measured at 39 files / 11k LOC, but only **two** of those classes have any active use in
@@ -154,7 +154,7 @@ matsim-adapter/      ◀── matsimIntegration/*, and the vendored transit.far
 * No test requires: Hong Kong data, absolute paths, MATLAB, network access, `Math.random()`, or
   `HashMap` iteration order.
 * Offline verification: `cd MetaModelCalibration && mvn -o -B clean test`
-  → BUILD SUCCESS, 106 tests, 0 failures, zero compiler diagnostics.
+  → BUILD SUCCESS, 144 tests, 0 failures, zero compiler diagnostics.
 
 ## 6. Delivery roadmap (small, behaviour-protected PRs)
 
@@ -176,8 +176,8 @@ it is the gate for Track C.
 | PR | Content | Status |
 |---|---|---|
 | 1 | Audit + docs + build reproducibility + test harness + fixtures + ObjectiveCalculator/Measurement characterization | merged |
-| 2 | `MeasurementType` extraction full coverage (remaining types) + objective-purity plan | **this PR** |
-| 3 | `ParamReader` characterization → typed `ParameterDefinition`/`ParameterSpace` | planned |
+| 2 | `MeasurementType` extraction full coverage (remaining types) + objective-purity plan | merged |
+| 3 | `ParamReader` characterization → typed `ParameterDefinition`/`ParameterSpace` (characterization done; the typed redesign is the follow-up) | **this PR** |
 | 4 | Meta-model mathematical tests (weighted-ridge oracle; decide the fate of the 5 fitting paths) | planned |
 | 5 | Calibrator/trust-region deterministic state-machine tests (incl. CAL-1…CAL-8) | planned |
 | 6 | Link/route/transit analytical unit tests (oracle values) | planned |

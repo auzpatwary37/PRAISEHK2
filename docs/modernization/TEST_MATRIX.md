@@ -3,11 +3,17 @@
 The meaningful metric is **mathematical behaviour coverage**, not line/branch coverage. Each row is
 an equation, algorithm or component; each column records whether that behaviour is protected.
 
-Legend: **C** = characterization test (pins legacy behaviour), **O** = independent oracle test
-(hand-computed / mathematically independent), **B** = boundary/edge test, **I** = integration test.
-`—` = absent. `P` = planned (this roadmap).
+Legend: **C** = characterization test (pins the legacy behaviour; it does **not** imply the behaviour
+is correct), **O** = independent oracle test — an assertion backed by something outside the
+implementation: a hand-computed value, a mathematical identity, or an **external/domain
+specification** (a documented file format, a published boundary), **B** = boundary/edge test,
+**I** = integration test. `—` = absent. `P` = planned (this roadmap).
 
-Snapshot: **106 deterministic tests, 0 failures, ~9 s**, runnable offline
+The C/O distinction is load-bearing for the next phase: oracle-backed semantics **must** be preserved
+by a redesign, whereas characterized defects are free to be fixed deliberately (with a migration
+decision). A row must not be marked `O` merely because a test exists.
+
+Snapshot: **144 deterministic tests, 0 failures, ~9 s**, runnable offline
 (`mvn -o test` in `MetaModelCalibration`), enforced in CI on every PR into the trunk.
 
 ---
@@ -132,11 +138,21 @@ declaration). `FareLink`'s grammar is a serialization contract for `MeasurementT
 
 | Component / algorithm | C | O | B | I | Tests | Notes |
 |---|---|---|---|---|---|---|
-| `ParamReader` valid file, bounds, codes | — | — | — | — | — | P (phase 5) |
-| `ParamReader` missing file fallback | — | — | — | — | — | P (**PARAM-1**) |
-| `ParamReader` malformed CSV / missing columns | — | — | — | — | — | P (**PARAM-2**) |
-| `ScaleUp` / `ScaleDown` / `ScaleUpLimit` | — | — | — | — | — | P (**PARAM-5/6**) |
-| `SetParamToConfig` disk round trip | — | — | — | — | — | P (**PARAM-3**) |
+| `ParamReader` CSV column semantics (lower/upper/current/include) | ✔ | ✔ | ✔ | — | `Parsing.readsBoundsValueAndInclusion` | `O` from the documented header |
+| `ParamReader` code-keyed maps + dead `id` column | ✔ | — | — | — | `Parsing.emptySubPopulationIsExcludedAndIdIsTheParamName`, `allIsExcludedFromSubPopulations`, `idColumnIsIgnored` | **PARAM-2**; characterization of the keying scheme |
+| `ParamReader` missing file fallback | ✔ | — | ✔ | — | `MissingFile.missingFileSelectsRelativeDefaultPath` (deterministic), `missingFileSilentlyFallsBack` (CWD-guarded; surefire CWD pinned in the POM) | **PARAM-1**; the guarded assertion is the one that can skip |
+| `ParamReader` malformed CSV | ✔ | — | ✔ | — | `Malformed.tooFewColumnsThrows`, `nonNumericThrows`, `trailingEmptyIncludeFlagThrows`, `firstLineIsAlwaysDiscarded`, `emptyFileIsAccepted` | **PARAM-2**, **PARAM-2b** |
+| `ParamReader` duplicate codes (unscoped) | ✔ | — | ✔ | — | `Parsing.duplicateCodeInconsistency`, `duplicateCodeLaterRowIncluded` | **PARAM-4** |
+| `ParamReader` shared code across two REAL sub-populations | ✔ | ✔ | ✔ | ✔ | `SharedCodes.oneCodeGroupsScopedParameterIds`, `scaleUpFansOutOneCodeToManyNames`, `sharedCodeValueAndBoundsAreLastWins`, `sharedCodeIncludedByBothIsLastWins`, `firstSubPopulationsBoundsAreLost`, `scaleDownCollapsesConflictingValues` | **PARAM-7** (order-dependent collapse — `C`), **PARAM-7b** (documented alias/group semantics — `O`) |
+| `ScaleUp` / `ScaleDown` format conversion | ✔ | ✔ | ✔ | — | `Scaling.scaleUp`, `scaleDown` | `O` from the method contract (code ↔ parameter name) |
+| `ScaleUp` / `ScaleDown` / `ScaleUpLimit` edge dispatch | ✔ | — | ✔ | — | `scaleUpOmitsAbsentCodes`, `scaleUpAlreadyScaledIsIdentity`, `scaleUpUnknownInput`, `scaleDownNoOverlapReturnsInput`, `scaleDownPartialOverlapEmitsNullKey`, `scaleUpLimitAlreadyScaledIsIdentity`, `scaleUpLimitMixedKeysThrow`, `scaleUpLimitOmitsAbsentCodes` | **PARAM-5**, **PARAM-6**; characterization (omission / null key / mutable policy) |
+| `generateSubPopSpecificParam` | ✔ | — | ✔ | — | `SubPopExtraction.extractsMatchingEntries`, `matchingKeyWithoutSpaceThrows` | **PARAM-5** |
+| `SetParamToConfig` CWD disk round trip | ✔ | — | ✔ | — | `SetParamToConfigTests.writesConfigToCwdAndAppliesValues` | **PARAM-3**; a side effect, not a specification |
+| `SetParamToConfig` no-sub-population value → config mapping | ✔ | ✔ | ✔ | ✔ | `writesConfigToCwdAndAppliesValues` | `O`: the parameter → config-field mapping is the method's domain contract |
+| `SetParamToConfig` non-GV sub-population mapping | ✔ | ✔ | ✔ | ✔ | `nonGvSubPopulationIsFullyMapped` | 13 scoring fields asserted with distinctive values |
+| `SetParamToConfig` GV-branch omissions | ✔ | — | ✔ | ✔ | `gvSubPopulationOmitsPtParameters` | **PARAM-8**; PT / waiting / line-switch / mode constants not written |
+| `setDefaultParams(Config, String)` | ✔ | ✔ | ✔ | ✔ | `setDefaultParamsWritesIntoNamedSubPopulation` | **PARAM-9**; second application path, does not touch qsim |
+| `getDefaultTimeBean` | ✔ | ✔ | — | — | `DefaultTimeBean.fiveCanonicalPeriods` | `O`: the five HK periods are a domain specification |
 | `AnalyticLinearMetaModel` `y = β0 + βA·A(x) + βᵀx` | — | P | — | — | — | P (phase 6); oracle = weighted ridge |
 | `AnalyticLinearMetaModel` weighting | — | — | — | — | — | P |
 | `AnalyticLinearMetaModel` 5 fitting paths equivalence | — | — | — | — | — | P (**MODEL-2**) |
