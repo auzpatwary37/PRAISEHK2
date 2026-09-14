@@ -1,0 +1,83 @@
+name: deterministic-tests
+
+# Runs the deterministic test suite on every PR into the trunk and on every push
+# to it.
+#
+# Design notes:
+#  * The build has NO root POM - MetaModelCalibration is the only module, so all
+#    Maven invocations set working-directory. A bare `mvn test` at the repo root
+#    fails by design.
+#  * `mvn` (not `mvn -o`) is used: a fresh runner has an empty ~/.m2, so the build
+#    must be allowed to download dependencies once; the cache below makes later
+#    runs fast. The mission's "no network" rule applies to the TESTS, which
+#    require no network, no MATLAB, no Hong Kong data, no absolute paths,
+#    no Math.random() and no HashMap iteration order.
+#  * MATSim is a 15.0-SNAPSHOT resolved from repo.matsim.org. That is a
+#    reproducibility risk (see docs/modernization/DEPENDENCIES.md section C): the
+#    coordinates are mutable and single-source. Pinning it is a planned,
+#    isolated change.
+
+on:
+  pull_request:
+    branches: [modernization/main]
+  push:
+    branches: [modernization/main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: mvn -B clean test (JDK 17)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out
+        uses: actions/checkout@v7
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+
+      - name: Show toolchain
+        run: |
+          java -version
+          mvn -version
+
+      - name: Compile (main + test)
+        working-directory: MetaModelCalibration
+        run: mvn -B clean test-compile
+
+      - name: Run deterministic tests
+        working-directory: MetaModelCalibration
+        run: mvn -B test
+
+      - name: Assert the test count did not silently collapse
+        working-directory: MetaModelCalibration
+        # A suite that reports fewer tests than expected is a failure, not a pass:
+        # the legacy nondeterministic test is quarantined in the POM, and a
+        # mis-edited <excludes> must not be able to hide the whole suite.
+        run: |
+          total=$(awk -F'[:,]' '/^Tests run:/ {s+=$2} END {print s+0}' target/surefire-reports/*.txt)
+          echo "total tests reported: ${total}"
+          if [ "${total}" -lt 80 ]; then
+            echo "::error::expected at least 80 tests, got ${total}"
+            exit 1
+          fi
+
+      - name: Upload surefire reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: surefire-reports
+          path: MetaModelCalibration/target/surefire-reports/
+          if-no-files-found: ignore
