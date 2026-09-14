@@ -14,7 +14,12 @@ by a redesign, whereas characterized defects are free to be fixed deliberately (
 decision). A row must not be marked `O` merely because a test exists.
 
 Snapshot: **157 deterministic tests, 0 failures, ~9 s**, runnable offline
+Snapshot: **158 deterministic tests, 0 failures, ~9 s**, runnable offline
 (`mvn -o test` in `MetaModelCalibration`), enforced in CI on every PR into the trunk.
+
+Merge-order note: this count is for the trust-region branch, which is based on the trunk *before* the
+meta-model-oracle PR. That PR adds a further 13 tests (one of them `@Disabled` by design, see MODEL-5),
+after which the total is 171. Only this snapshot line and the count in `ARCHITECTURE.md` overlap.
 
 ---
 
@@ -163,6 +168,27 @@ declaration). `FareLink`'s grammar is a serialization contract for `MeasurementT
 | `LinearMetaModel`, `QuadraticMetaModel`, `AnalyticalQuadraticMetaModel` | — | P | — | — | — | P |
 | `GradientBasedMetaModel` (I/II/III), `SimAndAnalyticalGradientCalculator` | — | P | — | — | — | P; the gradient calculator must be distinguished from analytic derivatives |
 | `CalibratorImpl` trust ratio / accept / reject | — | P | — | — | — | P (phase 7) |
+| `AnalyticLinearMetaModel` `y = β0 + βA·A(x) + βᵀx` | — | P | — | — | — | P (phase 6); oracle = weighted ridge |
+| `AnalyticLinearMetaModel` weighting | — | — | — | — | — | P |
+| `AnalyticLinearMetaModel` 5 fitting paths equivalence | — | — | — | — | — | P (**MODEL-2**) |
+| `AnalyticLinearMetaModel` dense-index assumption | — | — | P | — | — | P (**MODEL-1**) |
+| `AnalyticLinearMetaModel` static `errorT` | — | — | P | — | — | P (**MODEL-3**) |
+| `LinearMetaModel`, `QuadraticMetaModel` | — | P | — | — | — | P |
+| `AnalyticalQuadraticMetaModel` | — | P | — | — | — | P |
+| `GradientBasedMetaModel` (I/II/III) | — | — | — | — | — | P |
+| `SimAndAnalyticalGradientCalculator` | — | P | — | — | — | P; must be distinguished from analytic derivatives |
+| `CalibratorImpl` constructor / tunables | ✔ | — | — | — | `CalibratorImplStateMachineTest.Construction.tunablesArePinned`, `maxTrRadiusIgnoresTheConfiguredInitialRadius` | **CAL-1** |
+| `CalibratorImpl` iteration 0 (no acceptance test) | ✔ | — | — | ✔ | `StateMachine.iterationZeroHasNoAcceptanceTest` | also asserts the legacy `0th Objective Value` stdout report |
+| acceptance policy: accept vs reject | ✔ | — | ✔ | ✔ | `StateMachine.improvedObjectiveIsAccepted` (asserts only "not shrunk"), `worsenedObjectiveIsRejected` (`25 -> 22.5`), `radiusIsFlooredAtMinTrRadius` | **CAL-2**; the two ACCEPTED sub-branches (grow on `rho >= 0.01` vs hold below it) are **not** distinguished - `rho` is not settable from outside. **CAL-3** pending |
+| internal-recalibration result application | ✔ | — | ✔ | ✔ | `StateMachine.internalCalibrationResultIsDiscarded`, `counterRestartsAfterTheTrigger` | **CAL-11**: the callback fires and the counter resets, but the recalibrated measurements are **discarded** |
+| trust-radius floor (`minTrRadius`) | ✔ | ✔ | ✔ | — | `StateMachine.radiusIsFlooredAtMinTrRadius` | `max(24, 22.5)` |
+| consecutive rejection -> internal parameter calibration | ✔ | — | ✔ | ✔ | `StateMachine.consecutiveRejectionTriggersInternalCalibration` | trigger reached and counter reset |
+| `updateAnalyticalMeasurement` gate | ✔ | — | ✔ | — | `UpdateAnalyticalMeasurement.*` (4 tests) | **CAL-5** |
+| `drawRandomPoint` bounds + nondeterminism | ✔ | — | ✔ | — | `DrawRandomPoint.boundsRespectedButNondeterministic` | **CAL-6** |
+| `calcAverageMetaParamsChange` k=0 / missing old fit | ✔ | ✔ | ✔ | — | `AverageMetaParamsChange.noMetaModelsYieldsNaN`, `missingOldMetaModelThrows` | **CAL-8**; NaN silently disables the restart |
+| optimizer start vector partially initialised | — | — | — | — | — | **CAL-10**, record-only (start vector not observable) |
+| acceptance when `rho` is NaN/Inf/negative | — | — | P | — | — | **CAL-3**; `rho` depends on the fitted meta-model prediction and cannot be set from outside |
+| `parallelStream` determinism, `createMetaModel` null gradients | — | — | P | — | — | **CAL-4**, **CAL-7** |
 | `CalibratorImpl` `maxTrRadius` init bug | — | — | P | — | — | P (**CAL-1**) |
 | `CalibratorImpl` NaN / Inf / zero predicted reduction | — | — | P | — | — | P (**CAL-3**) |
 | `createMetaModel` null gradient handling | — | — | P | — | — | P (**CAL-4**) |
