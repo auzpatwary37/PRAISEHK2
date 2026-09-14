@@ -517,7 +517,7 @@ matters for every reading of this class.
 
 ## CalibratorImpl (`calibrator/CalibratorImpl.java`) — trust region
 
-### CAL-1 — `READ` — `maxTrRadius` ignores the configured initial radius
+### CAL-1 — `VERIFIED` — `maxTrRadius` ignores the configured initial radius
 * Field initialisers run before the constructor body:
   ```java
   protected double TrRadius = 25;
@@ -528,9 +528,10 @@ matters for every reading of this class.
   The constructor assigns `TrRadius` **after** `maxTrRadius` was computed, and never recomputes
   `maxTrRadius`. With a non-default `initialTRRadius` (e.g. 100) the effective maximum stays
   **62.5** < initial radius, so the trust region can only shrink.
-  A test with a non-default initial radius must pin this before any change.
+* **Evidence:** `CalibratorImplStateMachineTest.Construction.maxTrRadiusIgnoresTheConfiguredInitialRadius`
+  — with `initialTRRadius = 100` the getters report `TrRadius = 100` and `maxTrRadius = 62.5`.
 
-### CAL-2 — `READ` — an improved simulation objective is accepted even when `rho < thresholdErrorRatio`
+### CAL-2 — `VERIFIED` — an improved simulation objective is accepted even when `rho < thresholdErrorRatio`
 * ```java
   if (SimObjectiveChange > 0 && rouk >= thresholdErrorRatio) { accept; grow; }
   else if (SimObjectiveChange > 0 && rouk < thresholdErrorRatio) { accept; /* no growth */ }
@@ -555,7 +556,7 @@ matters for every reading of this class.
   `simGradient.get(m.getId())` → NPE. The intent ("switching to AnalyticalLinear") is not realised.
   The `catch` also swallows the message into `System.out` rather than logging.
 
-### CAL-5 — `READ` — `updateAnalyticalMeasurement` gate is inverted
+### CAL-5 — `VERIFIED` — `updateAnalyticalMeasurement` gate is inverted
 * ```java
   if (this.anaMeasurements.size() != measurements.size()) {
       logger.error("Measurements size must match. Aborting update");
@@ -566,10 +567,17 @@ matters for every reading of this class.
   The update loop runs **only when the sizes differ**, and it iterates the *existing* keys (so a
   new iteration's measurement is never added). When the sizes *match* — the normal case — no update
   happens at all. The "same size / new contents" case is a no-op.
+* **Verified in four parts:** a fresh calibrator's update is a complete no-op (the loop iterates the
+  empty existing key set); with equal sizes the method short-circuits and even key 0 stays stale; with
+  different sizes only the existing keys are refreshed and the extra iteration is still not added; and
+  an existing iteration missing from the new map throws `IllegalArgumentException`.
+* **Evidence:** `CalibratorImplStateMachineTest.UpdateAnalyticalMeasurement.*` (four tests).
 
-### CAL-6 — `READ` — `drawRandomPoint` uses `Math.random()`
+### CAL-6 — `VERIFIED` — `drawRandomPoint` uses `Math.random()`
 * Non-seedable; makes random restarts and any test that reaches them nondeterministic. The modern
   target must inject a seeded RNG.
+* **Evidence:** `CalibratorImplStateMachineTest.DrawRandomPoint.boundsRespectedButNondeterministic` —
+  the point respects the bounds and is keyed by the CSV **Code** column, but repeated draws differ.
 
 ### CAL-7 — `READ` — `parallelStream()` over measurements while mutating maps
 * `createMetaModel` (instance method) does
@@ -580,11 +588,18 @@ matters for every reading of this class.
   between the two is unspecified. Correctness before parallelism: replace with a sequential
   reduction, then benchmark.
 
-### CAL-8 — `READ` — `calcAverageMetaParamsChange` divides by `k` without checking `k == 0`
+### CAL-8 — `VERIFIED` — `calcAverageMetaParamsChange` divides by `k` without checking `k == 0`
 * `z = z / k;` with `k` incremented per (measurement, time bean) when meta-model types match. If
   `metaModels` is empty, or types differ (the `break outerloop` path sets `comparable=false` but
   still divides), `k` can be 0 → `NaN`. Also `this.oldMetaModel.get(m)` is dereferenced assuming
   the previous iteration populated every key → NPE on the first comparison.
+* **Consequential effect, now pinned:** with no meta-models the mean is `NaN`, and the caller's guard
+  is `change < minMetaParamChange` — which is **false** for `NaN`, so the random-restart branch can
+  never fire. The empty-meta-model case therefore silently disables the restart mechanism instead of
+  triggering it.
+* **Evidence:** `CalibratorImplStateMachineTest.AverageMetaParamsChange.noMetaModelsYieldsNaN`
+  (`0/0` and the downstream comparison) and `missingOldMetaModelThrows` (NPE with `metaModels`
+  populated, because `oldMetaModel` is private and starts empty).
 
 ### CAL-9 — `READ` — logging is nondeterministic
 * `interLogger` writes `LocalDateTime.now()` into `iterLogger.csv`, and the header is written based
@@ -630,6 +645,30 @@ matters for every reading of this class.
   characterized, not relied upon.
 
 ---
+
+### CAL-10 — `READ` — the trust-region optimizer starts from a PARTIALLY initialised vector
+* **Where:** `AnalyticalModelOptimizerImpl.performOptimization`:
+  ```java
+  double[] x=new double[noOfVariables];
+  for (int j=0;j<x.length;j++) {
+      x[j]=1;
+      j++;            // <-- double increment
+  }
+  ```
+  The loop increments `j` twice per pass, so only the **even** indices are set to `1`; the odd indices
+  keep the array default `0`. For two variables the start point is `[1, 0]`, not `[1, 1]`.
+* **Legacy:** `ScaleUp(x)` maps a coordinate to `(1 + x[j]/100) * currentParam`, so a `0` coordinate
+  means "leave this parameter exactly as it is". The optimizer therefore begins at the *current*
+  parameter for every odd-index variable rather than at a perturbed point — a silent asymmetry in the
+  starting simplex.
+* **Expected:** all coordinates initialised consistently.
+* **Status:** `READ` — not pinned by a test, because the initial vector is not exposed and the returned
+  point is the output of a COBYLA run, so the start cannot be observed in isolation without first
+  extracting the optimizer's setup. Recorded here so the redesign does not reproduce it.
+* Also recorded: this path prints `iprint=3` COBYLA output plus one `System.out.println` per variable on
+  every call, and `CalibratorImpl.writeMeasurementComparison` writes `Comparison<N>.csv` per iteration.
+  Tests must capture stdout rather than assume it is clean —
+  `CalibratorImplStateMachineTest` does exactly that.
 
 ## Cross-cutting
 
