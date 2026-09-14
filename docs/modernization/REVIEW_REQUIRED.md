@@ -446,7 +446,72 @@ matters for every reading of this class.
 * `ScaleUp` also **omits** codes that are absent from the input rather than defaulting them
   (the defaulting line is commented out), so a partial input silently yields a partial parameter map.
 * **Evidence:** `Scaling.scaleUp`, `scaleUpOmitsAbsentCodes`, `scaleUpAlreadyScaledIsIdentity`,
-  `scaleUpUnknownInput`.
+  `scaleUpUnknownInput`, `scaleUpLimit`, `scaleUpLimitAlreadyScaledIsIdentity`,
+  `scaleUpLimitMixedKeysThrow`, `scaleUpLimitOmitsAbsentCodes`.
+
+### PARAM-7 — `VERIFIED` — conflicting scoped values COLLAPSE onto one code, and the survivor is order-dependent
+* **Where:** `ScaleDown` maps every input key through `ParamNoCode.get(s)` into a single
+  `LinkedHashMap` keyed by code.
+* **Legacy:** a code shared by several sub-populations is a many-to-one relation, so
+  `ScaleDown({person_A MuMoney: 1.0, person_B MuMoney: 1.2})` inserts `3 → 1.0` and then `3 → 1.2`
+  into the **same** map. The surviving value is whichever was inserted last, so the same *set* of
+  scoped values yields **different** canonical values depending only on iteration order. The other
+  sub-population's value is silently discarded — there is no place in the representation to keep it.
+* **Expected:** an explicit policy. Either the collapse is defined (documented, deterministic) or the
+  typed model rejects conflicting scoped values for one canonical code.
+* **Evidence:** `SharedCodes.scaleDownCollapsesConflictingValues`,
+  `SharedCodes.firstSubPopulationsBoundsAreLost`.
+* **Risk:** this is the highest-value item for the typed redesign: whatever
+  `ParameterDefinition`/`ParameterSpace` chooses, it must decide this deliberately rather than
+  inherit an iteration-order accident.
+
+### PARAM-7b — `INTENTIONAL, MUST BE PRESERVED` — one code deliberately GROUPS several scoped ids
+* The class javadoc states the intent: *"The code will be used to identify the parameters... same code
+  parameters will be treated as one parameter."* The behaviour is therefore **documented alias/group
+  semantics**, not an accident:
+  * `ParamNoCode` maps several scoped ids (`person_A MuMoney`, `person_B MuMoney`) to one canonical
+    code;
+  * `ScaleUp({3: v})` **fans out** that single value to **every** scoped name (verified);
+  * so `SetParamToConfig` writes the *same* canonical value into every sub-population sharing the code
+    (verified end-to-end through to the two `ScoringParameterSet`s);
+  * while `ScaleDown` collapses them back, order-dependently (PARAM-7).
+* **Consequence for the redesign:** the typed model **must** be able to express "one canonical
+  parameter, several scoped aliases". A naive `Map<ParameterName, …>` would silently break it.
+* **Evidence:** `SharedCodes.oneCodeGroupsScopedParameterIds`, `scaleUpFansOutOneCodeToManyNames`,
+  `SetParamToConfigTests.sharedCodeFeedsEverySubPopulationConfig`.
+
+### PARAM-4 (extended) — shared codes across real sub-populations
+* The reviewer's point was correct: the original tests used unscoped rows sharing a code, which
+  exercised only the degenerate case. With **two real sub-populations** sharing code `3`, the value
+  and bounds are last-wins (`1.2`, `(0.9, 1.5)`) while the initial maps retain the first *included*
+  row (`1.0`, `(0.8, 1.2)`) — so the first sub-population's bounds are **not recoverable from any
+  map**. When both rows are included, the initial maps follow last-wins like the general maps.
+* **Evidence:** `SharedCodes.sharedCodeValueAndBoundsAreLastWins`, `sharedCodeIncludedByBothIsLastWins`.
+
+### PARAM-8 — `VERIFIED` — the GV sub-population branch silently omits the PT-family parameters
+* **Where:** `SetParamToConfig`, `if (!subPop.contains("GV")) { … } else { … }`. GV names are matched
+  by **substring** (`contains("GV")`), not equality.
+* **Legacy:** the non-GV branch writes car travel/distance, money, car money cost, PT travel,
+  PT distance cost, waiting, line switch, walk travel, walk money cost, PT constant, car constant and
+  performing utility. The **GV branch writes only** car travel, car distance, money, car money cost,
+  walk travel, walk money cost and performing utility — it does **not** write PT travel, PT distance
+  cost, waiting, line switch or the mode constants, so those keep their MATSim defaults and the values
+  present in the CSV are silently ignored.
+* **Expected:** intentional (goods vehicles have no PT leg) — but it should be stated, and the
+  substring match on `"GV"` is a fragile dispatch key.
+* **Evidence:** `SetParamToConfigTests.gvSubPopulationOmitsPtParameters` (asserts the written fields
+  *and* that the PT fields equal a fresh sub-population's defaults and differ from the CSV values),
+  `nonGvSubPopulationIsFullyMapped`.
+
+### PARAM-9 — `VERIFIED` — `setDefaultParams(Config, String)` is a second, separate application path
+* **Where:** `ParamReader.setDefaultParams(Config, String)`.
+* **Legacy:** reads its values from `ScaleUp(this.DefaultParam)` — i.e. the **bare** parameter names
+  regardless of the `subPop` argument — and writes them into
+  `getOrCreateScoringParameters(subPop)`. It does **not** touch `qsim` (no `CapacityMultiplier`
+  handling), unlike `SetParamToConfig`.
+* **Expected:** the reviewer's point stands — this public path must be protected, or explicitly
+  excluded with evidence that no caller depends on it. Characterized now.
+* **Evidence:** `SetParamToConfigTests.setDefaultParamsWritesIntoNamedSubPopulation`.
 
 ---
 

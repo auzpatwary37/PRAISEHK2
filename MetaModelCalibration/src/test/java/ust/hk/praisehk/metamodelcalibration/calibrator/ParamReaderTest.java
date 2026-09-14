@@ -236,15 +236,29 @@ class ParamReaderTest {
 	class MissingFile {
 
 		@Test
-		@DisplayName("REVIEW_REQUIRED PARAM-1: a missing parameter file SILENTLY falls back to a "
-				+ "CWD-relative default, loading the shipped CSV instead")
-		void missingFileSilentlyFallsBack(@TempDir Path dir) {
-			Path requested = dir.resolve("does-not-exist.csv");
-			ParamReader r = new ParamReader(requested.toString());
+		@DisplayName("REVIEW_REQUIRED PARAM-1: a missing parameter file selects a CWD-RELATIVE default path "
+				+ "(deterministic part)")
+		void missingFileSelectsRelativeDefaultPath(@TempDir Path dir) {
+			ParamReader r = new ParamReader(dir.resolve("does-not-exist.csv").toString());
 
-			// The fallback path is a *relative* path, so its resolution depends on the process CWD.
+			// Always asserted: the fallback is a *relative* path, so its resolution depends on the
+			// process working directory. Nothing here depends on that directory existing.
 			assertEquals("src/main/resources/paramReaderTrial1.csv", r.getDefaultFileLoc());
+			assertTrue(Path.of(r.getDefaultFileLoc()).isAbsolute() == false,
+					"the fallback path is deliberately relative - that is the defect");
+		}
 
+		@Test
+		@DisplayName("REVIEW_REQUIRED PARAM-1: and then SILENTLY substitutes the bundled sample "
+				+ "parameters for the requested file")
+		void missingFileSilentlyFallsBack(@TempDir Path dir) {
+			ParamReader r = new ParamReader(dir.resolve("does-not-exist.csv").toString());
+
+			// The assertions below require the relative default to resolve. Surefire's working
+			// directory is pinned to ${project.basedir} in the POM precisely so that this holds in
+			// CI (see the pom comment). The assumption keeps the test honest if it is ever run from
+			// a different directory, at the cost of skipping the substantive assertion - which is
+			// itself the point: the behaviour is CWD-dependent.
 			assumeTrue(Files.exists(Path.of(r.getDefaultFileLoc())),
 					"relative default not resolvable from the current working directory (see PARAM-1)");
 
@@ -359,6 +373,47 @@ class ParamReaderTest {
 			assertEquals(-240.0, out.get("MuCar").getFirst(), 0.);
 			assertEquals(-160.0, out.get("MuCar").getSecond(), 0.);
 		}
+
+		@Test
+		@DisplayName("CHARACTERIZATION: an already-scaled ScaleUpLimit input is returned unchanged")
+		void scaleUpLimitAlreadyScaledIsIdentity(@TempDir Path dir) throws IOException {
+			ParamReader r = reader(dir);
+
+			LinkedHashMap<String, Tuple<Double, Double>> in = new LinkedHashMap<>();
+			in.put("MuCar", new Tuple<>(-240.0, -160.0));
+			LinkedHashMap<String, Tuple<Double, Double>> out = r.ScaleUpLimit(in);
+
+			assertEquals(1, out.size());
+			assertTrue(out.containsKey("MuCar"));
+			assertEquals(-240.0, out.get("MuCar").getFirst(), 0.);
+			assertEquals(-160.0, out.get("MuCar").getSecond(), 0.);
+		}
+
+		@Test
+		@DisplayName("REVIEW_REQUIRED PARAM-6: ScaleUpLimit rejects a MIXED code/paramName input")
+		void scaleUpLimitMixedKeysThrow(@TempDir Path dir) throws IOException {
+			ParamReader r = reader(dir);
+
+			LinkedHashMap<String, Tuple<Double, Double>> in = new LinkedHashMap<>();
+			in.put("1", new Tuple<>(-240.0, -160.0));
+			in.put("MuMoney", new Tuple<>(0.8, 1.2));
+
+			assertThrows(IllegalArgumentException.class, () -> r.ScaleUpLimit(in));
+		}
+
+		@Test
+		@DisplayName("CHARACTERIZATION: ScaleUpLimit OMITS codes absent from the input, exactly like ScaleUp")
+		void scaleUpLimitOmitsAbsentCodes(@TempDir Path dir) throws IOException {
+			ParamReader r = reader(dir); // defines codes 1 and 3
+
+			LinkedHashMap<String, Tuple<Double, Double>> in = new LinkedHashMap<>();
+			in.put("1", new Tuple<>(-240.0, -160.0));
+			LinkedHashMap<String, Tuple<Double, Double>> out = r.ScaleUpLimit(in);
+
+			assertEquals(1, out.size());
+			assertFalse(out.containsKey("MuMoney"),
+					"bound and value transformations share the same omission semantics today");
+		}
 	}
 
 	// ==================================================================
@@ -394,6 +449,119 @@ class ParamReaderTest {
 
 			assertThrows(ArrayIndexOutOfBoundsException.class,
 					() -> r.generateSubPopSpecificParam(map("All", 1.0), "person_GV"));
+		}
+	}
+
+	// ==================================================================
+	// Shared codes across sub-populations (the real production case)
+	// ==================================================================
+
+	@Nested
+	@DisplayName("shared code across sub-populations (alias / group semantics)")
+	class SharedCodes {
+
+		private static final String SUB_A = "person_A";
+		private static final String SUB_B = "person_B";
+
+		/**
+		 * The production shape: two DIFFERENT sub-populations deliberately reusing one code. The class
+		 * javadoc states the intent - "same code parameters will be treated as one parameter".
+		 */
+		private ParamReader shared(Path dir, String includeA, String includeB,
+				double valueA, double valueB, double loA, double hiA, double loB, double hiB)
+				throws IOException {
+			return reader(dir,
+					row(SUB_A, "MuMoney", loA, hiA, valueA, "3", includeA),
+					row(SUB_B, "MuMoney", loB, hiB, valueB, "3", includeB));
+		}
+
+		private ParamReader shared(Path dir) throws IOException {
+			return shared(dir, "FALSE", "FALSE", 1.0, 1.2, 0.8, 1.2, 0.9, 1.5);
+		}
+
+		@Test
+		@DisplayName("ORACLE: one code GROUPS several scoped parameter ids")
+		void oneCodeGroupsScopedParameterIds(@TempDir Path dir) throws IOException {
+			ParamReader r = shared(dir);
+
+			// both scoped ids exist, and both resolve to the same canonical code
+			LinkedHashMap<String, Double> up = r.ScaleUp(map("3", 1.1));
+			assertEquals(2, up.size());
+			assertTrue(up.containsKey("person_A MuMoney"));
+			assertTrue(up.containsKey("person_B MuMoney"));
+
+			// the sub-population list contains both, in first-seen order
+			assertEquals(Arrays.asList(SUB_A, SUB_B), r.getSubPopulationName());
+		}
+
+		@Test
+		@DisplayName("ORACLE: ScaleUp FANS OUT one code value to every scoped name")
+		void scaleUpFansOutOneCodeToManyNames(@TempDir Path dir) throws IOException {
+			ParamReader r = shared(dir);
+
+			LinkedHashMap<String, Double> up = r.ScaleUp(map("3", 1.1));
+
+			// a single canonical value becomes the SAME value for every sub-population sharing the code
+			assertEquals(1.1, up.get("person_A MuMoney"), 0.);
+			assertEquals(1.1, up.get("person_B MuMoney"), 0.);
+		}
+
+		@Test
+		@DisplayName("REVIEW_REQUIRED PARAM-7: ScaleDown COLLAPSES conflicting scoped values onto one code, "
+				+ "and which value survives depends only on iteration order")
+		void scaleDownCollapsesConflictingValues(@TempDir Path dir) throws IOException {
+			ParamReader r = shared(dir);
+
+			// insert B last -> B's value survives
+			LinkedHashMap<String, Double> aThenB = map("person_A MuMoney", 1.0, "person_B MuMoney", 1.2);
+			assertEquals(1.2, r.ScaleDown(aThenB).get("3"), 0.);
+
+			// insert A last -> A's value survives. The other scoped value is silently discarded.
+			LinkedHashMap<String, Double> bThenA = map("person_B MuMoney", 1.2, "person_A MuMoney", 1.0);
+			assertEquals(1.0, r.ScaleDown(bThenA).get("3"), 0.);
+
+			// i.e. the same SET of scoped values yields different canonical values by insertion order
+			assertTrue(Math.abs(r.ScaleDown(aThenB).get("3") - r.ScaleDown(bThenA).get("3")) > 1e-9,
+					"the collapse is order-dependent: conflicting scoped values cannot both be represented");
+		}
+
+		@Test
+		@DisplayName("REVIEW_REQUIRED PARAM-4: for a shared code the value and bounds are LAST-WINS, while "
+				+ "the initial maps keep the FIRST included row")
+		void sharedCodeValueAndBoundsAreLastWins(@TempDir Path dir) throws IOException {
+			ParamReader r = shared(dir, "TRUE", "FALSE", 1.0, 1.2, 0.8, 1.2, 0.9, 1.5);
+
+			assertEquals(1.2, r.getDefaultParam().get("3"), 0.);          // last row wins
+			assertEquals(0.9, r.getParamLimit().get("3").getFirst(), 0.);
+			assertEquals(1.5, r.getParamLimit().get("3").getSecond(), 0.);
+
+			// the initial maps keep the first row's value and bounds, because the later row is excluded
+			assertEquals(1.0, r.getInitialParam().get("3"), 0.);
+			assertEquals(0.8, r.getInitialParamLimit().get("3").getFirst(), 0.);
+			assertEquals(1.2, r.getInitialParamLimit().get("3").getSecond(), 0.);
+		}
+
+		@Test
+		@DisplayName("CHARACTERIZATION: when BOTH sub-populations include the shared code, the initial "
+				+ "maps follow the same last-wins rule as the general maps")
+		void sharedCodeIncludedByBothIsLastWins(@TempDir Path dir) throws IOException {
+			ParamReader r = shared(dir, "TRUE", "TRUE", 1.0, 1.2, 0.8, 1.2, 0.9, 1.5);
+
+			assertEquals(1.2, r.getInitialParam().get("3"), 0.);
+			assertEquals(0.9, r.getInitialParamLimit().get("3").getFirst(), 0.);
+			assertEquals(1.5, r.getInitialParamLimit().get("3").getSecond(), 0.);
+		}
+
+		@Test
+		@DisplayName("ORACLE: disagreement between the two rows' values and bounds is resolved last-wins, "
+				+ "so the first sub-population's bounds are unrecoverable from the general maps")
+		void firstSubPopulationsBoundsAreLost(@TempDir Path dir) throws IOException {
+			ParamReader r = shared(dir);
+
+			// code 3 carries sub_B's bounds; sub_A's (0.8, 1.2) exist only in the CSV, not in any map
+			assertEquals(0.9, r.getParamLimit().get("3").getFirst(), 0.);
+			assertFalse(r.getParamLimit().get("3").getFirst() == 0.8,
+					"the first sub-population's lower bound is not retained anywhere");
 		}
 	}
 
@@ -445,6 +613,181 @@ class ParamReaderTest {
 				Files.deleteIfExists(sideEffect);
 			}
 		}
+
+		// ------------------------------------------------------------------
+		// Sub-population branches. Values are deliberately far from MATSim's
+		// defaults so that an assertion cannot pass because nothing was written.
+		// ------------------------------------------------------------------
+
+		private static final String SUB = "person_A";
+		private static final String GV = "person_GV";
+
+		private static final double CAR_TRAVEL = -111.0;
+		private static final double CAR_DISTANCE = -0.0175;
+		private static final double MONEY = 1.11;
+		private static final double CAR_MONEY_COST = 0.11;
+		private static final double PT_TRAVEL = -122.0;
+		private static final double PT_DISTANCE_COST = -1.9e-4;
+		private static final double WAITING = -6.6;
+		private static final double LINE_SWITCH = -5.5;
+		private static final double WALK_TRAVEL = -133.0;
+		private static final double WALK_MONEY_COST = -0.009;
+		private static final double PT_CONSTANT = 0.22;
+		private static final double CAR_CONSTANT = 0.33;
+		private static final double PERFORM = 99.0;
+		private static final double CAPACITY_MULTIPLIER = 1.25;
+
+		/** Every name the non-GV sub-population branch dereferences, with distinctive values. */
+		private String[] subPopRows(String subPop) {
+			return new String[] {
+					row(subPop, "MarginalUtilityofTravelCar", -240, -160, CAR_TRAVEL, "1", "TRUE"),
+					row(subPop, "MarginalUtilityofDistanceCar", -0.02, -0.005, CAR_DISTANCE, "2", "TRUE"),
+					row(subPop, "MarginalUtilityofMoney", 0.8, 1.2, MONEY, "3", "TRUE"),
+					row(subPop, "DistanceBasedMoneyCostCar", 0, 1, CAR_MONEY_COST, "4", "TRUE"),
+					row(subPop, "MarginalUtilityofTravelpt", -240, -160, PT_TRAVEL, "5", "TRUE"),
+					row(subPop, "MarginalUtilityOfDistancePt", -2e-4, -8e-5, PT_DISTANCE_COST, "6", "TRUE"),
+					row(subPop, "MarginalUtilityofWaiting", -7.2, -4.8, WAITING, "7", "TRUE"),
+					row(subPop, "UtilityOfLineSwitch", -6, -4, LINE_SWITCH, "8", "TRUE"),
+					row(subPop, "MarginalUtilityOfWalking", -240, -160, WALK_TRAVEL, "9", "TRUE"),
+					row(subPop, "DistanceBasedMoneyCostWalk", -0.02, -0.004, WALK_MONEY_COST, "10", "TRUE"),
+					row(subPop, "ModeConstantPt", 0, 1, PT_CONSTANT, "11", "TRUE"),
+					row(subPop, "ModeConstantCar", 0, 1, CAR_CONSTANT, "12", "TRUE"),
+					row(subPop, "MarginalUtilityofPerform", 80, 120, PERFORM, "13", "TRUE"),
+			};
+		}
+
+		private Config apply(ParamReader r) {
+			Path sideEffect = Path.of("config_Intermediate.xml");
+			try {
+				return r.SetParamToConfig(ConfigUtils.createConfig(), new LinkedHashMap<>());
+			} finally {
+				// Delete inside the helper, but only after the Config has been loaded - the returned
+				// Config is in-memory by then.
+				deleteQuietly(sideEffect);
+			}
+		}
+
+		private void deleteQuietly(Path p) {
+			try {
+				Files.deleteIfExists(p);
+			} catch (IOException ignored) {
+				// test hygiene only
+			}
+		}
+
+		@Test
+		@DisplayName("ORACLE: the NON-GV sub-population branch maps every parameter family into that "
+				+ "sub-population's scoring set")
+		void nonGvSubPopulationIsFullyMapped(@TempDir Path dir) throws IOException {
+			ParamReader r = new ParamReader(csv(dir,
+					concat(subPopRows(SUB),
+							row("All", "CapacityMultiplier", 0.5, 1.5, CAPACITY_MULTIPLIER, "14", "FALSE")))
+					.toString());
+
+			Config out = apply(r);
+			var set = out.planCalcScore().getOrCreateScoringParameters(SUB);
+
+			assertEquals(CAR_TRAVEL, set.getOrCreateModeParams("car").getMarginalUtilityOfTraveling(), 0.);
+			assertEquals(CAR_DISTANCE, set.getOrCreateModeParams("car").getMarginalUtilityOfDistance(), 0.);
+			assertEquals(MONEY, set.getMarginalUtilityOfMoney(), 0.);
+			assertEquals(CAR_MONEY_COST, set.getOrCreateModeParams("car").getMonetaryDistanceRate(), 0.);
+			assertEquals(PT_TRAVEL, set.getOrCreateModeParams("pt").getMarginalUtilityOfTraveling(), 0.);
+			assertEquals(PT_DISTANCE_COST, set.getOrCreateModeParams("pt").getMonetaryDistanceRate(), 0.);
+			assertEquals(WAITING, set.getMarginalUtlOfWaitingPt_utils_hr(), 0.);
+			assertEquals(LINE_SWITCH, set.getUtilityOfLineSwitch(), 0.);
+			assertEquals(WALK_TRAVEL, set.getOrCreateModeParams("walk").getMarginalUtilityOfTraveling(), 0.);
+			assertEquals(WALK_MONEY_COST, set.getOrCreateModeParams("walk").getMonetaryDistanceRate(), 0.);
+			assertEquals(PT_CONSTANT, set.getOrCreateModeParams("pt").getConstant(), 0.);
+			assertEquals(CAR_CONSTANT, set.getOrCreateModeParams("car").getConstant(), 0.);
+			assertEquals(PERFORM, set.getPerforming_utils_hr(), 0.);
+
+			// An All-scoped CapacityMultiplier reaches qsim through the "All " fallback.
+			assertEquals(CAPACITY_MULTIPLIER, out.qsim().getFlowCapFactor(), 0.);
+		}
+
+		@Test
+		@DisplayName("REVIEW_REQUIRED PARAM-8: the GV branch writes car/walk/performing but deliberately "
+				+ "OMITS the PT, waiting and line-switch parameters")
+		void gvSubPopulationOmitsPtParameters(@TempDir Path dir) throws IOException {
+			ParamReader r = new ParamReader(csv(dir, subPopRows(GV)).toString());
+
+			// Baseline: the defaults a FRESH sub-population set has for the fields the GV branch skips.
+			var baseline = ConfigUtils.createConfig().planCalcScore()
+					.getOrCreateScoringParameters("baseline");
+			double defaultPtTravel = baseline.getOrCreateModeParams("pt").getMarginalUtilityOfTraveling();
+			double defaultWaiting = baseline.getMarginalUtlOfWaitingPt_utils_hr();
+			double defaultLineSwitch = baseline.getUtilityOfLineSwitch();
+			double defaultPtConstant = baseline.getOrCreateModeParams("pt").getConstant();
+
+			Config out = apply(r);
+			var set = out.planCalcScore().getOrCreateScoringParameters(GV);
+
+			// written by the GV branch
+			assertEquals(CAR_TRAVEL, set.getOrCreateModeParams("car").getMarginalUtilityOfTraveling(), 0.);
+			assertEquals(CAR_DISTANCE, set.getOrCreateModeParams("car").getMarginalUtilityOfDistance(), 0.);
+			assertEquals(MONEY, set.getMarginalUtilityOfMoney(), 0.);
+			assertEquals(CAR_MONEY_COST, set.getOrCreateModeParams("car").getMonetaryDistanceRate(), 0.);
+			assertEquals(WALK_TRAVEL, set.getOrCreateModeParams("walk").getMarginalUtilityOfTraveling(), 0.);
+			assertEquals(WALK_MONEY_COST, set.getOrCreateModeParams("walk").getMonetaryDistanceRate(), 0.);
+			assertEquals(PERFORM, set.getPerforming_utils_hr(), 0.);
+
+			// NOT written by the GV branch: these keep their defaults, and are therefore
+			// demonstrably different from the values present in the CSV.
+			assertEquals(defaultPtTravel, set.getOrCreateModeParams("pt").getMarginalUtilityOfTraveling(), 0.);
+			assertEquals(defaultWaiting, set.getMarginalUtlOfWaitingPt_utils_hr(), 0.);
+			assertEquals(defaultLineSwitch, set.getUtilityOfLineSwitch(), 0.);
+			assertEquals(defaultPtConstant, set.getOrCreateModeParams("pt").getConstant(), 0.);
+
+			assertTrue(Math.abs(set.getOrCreateModeParams("pt").getMarginalUtilityOfTraveling() - PT_TRAVEL) > 1e-9,
+					"the CSV PT value must NOT have been applied for a GV sub-population");
+			assertTrue(Math.abs(set.getMarginalUtlOfWaitingPt_utils_hr() - WAITING) > 1e-9);
+			assertTrue(Math.abs(set.getUtilityOfLineSwitch() - LINE_SWITCH) > 1e-9);
+		}
+
+		@Test
+		@DisplayName("ORACLE: a shared code feeds EVERY sub-population that reuses it, through ScaleUp and "
+				+ "then SetParamToConfig")
+		void sharedCodeFeedsEverySubPopulationConfig(@TempDir Path dir) throws IOException {
+			// Codes 1..13 are shared, scoped to two different sub-populations.
+			ParamReader r = new ParamReader(csv(dir,
+					concat(subPopRows(SUB), subPopRows("person_B"))).toString());
+
+			// The reader groups both sub-populations; ScaleUp therefore fans one canonical value out
+			// to both scoped names.
+			assertEquals(Arrays.asList(SUB, "person_B"), r.getSubPopulationName());
+			LinkedHashMap<String, Double> up = r.ScaleUp(map("1", CAR_TRAVEL));
+			assertEquals(2, up.size());
+			assertEquals(CAR_TRAVEL, up.get("person_A MarginalUtilityofTravelCar"), 0.);
+			assertEquals(CAR_TRAVEL, up.get("person_B MarginalUtilityofTravelCar"), 0.);
+
+			// And the resulting Config carries the SAME canonical value in both sub-populations -
+			// which is the alias/group semantics the typed model must decide whether to preserve.
+			Config out = apply(r);
+			assertEquals(CAR_TRAVEL, out.planCalcScore().getOrCreateScoringParameters(SUB)
+					.getOrCreateModeParams("car").getMarginalUtilityOfTraveling(), 0.);
+			assertEquals(CAR_TRAVEL, out.planCalcScore().getOrCreateScoringParameters("person_B")
+					.getOrCreateModeParams("car").getMarginalUtilityOfTraveling(), 0.);
+		}
+
+		@Test
+		@DisplayName("CHARACTERIZATION: setDefaultParams(config, subPop) writes the reader's defaults into "
+				+ "the NAMED sub-population (a second, separate application path)")
+		void setDefaultParamsWritesIntoNamedSubPopulation(@TempDir Path dir) throws IOException {
+			ParamReader r = new ParamReader(fullCsv(dir).toString());
+			Config config = ConfigUtils.createConfig();
+			double untouchedFlowCapFactor = config.qsim().getFlowCapFactor();
+
+			r.setDefaultParams(config, "mySub");
+
+			var set = config.planCalcScore().getOrCreateScoringParameters("mySub");
+			assertEquals(-200.0, set.getOrCreateModeParams("car").getMarginalUtilityOfTraveling(), 0.);
+			assertEquals(-0.0075, set.getOrCreateModeParams("car").getMarginalUtilityOfDistance(), 0.);
+			assertEquals(1.0, set.getMarginalUtilityOfMoney(), 0.);
+			assertEquals(100.0, set.getPerforming_utils_hr(), 0.);
+
+			// Unlike SetParamToConfig, this path never touches qsim (no CapacityMultiplier handling).
+			assertEquals(untouchedFlowCapFactor, config.qsim().getFlowCapFactor(), 0.);
+		}
 	}
 
 	// ==================================================================
@@ -482,5 +825,11 @@ class ParamReaderTest {
 			m.put((String) kv[i], (Double) kv[i + 1]);
 		}
 		return m;
+	}
+
+	private static String[] concat(String[] a, String... b) {
+		String[] out = Arrays.copyOf(a, a.length + b.length);
+		System.arraycopy(b, 0, out, a.length, b.length);
+		return out;
 	}
 }
