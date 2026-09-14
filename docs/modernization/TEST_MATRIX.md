@@ -15,6 +15,7 @@ decision). A row must not be marked `O` merely because a test exists.
 
 Snapshot: **157 deterministic tests, 0 failures, ~9 s**, runnable offline
 Snapshot: **158 deterministic tests, 0 failures, ~9 s**, runnable offline
+Snapshot: **153 deterministic tests, 0 failures, ~9 s**, runnable offline
 (`mvn -o test` in `MetaModelCalibration`), enforced in CI on every PR into the trunk.
 
 Merge-order note: this count is for the trust-region branch, which is based on the trunk *before* the
@@ -120,6 +121,18 @@ after which the total is 171. Only this snapshot line and the count in `ARCHITEC
 | `fareLinkVolume` / `fareLinkVolumeCluster` round trip | ✔ | — | ✔ | ✔ | `FareLinkSerializationTests.fareLinkVolumeRoundTrip`, `fareLinkVolumeClusterRoundTrip` | cluster pins the bracket/space clean-up |
 | `MaaSPacakgeUsage` round trip | ✔ | — | ✔ | — | `FareLinkSerializationTests.maasPackageNameCannotRoundTrip` | **MEAS-8b** (cannot round trip) |
 
+| `Measurements.clone()` container time-bean aliasing | ✔ | — | ✔ | — | `MeasurementsTest.cloneAliasesTheContainerTimeBeanMap`, `clonedContainerDivergesFromItsChildren` | **MEAS-18**; the clone shares the map and can diverge from its own children |
+| `Measurement.clone()` coordinate + time-bean copy | ✔ | — | ✔ | — | `MeasurementTest.cloneDropsCoord`, `cloneCopiesTheTimeBeanMap` | **MEAS-17**; `coord` is dropped, the child's time-bean map *is* copied |
+| CSV measurement-id escaping | ✔ | — | ✔ | — | `MeasurementsTest.csvRewritesCommaInMeasurementId` | **MEAS-19**; `,` -> `__` and never restored |
+| CSV `ifForValidation` column | ✔ | — | ✔ | — | `MeasurementsTest.csvDropsIfForValidation` | **MEAS-20**; written, never read |
+| CSV type column (new vs existing measurement) and multi-bean round trip | ✔ | — | ✔ | ✔ | `MeasurementsTest.csvTypeHandling`, `csvRoundTripAllColumns` | the file's type is used for a new measurement only |
+| fare-link EMPTY-volume path | ✔ | — | ✔ | — | `MeasurementTypeTest.fareLinkEmptyVolumePathThrowsBeforeTheFallback` | **MEAS-21**; throws before the MaaS fallback is reached, so MEAS-4's "cluster works" is conditional |
+
+**CSV "round trip" scope, stated precisely:** the round trip preserves id (except commas), time bean,
+volume and — for a *new* measurement — type. It does **not** preserve `ifForValidation`, does not restore
+a comma in an id, and does not carry the other measurement attributes. Earlier wording in this matrix
+("CSV round trip") referred only to the volume path and was narrower than it sounded.
+
 ## 3b. Vendored transit fare contract (`transit.fare`)
 
 `FareCalculator` and `FareLink` were vendored from the HK MATSim fork (verbatim except the package
@@ -222,7 +235,7 @@ declaration). `FareLink`'s grammar is a serialization contract for `MeasurementT
 | No Hong Kong production data required | ✔ | all fixtures in-memory; only `paramReaderTrial1.csv` values copied as literals |
 | No absolute filesystem paths in tests | ✔ | `@TempDir` used; legacy absolute-path helper excluded |
 | No MATLAB required | ✔ | MATLAB jars unused; `MatlabOptimizer` returns null |
-| No network required | ✔ | offline run verified |
+| No network required | ✔ | The observed failure is **fixed deterministically**: `ParamReader.SetParamToConfig` round trips through `ConfigUtils.loadConfig`, which resolved the MATSim DTD **remotely** (`www.matsim.org`) - a latent flake, green locally and red on a CI runner - until `-Dmatsim.preferLocalDtds=true` made it read `dtd/config_v2.dtd` from the MATSim jar. Surefire also sets an invalid proxy as **defence in depth** for HTTP clients that honour JVM proxy properties. **That guard is not a process-level network sandbox**, so residual egress remains possible for a client using a raw socket, `Proxy.NO_PROXY`, or its own proxy settings. Hard isolation would need network-namespace/firewall enforcement in CI, which is **not** in place - recorded as an open item |
 | No `Math.random()` in tests | ✔ | new tests deterministic; legacy nondeterministic test excluded |
 | No `HashMap` iteration-order dependence | ✔ | CSV assertions are order-independent |
 | Legacy nondeterministic/hanging test quarantined | ✔ | surefire `<excludes>` in `MetaModelCalibration/pom.xml` |

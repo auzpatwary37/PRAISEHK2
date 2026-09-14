@@ -167,6 +167,19 @@ explicit deliverable of roadmap phase 8. Do not refactor it or merge it with `CN
 | `MTRLinkVolumeInfo` `[V]` | `lineId`, `routeId`, `linkId` triple for MTR physical-link-volume measurements; `toString`/parse via the `___`-style grammar. |
 | `MeasurementsUtils` | `[U]` helper. |
 
+**Clone semantics, pinned in full (MEAS-1, MEAS-2, MEAS-17, MEAS-18):** `Measurement.clone()`
+deep-copies volumes and SD, copies the declared time-bean map into a **private** `HashMap`, copies
+attributes **shallowly** (the link list is shared) and silently **drops `coord`**. `Measurements.clone()`
+deep-copies the child measurements but constructs the container with `new Measurements(this.timeBean)` —
+the **same** map instance — so `addRedundantTimeBean` on the clone mutates the original, and the cloned
+container can declare a time bean that its own cloned children do not know about. A "copy" is therefore
+neither independent nor internally consistent.
+
+**CSV persistence, pinned (MEAS-19, MEAS-20):** `writeCSVMeasurements` writes five columns, rewriting
+`,` to `__` in the measurement id; `updateMeasurementsFromFile` reads only columns 0–3, so a comma in an
+id is **not** restored (the identity changes) and `ifForValidation` is silently dropped. The type column
+is honoured for a *new* measurement, while an existing measurement keeps its own type.
+
 ## 8. `calibrator/ObjectiveCalculator` `[V]` `[T]`
 
 Static utility computing four objective families, each with `TypeAADT` and
