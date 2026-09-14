@@ -42,7 +42,7 @@ PRAISEHK2/
 ```
 
 Build: `mvn -o -B clean test` from the repository root, or `cd MetaModelCalibration && mvn -o -B
-clean test` → BUILD SUCCESS, **181 tests (1 skipped), 0 failures**, offline. Both invocations are
+clean test` → BUILD SUCCESS, **191 tests (1 skipped), 0 failures**, offline. Both invocations are
 verified equivalent.
 
 The Hong Kong MATSim fork was first imported as a 153-file module, then reduced: the dependency
@@ -177,7 +177,7 @@ matsim-adapter/      ◀── matsimIntegration/*, and the vendored transit.far
   `Proxy.NO_PROXY`, or its own proxy configuration. Hard isolation, if required, needs enforcement
   outside the JVM (network namespace, firewall, or a no-egress container) and is **not** in place.
 * Offline verification: `cd MetaModelCalibration && mvn -o -B clean test`
-  → BUILD SUCCESS, **181 tests (1 skipped), 0 failures**, zero compiler diagnostics.
+  → BUILD SUCCESS, **191 tests (1 skipped), 0 failures**, zero compiler diagnostics.
 
 ## 6. Delivery roadmap (small, behaviour-protected PRs)
 

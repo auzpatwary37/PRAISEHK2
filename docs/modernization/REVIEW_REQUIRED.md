@@ -445,6 +445,93 @@ restores it
 
 ---
 
+## `CNLSUEModel` (`analyticalModelImpl/CNLSUEModel.java`) — the MSA core
+
+The assignment loop appends the residual norm to `error` in `CheckConvergence`, then reads the last two
+of those norms in `UpdateLinkVolume` to advance `beta` and move every volume by
+`(1/beta) * (loaded - current)`. Characterized with the step weight recovered from the observable
+volume change, so the test does not trust the internal list.
+
+### SUE-1 — `VERIFIED` — `consecutiveSUEErrorIncrease` is never seeded, so the alpha branch THROWS
+* `beta` advances by `gammaMSA` (0.1) when the residual error decreased, and by `alphaMSA` (1.9)
+  otherwise:
+  ```java
+  if (error.get(timeBeanId).get(counter-1) < error.get(timeBeanId).get(counter-2)) {
+      beta.get(timeBeanId).add(beta.get(timeBeanId).get(counter-2) + this.gammaMSA);
+  } else {
+      this.getConsecutiveSUEErrorIncrease().put(timeBeanId,
+          this.getConsecutiveSUEErrorIncrease().get(timeBeanId) + 1);   // <-- get() is null
+      beta.get(timeBeanId).add(beta.get(timeBeanId).get(counter-2) + this.alphaMSA);
+  }
+  ```
+  `consecutiveSUEErrorIncrease` is a `ConcurrentHashMap` created empty, and the line above is its
+  **only** write anywhere in the class — nothing ever seeds a per-time-bean entry. The first time the
+  residual fails to decrease, `get(timeBeanId)` returns `null` and the unboxing in `null + 1` throws
+  `NullPointerException`, before any volume is moved.
+* **Expected:** the counter should be seeded per time bean (as the constructor does for
+  `beta`/`error`/`error1`), or the policy should be an `int` field.
+* **Legacy reference:** the older `SUEModelContTime` uses `protected int consecutiveSUEErrorIncrease = 0;`
+  and simply `++`s it — so this is a refactoring regression introduced when the field was converted to a
+  per-time-bean map without moving the initialization.
+* **Consequence:** in practice `beta` can only ever grow by `gammaMSA`, so the adaptive MSA policy is
+  inert and the step weight decays as `1/(1 + 0.1k)` instead of responding to stagnation.
+* **Evidence:** `CNLSUEModelMSATest.nonDecreasingErrorThrowsBecauseTheCounterIsNeverInitialised` (asserts
+  the map is empty, that the call throws, and that the volume is untouched);
+  `nonDecreasingErrorGrowsBetaByAlphaOnceTheCounterIsSeeded` proves the branch itself is correct by
+  seeding the map by hand and recovering `beta = 2.9` from the volume change.
+
+### SUE-2 — `VERIFIED` — the stopping rule ORs three criteria of different kinds, and the tolerance argument can force convergence
+* `CheckConvergence` returns true when **any** of:
+  ```java
+  squareSum <= 1                                        // absolute: norm of SQUARED errors
+  || sum == 0                                           // relative: no link breaches `tollerance`
+  || linkBelow1 == linkVolume.size()+transitlinkVolume.size()   // pointwise: every link below 1
+  ```
+* The middle disjunct is decided by `error / newVolume * 100 > tollerance`, where `tollerance` is a
+  **method parameter** — so passing a large value declares convergence regardless of the actual state.
+  (Note `UpdateLinkVolume` takes no such parameter and instead reads the `tollerance` *field*: the same
+  quantity is a parameter in one method and a field in the other.)
+* The first disjunct compares a norm of *squared* errors against 1, so it means "the root-sum-square of
+  the deltas is at most 1" — easy to mistake for a tolerance test.
+* **Evidence:** `theToleranceArgumentAloneForcesConvergence` (identical state, converged only because
+  the argument was raised to 1000), `convergenceBoundaryIsTheUnitSquaredErrorNorm` (passes at exactly
+  `|diff| = 1`, fails at `|diff| = 2`).
+
+### SUE-3 — `VERIFIED` — an UNLOADED link is excluded from `linkBelow1`, making the pointwise disjunct unreachable
+* The `if (error < 1) { linkBelow1++; }` increment sits **inside** the `else` branch of
+  `if (linkVolume.get(linkid) == 0)`. A link with zero loaded volume therefore contributes `0` to
+  `squareSum` (helping the norm test) but **never** counts toward `linkBelow1`.
+* Since `linkBelow1 == linkVolume.size() + transitlinkVolume.size()` requires *every* link to be
+  counted, the pointwise disjunct **cannot** fire for any time bean containing an unloaded link — the
+  counter can reach at most `N - (number of unloaded links)`.
+* This is the opposite of what the code reads like: an unloaded link looks trivially converged.
+* **Evidence:** `unloadedLinksAreExcludedFromThePointwiseDisjunct` — three loaded links with squared
+  errors of 0.81 each converge via the pointwise disjunct, yet unloading just one of them flips the same
+  state to NOT converged.
+
+### SUE-4 — `VERIFIED` — the `error == Double.NaN` guards are DEAD, and a NaN residual reports CONVERGED
+* `CheckConvergence` guards with `error == Double.NaN` and `squareSum == Double.NaN`. `NaN == NaN` is
+  always false, so neither guard can ever fire (the same dead-comparison shape as MEAS-14's
+  `== null` writer guard).
+* `(Inf - Inf)^2` is `NaN`. With an infinite current volume the infinity guard (`error == ±Infinity`)
+  does not fire either, every subsequent comparison is false, `sum` therefore stays `0`, and the
+  `sum == 0` disjunct **declares convergence on unusable state**.
+* The car loop throws `IllegalArgumentException("Error is infinity!!!")` for `±Infinity`, so the two
+  non-finite cases are handled inconsistently: `+Inf` throws, `NaN` silently converges.
+* **Evidence:** `nanErrorIsSilentlyReportedAsConverged` (asserts the throw for `+Inf` and the silent
+  `true` for `Inf - Inf`).
+
+### SUE-5 — `READ` — recorded, not tested
+* `tolleranceLink` and the `linkSum` counter in `UpdateLinkVolume` are computed for every link and then
+  **discarded**: neither is returned nor used. The per-link relative-change diagnostic is dead.
+* The transit loop's guard is `error == Double.NaN || error == Double.NEGATIVE_INFINITY` — it tests NaN
+  (dead) where the car loop tests `+Infinity`, so a transit link can carry `+Infinity` error without
+  throwing. Not tested: it would need a `TransitLink` stub, and no test can distinguish it from the
+  car path today.
+* `UpdateLinkVolume` takes `(…, int counter, String timeBeanId)` while `CheckConvergence` takes
+  `(…, String timeBeanId, int counter)` — the argument order is transposed between the two halves of
+  the same loop.
+
 ## ParamReader (`calibrator/ParamReader.java`)
 
 All six items below are now `VERIFIED` by `ParamReaderTest` (23 tests). Correction to an earlier draft:

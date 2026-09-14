@@ -13,12 +13,13 @@ The C/O distinction is load-bearing for the next phase: oracle-backed semantics 
 by a redesign, whereas characterized defects are free to be fixed deliberately (with a migration
 decision). A row must not be marked `O` merely because a test exists.
 
-Snapshot: **181 tests (1 skipped), 0 failures, ~9 s**, runnable offline
+Snapshot: **191 tests (1 skipped), 0 failures, ~9 s**, runnable offline
 (`mvn -o test` in `MetaModelCalibration`), enforced in CI on every PR into the trunk.
 
 How the count is composed: **158** on the trunk after the meta-model oracle merged, **+14** from the
 trust-region state machine (one `@Disabled` by design, see MODEL-5), **+9** from the clone/CSV
-characterization gaps. This snapshot line and the two counts in `ARCHITECTURE.md` are the only
+characterization gaps, **+10** from the `CNLSUEModel` MSA core (SUE-1..SUE-5). This snapshot line and
+the two counts in `ARCHITECTURE.md` are the only
 hand-maintained numbers; a deliberate change to any of them must be visible in the same PR.
 
 ---
@@ -41,8 +42,10 @@ hand-maintained numbers; a deliberate change to any of them must be visible in t
 | `CNLTransitRoute` utility (fare/wait/transfer) | — | P | — | — | — | P (phase 2) |
 | `CNLTransitDirectLink` travel components | — | P | — | — | — | P |
 | `CNLTransitTransferLink` travel components | — | P | — | — | — | P |
-| `CNLSUEModel` MSA β sequence / update weight | — | P | — | — | — | P (phase 8) |
-| `CNLSUEModel` convergence error / stopping rule | — | P | — | — | — | P |
+| `CNLSUEModel` MSA β sequence / update weight | ✔ | ✔ | ✔ | ✔ | `CNLSUEModelMSATest.firstIterationTakesTheFullStep`, `decreasingErrorGrowsBetaByGamma`, `nonDecreasingErrorGrowsBetaByAlphaOnceTheCounterIsSeeded`, `updateReturnIsGovernedByTheFieldTolerance` | `O`: β recovered from the observable volume change alone; β₁ = 1, then +γ on a decreasing residual and +α otherwise, giving the harmonic step `1/β` |
+| `CNLSUEModel` convergence error / stopping rule | ✔ | ✔ | ✔ | ✔ | `convergenceBoundaryIsTheUnitSquaredErrorNorm`, `theToleranceArgumentAloneForcesConvergence`, `convergesWhenEveryLinkIsBelowOne`, `unloadedLinksAreExcludedFromThePointwiseDisjunct` | **SUE-2**, **SUE-3**; `O` for the unit-norm boundary |
+| `CNLSUEModel` MSA α branch reachability | ✔ | — | ✔ | — | `nonDecreasingErrorThrowsBecauseTheCounterIsNeverInitialised` | **SUE-1**: throws `NullPointerException` out of the box |
+| `CNLSUEModel` stopping-rule numerical robustness | ✔ | — | ✔ | — | `nanErrorIsSilentlyReportedAsConverged` | **SUE-4**: the `== Double.NaN` guards are dead, and NaN reports converged |
 | `CNLSUEModel` logit route split | — | P | — | — | — | P |
 | `CNLSUEModel` OD demand conservation | — | P | — | — | — | P |
 | `CNLSUEModel` link-flow aggregation | — | P | — | — | — | P |

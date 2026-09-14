@@ -126,12 +126,24 @@ See `PRAISE_MATSIMHK_RELATIONSHIP.md` §4.
   `setDefaultParameters(params)` seeds them.
 * Entry points: `perFormSUE(params, originalMeasurements)` and
   `perFormSUE(params, anaParams, originalMeasurements)`.
-* **Weighted MSA**: `beta` is a `Map<String /*timeBeanId*/, ArrayList<Double>>` explicitly commented
-  "related to weighted MSA of the SUE". The sequence is seeded with `1.0` and extended by adding
-  `gammaMSA` or `alphaMSA` depending on the branch; the update weight used when averaging new flows
-  is `1/beta(counter-1)`. Tunables: `setMSAAlpha`, `setMSAGamma`, `setTollerance`. **The exact branch
-  condition, the initial values of alpha/gamma, and the stopping rule are `[U]` and are the subject
-  of roadmap phase 8.**
+* **Weighted MSA - now `[V]`.** `beta` is a `Map<String /*timeBeanId*/, ArrayList<Double>>` explicitly
+  commented "related to weighted MSA of the SUE". Verified by `CNLSUEModelMSATest`:
+  * at `counter == 1` the list is cleared and seeded with `1.0`, so the first step takes the full
+    loaded volume;
+  * for `counter > 1`, `beta` grows by `gammaMSA = 0.1` when the last residual is **smaller** than the
+    one before it, and by `alphaMSA = 1.9` otherwise - so stagnation shrinks the step faster;
+  * the move applied to every link and transit link is `(1 / beta[counter-1]) * (loaded - current)`,
+    the classic harmonic `1/k` weight when the counter advances by 1 each iteration;
+  * the step norm is `sqrt(sum of squared moves)` and is compared against the **field** `tollerance`
+    (default `1`), not against a parameter - `UpdateLinkVolume` takes none;
+  * **`alphaMSA` is unreachable**: see SUE-1, the `else` branch throws because
+    `consecutiveSUEErrorIncrease` is never seeded, so in practice the weight only decays as
+    `1/(1 + 0.1k)`.
+* **Stopping rule - now `[V]`.** `CheckConvergence` appends the residual norm to `error` and returns
+  true if **any** of: the squared-error norm is `<= 1`; no link breaches the relative `tollerance`
+  **parameter**; or every link is below a squared error of 1. The three criteria are of different
+  kinds and interact (SUE-2, SUE-3), and the `== Double.NaN` guards are dead so a NaN residual reports
+  convergence (SUE-4). Full statements in REVIEW_REQUIRED.
 * **Logit/mode split**: route and mode probabilities use a numerically stabilised logit — the
   accumulation is written `totalUtility += Math.exp(d - u)`, i.e. a max-shifted (log-sum-exp)
   denominator. The shift variable `d` and the dispersion parameters (`LinkMiu`, `ModeMiu`) are `[U]`
