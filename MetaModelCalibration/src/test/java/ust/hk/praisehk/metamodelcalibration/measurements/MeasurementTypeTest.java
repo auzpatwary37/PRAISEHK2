@@ -349,4 +349,29 @@ class MeasurementTypeTest {
 
 		assertThrows(NullPointerException.class, () -> m.updateMeasurement(out, null, null));
 	}
+
+	@Test
+	@DisplayName("REVIEW_REQUIRED MEAS-21: the EMPTY-volume path of both fare-link types dereferences "
+			+ "getFareLinkVolume() BEFORE the MaaS fallback is built, so a null FareLinkVolume throws even "
+			+ "when the MaaS flow is populated")
+	void fareLinkEmptyVolumePathThrowsBeforeTheFallback() {
+		// fareLinkVolume
+		Measurement single = container().createAnadAddMeasurement("FL1", MeasurementType.fareLinkVolume);
+		single.setAttribute(Measurement.FareLinkAttributeName, new FareLink(FARE_KEY));
+		SUEModelOutput out1 = emptyOutput();
+		out1.setFareLinkVolume(null);
+		out1.setMaaSSpecificFareLinkFlow(maasFlow(FARE_KEY, 500.));
+		assertThrows(NullPointerException.class, () -> single.updateMeasurement(out1, null, null));
+
+		// fareLinkVolumeCluster: the fallback that "works" in MEAS-4 cannot even be reached here
+		Measurement cluster = container().createAnadAddMeasurement("CL1",
+				MeasurementType.fareLinkVolumeCluster);
+		cluster.setAttribute(Measurement.FareLinkClusterAttributeName,
+				new ArrayList<>(Arrays.asList(new FareLink(FARE_KEY))));
+		SUEModelOutput out2 = emptyOutput();
+		out2.setFareLinkVolume(null);
+		out2.setMaaSSpecificFareLinkFlow(maasFlow(FARE_KEY, 500.));
+		assertThrows(NullPointerException.class, () -> cluster.updateMeasurement(out2, null, null));
+	}
+
 }

@@ -40,7 +40,7 @@ PRAISEHK2/
 └── README.md
 ```
 
-Build: `cd MetaModelCalibration && mvn -o -B clean test` → BUILD SUCCESS, 144 tests, 0 failures, offline.
+Build: `cd MetaModelCalibration && mvn -o -B clean test` → BUILD SUCCESS, 153 tests, 0 failures, offline.
 
 The Hong Kong MATSim fork was first imported as a 153-file module, then reduced: the dependency
 closure was measured at 39 files / 11k LOC, but only **two** of those classes have any active use in
@@ -154,7 +154,7 @@ matsim-adapter/      ◀── matsimIntegration/*, and the vendored transit.far
 * No test requires: Hong Kong data, absolute paths, MATLAB, network access, `Math.random()`, or
   `HashMap` iteration order.
 * Offline verification: `cd MetaModelCalibration && mvn -o -B clean test`
-  → BUILD SUCCESS, 144 tests, 0 failures, zero compiler diagnostics.
+  → BUILD SUCCESS, 153 tests, 0 failures, zero compiler diagnostics.
 
 ## 6. Delivery roadmap (small, behaviour-protected PRs)
 
