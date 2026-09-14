@@ -12,14 +12,24 @@ Purity is not aesthetic tidiness in this codebase — it is load-bearing for fou
 
 1. **Reproducibility** (mission priority 3). The same inputs must give the same number. Today the
    objective can mutate its arguments, so the value depends on call history.
-2. **Marginal behaviour coverage.** A characterization test is only meaningful if the function under
-   test has no hidden state; otherwise a passing test may encode an accident of ordering.
+2. **Easier to characterize.** Characterization tests can and do record impure, stateful behaviour —
+   that is exactly what the `OBJ-3` mutation test does today. Purity does not make such tests
+   possible; it makes them *simpler to reason about and to keep honest*, because a passing test can
+   no longer be explained by hidden state or by call order.
 3. **Derivative work (Track B).** `ObjectiveDerivative` is defined as `(dL/dy)·(dy/dθ)`. If `L` is not
    a function of its stated inputs, the chain rule is not valid and the finite-difference oracle
    compares against a moving target.
 4. **Cost.** The SUE evaluation is the expensive part; a pure objective is safely memoizable and
    safely parallel. The calibrator already uses `parallelStream`, so purity is a correctness
    prerequisite for that parallelism, not an optimisation.
+
+**Two properties that purity does *not* imply**, and which must not be conflated with it:
+
+* **Totality.** A pure function may return `NaN` or throw. Purity constrains *where* a value comes
+  from, not *which* values are in the domain. Zero-denominator handling, missing-data handling and
+  `NaN` avoidance are **domain/correctness policies**, decided from the intended mathematics — not
+  consequences of purity.
+* **Correctness.** Purity is orthogonal to whether the number is right. See §6.
 
 ## 2. Current impurity inventory (all verified by tests)
 
@@ -51,9 +61,16 @@ currently used for diagnostics, and makes per-measurement contributions testable
 
 ## 4. Ordered steps
 
-Each step is a small PR. Steps marked **[purity-preserving]** must not change any number; steps marked
-**[behaviour-changing]** deliberately do, and therefore need the algorithmic decision and an oracle
-test — they must never be smuggled into a purity refactor.
+Each step is a small PR. Three markers are used:
+
+* **[purity-preserving]** — must not change any number *and* must not change observable API behaviour.
+* **[behaviour-preserving]** — intends not to change any number, but the claim must be demonstrated
+  against the golden corpus rather than assumed.
+* **[behaviour-changing]** — deliberately changes numbers and needs the algorithmic decision plus an
+  oracle test. **[potentially behaviour-changing]** changes observable API behaviour even when no
+  number moves.
+
+They must never be smuggled into one another.
 
 1. **[purity-preserving] Golden corpus.** Freeze the current objective value for every family, type
    branch and fixture in `FixtureE` plus the edge cases already covered. This is the regression net
@@ -62,11 +79,15 @@ test — they must never be smuggled into a purity refactor.
    skip / zero / fail-fast. This needs the intended semantics from the publication; the legacy code
    is internally inconsistent, so no choice can be read off it.
 3. **[behaviour-changing] Decide and implement the zero-denominator policy** (OBJ-5). Currently
-   `0`, `NaN` and `NaN` for the same input across three code paths. Note that purity alone forces a
-   decision here: a total function cannot return `NaN` for 0/0 by accident.
-4. **[purity-preserving] Remove the input mutation (OBJ-3)** once (2)/(3) have defined a total
-   function. This one is genuinely behaviour-preserving in the common path, because `putVolume`
-   already auto-inserts `SD = 0`; the mutation is observable only when volumes are populated directly.
+   `0`, `NaN` and `NaN` for the same input across three code paths. This is a **domain policy**, not a
+   consequence of purity — a pure function may legitimately return `NaN`. The decision must come from
+   the intended mathematics. Separately, once a policy is chosen, purity requires that the *same*
+   policy applies at every call site.
+4. **[behaviour-preserving] Remove the input mutation (OBJ-3)** once (2)/(3) have defined the intended
+   behaviour. This is behaviour-preserving in the common path, because `putVolume` already
+   auto-inserts `SD = 0`; the mutation is observable only when volumes are populated directly — so it
+   is *observably* behaviour-preserving only for inputs where the inserted value is already implied.
+   The golden corpus (1) must confirm that.
 5. **[behaviour-changing] Resolve the AADT accumulation scope (OBJ-1).** The scalar AADT branch is
    cumulative across measurements while `calcMultiObjective` and the filtered overload are
    per-station. One of them is wrong; this is an algorithmic decision with a large numerical effect
@@ -74,17 +95,26 @@ test — they must never be smuggled into a purity refactor.
 6. **[purity-preserving] Introduce the pure API and delegate.** Add `ObjectiveSpec` /
    `evaluate(...)`, make the legacy static methods delegate to it, and keep the legacy signatures
    until every caller has moved. Delete the legacy methods only once nothing calls them.
-7. **[purity-preserving] Fix the clone semantics** (MEAS-1, MEAS-2) so that "clone and evaluate" is a
-   sound pattern. This is a prerequisite for any implementation of `evaluate` that defensively copies.
+7. **[potentially behaviour-changing] Fix the clone semantics** (MEAS-1, MEAS-2). Changing
+   `Measurement.clone()`/`Measurements.clone()` alters **observable API behaviour**: callers that
+   currently rely on the shared attribute object (MEAS-1) or on the dropped container attributes
+   (MEAS-2) would change behaviour. This step therefore needs its own compatibility tests and a
+   caller survey; it must not be filed under "purity-preserving" and slipped through. It is a
+   prerequisite for any `evaluate` implementation that defensively copies its inputs.
 
 ## 5. Acceptance criteria for "pure"
 
 The objective may be called pure when all of the following hold, each with a test:
 
-* **No mutation:** arguments (observed and modelled, including measurement attributes) are
-  byte-identical before and after evaluation.
-* **Total:** for a declared policy, no `NaN` and no `Infinity` is returned for any input, including
-  zero observation, zero model, zero denominator and absent SD.
+* **No mutation:** evaluation must leave its arguments observably unchanged. Assert **structural
+  equivalence of the observable object graph** before and after — measurement ids, declared time
+  beans, volumes, SD, attributes and their contents — rather than reference or byte identity, which is
+  not a meaningful Java object-level contract. Since `Measurement`/`Measurements` do not implement
+  `equals` (CC-3), that comparison has to be written explicitly.
+* **Total under a declared policy:** with the chosen missing-data and zero-denominator policies, the
+  function returns a defined value for every input in its domain, including zero observation, zero
+  model, zero denominator and absent SD. Totality here is a *policy* property (see §1), not a
+  consequence of purity.
 * **No static mutable state read or written** (contrast: `AnalyticLinearMetaModel.errorT`, MODEL-3).
 * **Deterministic:** identical results across runs and independent of `HashMap`/`HashSet` iteration
   order.
@@ -94,6 +124,7 @@ The objective may be called pure when all of the following hold, each with a tes
 
 ## 6. Explicit warning
 
-Purity is **not** correctness. Steps 2, 3 and 5 change numbers; steps 1, 4, 6 and 7 must not. Keeping
-those two groups in separate PRs is what prevents "I made it pure" from becoming an undocumented
-formula change — which the mission forbids ("Do not change formulas because they 'look wrong'").
+Purity is **not** correctness. Steps 2, 3 and 5 change numbers; step 7 may change observable API
+behaviour while moving no number at all; steps 1, 4 and 6 must change neither. Keeping those groups in
+separate PRs is what prevents "I made it pure" from becoming an undocumented formula change — which the
+mission forbids ("Do not change formulas because they 'look wrong'").

@@ -246,10 +246,12 @@ No formula, tolerance, optimizer constant or weighting was modified in this PR.
   (later `applyFactor` would NPE on `getSD().get("All")`). `"All"` is not a declared time bean.
 * **Evidence:** `MeasurementTypeTest.maasPackageUsageWritesAllLiteralKey`
   (volume present, `getSD().get("All") == null`).
-* **Related — MEAS-8b `READ`:** `MaaSPacakgeUsage.parseAttribute` wraps the MaaS package name in a
+* **Related — MEAS-8b `VERIFIED`:** `MaaSPacakgeUsage.parseAttribute` wraps the MaaS package name in a
   `FareLink` (`new FareLink(...)`), so reading a package name that is not a valid fare-link
   description throws. Inconsistent with `updateMeasurement`, which treats the attribute as a plain
-  package-key string.
+  package-key string. Verified by writing a measurement with package name `"pkg1"` and reading it
+  back: the reader throws `IllegalArgumentException`, so the type cannot round trip at all.
+  Evidence: `MeasurementTypeTransitAndFareTest.MaasPackageNameCannotRoundTrip`.
 
 ### MEAS-9 — `VERIFIED` — `averagePTOccumpancy` dereferences without a guard
 * **Where:** `modelOut.getAveragePtOccupancyOnLink().get(s).get(linkId)`.
@@ -309,14 +311,48 @@ No formula, tolerance, optimizer constant or weighting was modified in this PR.
   but it means `Measurements.updateMeasurements` silently skips them. Confirm intent and document it
   in the type's contract rather than leaving an empty method.
 
-### MEAS-13 — `VERIFIED` — smart-card attribute round trip is asymmetric for `train`
-* **Where:** `smartCardEntryAndExit.writeAttribute`/`parseAttribute`.
-* **Legacy:** for `mode != "train"` the line id and route id are written and read back; for
-  `mode == "train"` they are deliberately omitted, so a round trip yields `null` for both.
-* **Evidence:** `MeasurementTypeTransitAndFareTest.SmartCardTests.smartCardEntryAndExitRoundTrip`.
-* **Expected:** consistent with the network-wide fare scheme (a train fare has no line/route), but the
-  asymmetry must be intentional and documented — a `train` measurement cannot carry line/route
-  identity through serialization at all.
+### MEAS-14 — `VERIFIED` — `MeasurementsWriter`'s generic attribute loop is DEAD CODE
+* **Where:** `MeasurementsWriter.write`:
+  ```java
+  for(String s:mm.getAttributes().keySet()) {
+      if(measurement.getAttribute(s)==null) {          // never true
+          measurement.setAttribute(s, mm.getAttribute(s).toString());
+      }
+  }
+  ```
+  `measurement` is a `org.w3c.dom.Element`, and `Element.getAttribute(name)` returns the **empty
+  string** for an absent attribute — it never returns `null`. The guard is therefore always false and
+  the loop body never executes.
+* **Legacy:** every measurement-level attribute that the type's `writeAttribute` does not set
+  explicitly is **silently not serialized**. Concretely, `smartCardEntry`'s optional
+  `ifForValidation` flag never reaches the XML and cannot come back on read.
+* **Expected:** the guard should be `measurement.hasAttribute(s)` (or `getAttribute(s).isEmpty()`),
+  so that the attribute copy actually runs — or the loop should be deleted if the copy is not wanted.
+* **Evidence:** `MeasurementTypeTransitAndFareTest.SmartCardTests.smartCardEntryValidationFlagDoesNotRoundTrip`
+  asserts both that `ifForValidation` is absent from the written XML and that it is `null` after reading.
+  (This test was originally written expecting a round trip; the failure is what exposed the defect.)
+* **Scope note:** this does **not** affect attributes written by each type's `writeAttribute`, which is
+  why `LineId`/`RouteId`/`BoardingStop`, `FareLink`, the fare-link cluster and the MTR info list all do
+  round trip. It affects only the *generic* fallback path.
+* **Proposed resolution:** fix the guard (one line) and add a round trip for an attribute that only the
+  generic path carries — `ifForValidation` is exactly such a case. Check callers first: if nothing ever
+  relied on the generic path, deleting the loop is the honest alternative.
+
+### MEAS-15 — `VERIFIED` — measurement-level attribute serialization is inconsistent by type
+* **Where:** `MeasurementType` — `parseAttribute` for `smartCardEntry`, `smartCardEntryAndExit`,
+  `fareLinkVolume`, `fareLinkVolumeCluster` and `maasSpecificFareLinkVolume` all read an optional
+  `ifForValidation` attribute, but only via that type's own `parseAttribute`; the writer can only supply
+  it through the dead generic path (MEAS-14). So the flag is readable-but-never-writable.
+* **Evidence:** `MeasurementTypeTransitAndFareTest` (round trips for the five types above).
+
+### MEAS-16 — `VERIFIED` — serialization coverage is now complete for the types that have an attribute contract
+* Added in PR 2's revision: round trips for `smartCardEntry`, `fareLinkVolume`, `fareLinkVolumeCluster`
+  and `TransitPhysicalLinkVolume`, alongside the existing `linkVolume`, `smartCardEntryAndExit` and
+  `maasSpecificFareLinkVolume` round trips.
+* `linkTravelTime` and `averagePTOccumpancy` have no type-specific attributes (their `writeAttribute`
+  and `parseAttribute` are empty), so there is nothing further to round trip; their link-list payload is
+  covered by the `linkVolume` round trip.
+* `MaaSPacakgeUsage` is the one type whose attribute **cannot** round trip (MEAS-8b).
 
 ---
 

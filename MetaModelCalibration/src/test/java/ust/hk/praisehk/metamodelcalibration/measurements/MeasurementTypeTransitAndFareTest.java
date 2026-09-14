@@ -1,6 +1,7 @@
 package ust.hk.praisehk.metamodelcalibration.measurements;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -51,6 +52,7 @@ class MeasurementTypeTransitAndFareTest {
 
 	/** Valid fare-link description: type___boardingStop___alightingStop___mode */
 	private static final String FARE_KEY = "NetworkWideFare___STOP_A___STOP_B___bus";
+	private static final String FARE_KEY_2 = "NetworkWideFare___STOP_A___STOP_B___train";
 
 	private static Measurements container() {
 		return Measurements.createMeasurements(TimeBeans.singleHour());
@@ -92,6 +94,14 @@ class MeasurementTypeTransitAndFareTest {
 		}
 
 		@Test
+		@DisplayName("ORACLE: the line/route key convention is exactly lineId + \"_\" + routeId")
+		void lineRouteKeyConvention() {
+			// Pinned independently of the extractor below, so that a change to this convention
+			// is reported as a failure rather than silently tracked by the extractor's lookup.
+			assertEquals("LINE_1_ROUTE_1", CNLTransitDirectLink.calcLineRouteId("LINE_1", "ROUTE_1"));
+		}
+
+		@Test
 		@DisplayName("ORACLE: the volume is the SUM of train counts over the configured line/route/link infos")
 		void sumsTrainCountsOverInfos() {
 			Measurement m = measurement(info(LINE_1), info(LINE_2));
@@ -99,15 +109,17 @@ class MeasurementTypeTransitAndFareTest {
 			Map<String, Map<Id<Link>, Map<String, Double>>> counts = new HashMap<>();
 			counts.put(TB1, new HashMap<>());
 			counts.get(TB1).put(L1, new HashMap<>());
-			// key format is CNLTransitDirectLink.calcLineRouteId(lineId, routeId) = lineId + "_" + routeId
-			counts.get(TB1).get(L1).put(CNLTransitDirectLink.calcLineRouteId("LINE_1", "ROUTE_1"), 30.);
-			counts.get(TB1).get(L1).put(CNLTransitDirectLink.calcLineRouteId("LINE_2", "ROUTE_1"), 20.);
+			// Keys are LITERALS, not produced by CNLTransitDirectLink.calcLineRouteId: this is an
+			// independent oracle, so it must not move with the production convention under test.
+			counts.get(TB1).get(L1).put("LINE_1_ROUTE_1", 30.);
+			counts.get(TB1).get(L1).put("LINE_2_ROUTE_1", 20.);
 
 			SUEModelOutput out = emptyOutput();
 			out.setTrainCount(counts);
 
 			m.updateMeasurement(out, null, null);
 
+			// hand-computed: 30 + 20
 			assertEquals(50., m.getVolume(TB1), 0.);
 		}
 
@@ -118,7 +130,7 @@ class MeasurementTypeTransitAndFareTest {
 			Measurement m = measurement(info(LINE_1));
 
 			SUEModelOutput out = emptyOutput();
-			out.setTrainCount(trainCount(CNLTransitDirectLink.calcLineRouteId("LINE_1", "ROUTE_1"), 30.));
+			out.setTrainCount(trainCount("LINE_1_ROUTE_1", 30.));
 
 			m.updateMeasurement(out, null, null);
 			assertEquals(30., m.getVolume(TB1), 0.);
@@ -135,7 +147,7 @@ class MeasurementTypeTransitAndFareTest {
 
 			SUEModelOutput out = emptyOutput();
 			// only LINE_1 is present
-			out.setTrainCount(trainCount(CNLTransitDirectLink.calcLineRouteId("LINE_1", "ROUTE_1"), 30.));
+			out.setTrainCount(trainCount("LINE_1_ROUTE_1", 30.));
 
 			m.updateMeasurement(out, null, null);
 			assertEquals(30., m.getVolume(TB1), 0.);
@@ -366,6 +378,55 @@ class MeasurementTypeTransitAndFareTest {
 		}
 
 		@Test
+		@DisplayName("smartCardEntry: LineId / RouteId / BoardingStop survive an XML round trip")
+		void smartCardEntryRoundTrip(@TempDir Path dir) throws IOException {
+			Measurements container = container();
+			Measurement m = container.createAnadAddMeasurement("SC1", MeasurementType.smartCardEntry);
+			m.setAttribute(Measurement.transitLineAttributeName, Id.create("LINE_1", TransitLine.class));
+			m.setAttribute(Measurement.transitRouteAttributeName, Id.create("ROUTE_1", TransitRoute.class));
+			m.setAttribute(Measurement.transitBoardingStopAtrributeName, "STOP_A");
+
+			Path xml = dir.resolve("scentry.xml");
+			new MeasurementsWriter(container).write(xml.toString());
+			Measurements read = new MeasurementsReader().readMeasurements(xml.toString());
+
+			Measurement r = read.getMeasurements().get(Id.create("SC1", Measurement.class));
+			assertNotNull(r);
+			assertEquals("LINE_1", r.getAttribute(Measurement.transitLineAttributeName).toString());
+			assertEquals("ROUTE_1", r.getAttribute(Measurement.transitRouteAttributeName).toString());
+			assertEquals("STOP_A", r.getAttribute(Measurement.transitBoardingStopAtrributeName));
+		}
+
+		@Test
+		@DisplayName("REVIEW_REQUIRED MEAS-14: the writer's generic attribute loop is DEAD CODE, so "
+				+ "smartCardEntry's ifForValidation flag is silently dropped on write")
+		void smartCardEntryValidationFlagDoesNotRoundTrip(@TempDir Path dir) throws IOException {
+			Measurements container = container();
+			Measurement m = container.createAnadAddMeasurement("SC1", MeasurementType.smartCardEntry);
+			m.setAttribute(Measurement.transitLineAttributeName, Id.create("LINE_1", TransitLine.class));
+			m.setAttribute(Measurement.transitRouteAttributeName, Id.create("ROUTE_1", TransitRoute.class));
+			m.setAttribute(Measurement.transitBoardingStopAtrributeName, "STOP_A");
+			m.setAttribute("ifForValidation", "true");
+
+			Path xml = dir.resolve("scentry-flag.xml");
+			new MeasurementsWriter(container).write(xml.toString());
+
+			// The flag is never written: MeasurementsWriter guards the attribute copy with
+			// `measurement.getAttribute(s) == null`, but DOM Element.getAttribute() returns ""
+			// (never null) for an absent attribute, so the loop body never runs. Any measurement
+			// attribute that writeAttribute() does not set explicitly is therefore lost.
+			String content = new String(Files.readAllBytes(xml));
+			assertFalse(content.contains("ifForValidation"),
+					"the flag is expected to be absent from the XML, proving the loop is dead");
+
+			Measurements read = new MeasurementsReader().readMeasurements(xml.toString());
+			Measurement r = read.getMeasurements().get(Id.create("SC1", Measurement.class));
+			assertNotNull(r);
+			assertNull(r.getAttribute("ifForValidation"),
+					"and therefore it cannot come back on read");
+		}
+
+		@Test
 		@DisplayName("smartCardEntryAndExit: non-train carries line/route through XML; train omits them")
 		void smartCardEntryAndExitRoundTrip(@TempDir Path dir) throws IOException {
 			Measurements m = container();
@@ -402,6 +463,76 @@ class MeasurementTypeTransitAndFareTest {
 			// The writer/reader deliberately omit line and route for network-wide (train) fares.
 			assertNull(rTrain.getAttribute(Measurement.transitLineAttributeName));
 			assertNull(rTrain.getAttribute(Measurement.transitRouteAttributeName));
+		}
+	}
+
+	// ==================================================================
+	// fare-link / MaaS serialization
+	// ==================================================================
+
+	@Nested
+	@DisplayName("fare-link serialization")
+	class FareLinkSerializationTests {
+
+		@Test
+		@DisplayName("fareLinkVolume: the FareLink attribute survives an XML round trip")
+		void fareLinkVolumeRoundTrip(@TempDir Path dir) throws IOException {
+			Measurements container = container();
+			Measurement m = container.createAnadAddMeasurement("FL1", MeasurementType.fareLinkVolume);
+			m.setAttribute(Measurement.FareLinkAttributeName, new FareLink(FARE_KEY));
+			m.putVolume(TB1, 0.);
+
+			Path xml = dir.resolve("fl.xml");
+			new MeasurementsWriter(container).write(xml.toString());
+			Measurements read = new MeasurementsReader().readMeasurements(xml.toString());
+
+			Measurement r = read.getMeasurements().get(Id.create("FL1", Measurement.class));
+			assertNotNull(r);
+			assertEquals(FARE_KEY, r.getAttribute(Measurement.FareLinkAttributeName).toString());
+		}
+
+		@Test
+		@DisplayName("fareLinkVolumeCluster: the comma-joined cluster survives, including the "
+				+ "bracket/space clean-up in parseAttribute")
+		void fareLinkVolumeClusterRoundTrip(@TempDir Path dir) throws IOException {
+			Measurements container = container();
+			Measurement m = container.createAnadAddMeasurement("CL1",
+					MeasurementType.fareLinkVolumeCluster);
+			m.setAttribute(Measurement.FareLinkClusterAttributeName,
+					new ArrayList<>(Arrays.asList(new FareLink(FARE_KEY), new FareLink(FARE_KEY_2))));
+			m.putVolume(TB1, 0.);
+
+			Path xml = dir.resolve("cl.xml");
+			new MeasurementsWriter(container).write(xml.toString());
+			Measurements read = new MeasurementsReader().readMeasurements(xml.toString());
+
+			Measurement r = read.getMeasurements().get(Id.create("CL1", Measurement.class));
+			assertNotNull(r);
+			List<FareLink> readLinks =
+					(List<FareLink>) r.getAttribute(Measurement.FareLinkClusterAttributeName);
+			assertNotNull(readLinks);
+			assertEquals(2, readLinks.size());
+			assertEquals(FARE_KEY, readLinks.get(0).toString());
+			assertEquals(FARE_KEY_2, readLinks.get(1).toString());
+		}
+
+		@Test
+		@DisplayName("REVIEW_REQUIRED MEAS-8b: MaaSPacakgeUsage.parseAttribute wraps the package name in "
+				+ "a FareLink, so a plain package name cannot be deserialized")
+		void maasPackageNameCannotRoundTrip(@TempDir Path dir) throws IOException {
+			Measurements container = container();
+			Measurement m = container.createAnadAddMeasurement("MP1", MeasurementType.MaaSPacakgeUsage);
+			// updateMeasurement stores a plain package key, so this is what the writer emits...
+			m.setAttribute(Measurement.MaaSPackageAttributeName, "pkg1");
+
+			Path xml = dir.resolve("mp.xml");
+			new MeasurementsWriter(container).write(xml.toString());
+			assertTrue(Files.exists(xml));
+
+			// ...but parseAttribute feeds it to `new FareLink(...)`, which rejects anything that is
+			// not a "type___...___mode" description. The type therefore cannot round trip.
+			assertThrows(IllegalArgumentException.class,
+					() -> new MeasurementsReader().readMeasurements(xml.toString()));
 		}
 	}
 

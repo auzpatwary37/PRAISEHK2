@@ -7,7 +7,7 @@ Legend: **C** = characterization test (pins legacy behaviour), **O** = independe
 (hand-computed / mathematically independent), **B** = boundary/edge test, **I** = integration test.
 `—` = absent. `P` = planned (this roadmap).
 
-Snapshot: **100 deterministic tests, 0 failures, ~9 s**, runnable offline
+Snapshot: **106 deterministic tests, 0 failures, ~9 s**, runnable offline
 (`mvn -o test` in `MetaModelCalibration`), enforced in CI on every PR into the trunk.
 
 ---
@@ -99,11 +99,15 @@ Snapshot: **100 deterministic tests, 0 failures, ~9 s**, runnable offline
 | `fareLinkVolumeCluster` missing fares | ✔ | — | ✔ | — | `fareLinkVolumeClusterRequiresFareLinks` | |
 | `MaaSPacakgeUsage` literal `"All"` key | ✔ | — | ✔ | — | `maasPackageUsageWritesAllLiteralKey` | **MEAS-8** |
 | `averagePTOccumpancy` missing map | ✔ | — | ✔ | — | `averagePtOccupancyThrowsWhenAbsent` | **MEAS-9** |
-| `TransitPhysicalLinkVolume` sums train counts | ✔ | ✔ | ✔ | — | `MeasurementTypeTransitAndFareTest` (ORACLE); `isNotIdempotent`, `unknownLineRouteContributesNothing`, `missingAttributeThrows`, `missingTrainCountThrows` | **MEAS-10** (non-idempotent) |
+| `TransitPhysicalLinkVolume` sums train counts | ✔ | ✔ | ✔ | — | `lineRouteKeyConvention` (pins `lineId + "_" + routeId` independently), `sumsTrainCountsOverInfos` (literal keys, hand-computed 30+20), `isNotIdempotent`, `unknownLineRouteContributesNothing`, `missingAttributeThrows`, `missingTrainCountThrows` | **MEAS-10** (non-idempotent) |
 | `TransitPhysicalLinkVolume` XML round trip | ✔ | — | — | ✔ | `roundTripsThroughXml`, `transitPhysicalLinkVolumeWriteAttributeFormat` | |
 | `MTRLinkVolumeInfo` `___` grammar | ✔ | ✔ | ✔ | — | `MtrLinkVolumeInfoTests.roundTrips`, `truncatedDescriptionThrowsAIOOBE` | **MTR-1** |
-| `maasSpecificFareLinkVolume` reads MaaS flow | ✔ | ✔ | ✔ | ✔ | `MaasSpecificFareLinkVolumeTests.readsMaasSpecificFlow`, `correctContainerIsUsed`, `unknownPackageYieldsZero`, `missingMaasAttributeThrows`, `emptyVolumesThrowsWhenFareLinkVolumeIsNull`, `roundTripsThroughXml` | **MEAS-11**; contrast **MEAS-4** |
-| `smartCardEntry` / `smartCardEntryAndExit` | ✔ | — | ✔ | ✔ | `SmartCardTests.*` (no-op extraction, asymmetric train round trip) | **MEAS-12**, **MEAS-13** |
+| `maasSpecificFareLinkVolume` reads MaaS flow | ✔ | ✔ | ✔ | ✔ | `MaasSpecificFareLinkVolumeTests.readsMaasSpecificFlow`, `correctContainerIsUsed`, `unknownPackageYieldsZero`, `missingMaasAttributeThrows`, `emptyVolumesThrowsWhenFareLinkVolumeIsNull` | **MEAS-11**; contrast **MEAS-4** |
+| `smartCardEntry` extraction + round trip | ✔ | — | ✔ | ✔ | `SmartCardTests.smartCardEntryUpdateIsNoOp`, `smartCardEntryRoundTrip` | **MEAS-12** |
+| `smartCardEntryAndExit` extraction + round trip | ✔ | — | ✔ | ✔ | `SmartCardTests.smartCardEntryAndExitUpdateIsNoOp`, `smartCardEntryAndExitRoundTrip` | **MEAS-12**, **MEAS-13** |
+| `ifForValidation` generic attribute path | ✔ | — | ✔ | — | `smartCardEntryValidationFlagDoesNotRoundTrip` (asserts absent from XML *and* null on read) | **MEAS-14** (dead writer loop), **MEAS-15** |
+| `fareLinkVolume` / `fareLinkVolumeCluster` round trip | ✔ | — | ✔ | ✔ | `FareLinkSerializationTests.fareLinkVolumeRoundTrip`, `fareLinkVolumeClusterRoundTrip` | cluster pins the bracket/space clean-up |
+| `MaaSPacakgeUsage` round trip | ✔ | — | ✔ | — | `FareLinkSerializationTests.maasPackageNameCannotRoundTrip` | **MEAS-8b** (cannot round trip) |
 
 ## 3b. Vendored transit fare contract (`transit.fare`)
 
