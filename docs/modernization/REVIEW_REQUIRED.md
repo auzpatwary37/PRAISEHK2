@@ -447,36 +447,65 @@ restores it
 
 ## `CNLSUEModel` (`analyticalModelImpl/CNLSUEModel.java`) — the MSA core
 
+**Scope of this section: the car-link / no-transit path only.** Every test below drives
+`UpdateLinkVolume`/`CheckConvergence` with an empty transit map. Both methods also run a transit loop
+with its own guard (SUE-5), so the `O` marks on these rows cover the car half of the loop, not the method
+as a whole.
+
 The assignment loop appends the residual norm to `error` in `CheckConvergence`, then reads the last two
 of those norms in `UpdateLinkVolume` to advance `beta` and move every volume by
 `(1/beta) * (loaded - current)`. Characterized with the step weight recovered from the observable
 volume change, so the test does not trust the internal list.
 
-### SUE-1 — `VERIFIED` — `consecutiveSUEErrorIncrease` is never seeded, so the alpha branch THROWS
-* `beta` advances by `gammaMSA` (0.1) when the residual error decreased, and by `alphaMSA` (1.9)
-  otherwise:
-  ```java
-  if (error.get(timeBeanId).get(counter-1) < error.get(timeBeanId).get(counter-2)) {
-      beta.get(timeBeanId).add(beta.get(timeBeanId).get(counter-2) + this.gammaMSA);
-  } else {
-      this.getConsecutiveSUEErrorIncrease().put(timeBeanId,
-          this.getConsecutiveSUEErrorIncrease().get(timeBeanId) + 1);   // <-- get() is null
-      beta.get(timeBeanId).add(beta.get(timeBeanId).get(counter-2) + this.alphaMSA);
-  }
-  ```
-  `consecutiveSUEErrorIncrease` is a `ConcurrentHashMap` created empty, and the line above is its
-  **only** write anywhere in the class — nothing ever seeds a per-time-bean entry. The first time the
-  residual fails to decrease, `get(timeBeanId)` returns `null` and the unboxing in `null + 1` throws
-  `NullPointerException`, before any volume is moved.
-* **Expected:** the counter should be seeded per time bean (as the constructor does for
-  `beta`/`error`/`error1`), or the policy should be an `int` field.
+**The step weight is an adaptive `1/beta`, NOT the classic harmonic `1/k`.** `beta` is a per-time-bean
+`ArrayList<Double>` seeded to `1.0` at `counter == 1` and thereafter advanced by `+gammaMSA` (0.1) on a
+strictly decreasing residual, or `+alphaMSA` (1.9) otherwise; the move then uses `1/beta[counter-1]`.
+Along an all-decreasing run that is `beta_k = 1 + 0.1(k-1)`, i.e. a weight of **`1/(1 + 0.1(k-1))`** —
+1, 1/1.1, 1/1.2, … An earlier revision of this document said "classic harmonic `1/k`" *and* `1/(1 + 0.1k)`;
+both were wrong (an off-by-one on the second, the wrong sequence on the first). The `1./counter` variant
+does exist in the source, but it is **commented out** (line 1226).
+
+### SUE-1 — `CORRECTED` — the α branch depends on state that only `generateRoutesAndOD` initialises
+
+*This item previously read "`consecutiveSUEErrorIncrease` is never seeded, so the alpha branch THROWS",
+concluded that the adaptive policy is "inert", and gave the weight as `1/(1 + 0.1k)`. **All three claims
+were wrong.** The correction is recorded rather than quietly edited, because the original reasoning is
+exactly the kind the redesign would have relied on.*
+
+* `consecutiveSUEErrorIncrease` **is** seeded per time bean: `generateRoutesAndOD`,
+  line 314 — `this.getConsecutiveSUEErrorIncrease().put(timeBeanId, 0.);`. The write in
+  `UpdateLinkVolume` is **not** its only write; the earlier claim that it was is false.
+* It is *not* seeded by the constructor (lines 140–163, which do initialise `beta`/`error`/`error1`) nor
+  by `perFormSUE`.
+* **It cannot be unseeded in a working production run.** `generateRoutesAndOD` is also the *only* code
+  that populates `networks` (line 303), and `perFormSUE` dereferences
+  `this.networks.get(timeBeanId).getLinks()`. So any run that reaches the MSA loop has, by construction,
+  already executed the very method that seeds the counter. The α branch is therefore **reachable in
+  production**, and the weight *does* respond to stagnation.
+
+What survives is a narrower and lower-severity point: `UpdateLinkVolume`'s α branch reads state that
+neither the constructor nor `perFormSUE` establishes, so the MSA core is **not self-contained**. Driving
+the loop on a model built by the constructor alone — injecting a network by hand, as the unit harness
+does — hits `null + 1` and throws `NullPointerException` before any volume moves. Such a caller would in
+any case fail earlier on the unpopulated `networks` map, so this is a latent initialisation/coupling
+defect, not a production outage.
+
+```java
+if (error.get(timeBeanId).get(counter-1) < error.get(timeBeanId).get(counter-2)) {
+    beta.get(timeBeanId).add(beta.get(timeBeanId).get(counter-2) + this.gammaMSA);
+} else {
+    this.getConsecutiveSUEErrorIncrease().put(timeBeanId,
+        this.getConsecutiveSUEErrorIncrease().get(timeBeanId) + 1);   // <-- null until generateRoutesAndOD runs
+    beta.get(timeBeanId).add(beta.get(timeBeanId).get(counter-2) + this.alphaMSA);
+}
+```
+* **Expected:** the constructor should seed the map (or `perFormSUE` should), so that `UpdateLinkVolume`
+  does not silently depend on a prior `generateRoutesAndOD`.
 * **Legacy reference:** the older `SUEModelContTime` uses `protected int consecutiveSUEErrorIncrease = 0;`
-  and simply `++`s it — so this is a refactoring regression introduced when the field was converted to a
-  per-time-bean map without moving the initialization.
-* **Consequence:** in practice `beta` can only ever grow by `gammaMSA`, so the adaptive MSA policy is
-  inert and the step weight decays as `1/(1 + 0.1k)` instead of responding to stagnation.
-* **Evidence:** `CNLSUEModelMSATest.nonDecreasingErrorThrowsBecauseTheCounterIsNeverInitialised` (asserts
-  the map is empty, that the call throws, and that the volume is untouched);
+  and simply `++`s it — a field that exists from construction, which is the property this class lost when
+  it became a per-time-bean map.
+* **Evidence:** `CNLSUEModelMSATest.nonDecreasingErrorThrowsWhenTheCounterWasNeverSeeded` (asserts the map
+  is empty *on the constructor path*, that the call throws, and that the volume is untouched);
   `nonDecreasingErrorGrowsBetaByAlphaOnceTheCounterIsSeeded` proves the branch itself is correct by
   seeding the map by hand and recovering `beta = 2.9` from the volume change.
 

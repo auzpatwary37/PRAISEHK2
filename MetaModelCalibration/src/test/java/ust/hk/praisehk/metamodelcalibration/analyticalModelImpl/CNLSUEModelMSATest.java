@@ -21,8 +21,11 @@ import ust.hk.praisehk.metamodelcalibration.fixtures.SyntheticNetworks;
 import ust.hk.praisehk.metamodelcalibration.fixtures.TimeBeans;
 
 /**
- * PHASE 7 - characterization of the MSA core of {@link CNLSUEModel}: the step-weight sequence
+ * PHASE 8 - characterization of the MSA core of {@link CNLSUEModel}: the step-weight sequence
  * ({@code beta}) and the two error/stopping rules.
+ *
+ * <p><b>Scope:</b> the car-link / no-transit path only (see {@code noTransit()}). Both methods also run
+ * a transit loop whose non-finite guard differs from the car loop's (SUE-5); that half is not covered.
  *
  * <p>These two methods are the mathematical heart of the assignment loop:
  * {@code CheckConvergence} appends the residual norm to {@code error}, and {@code UpdateLinkVolume}
@@ -122,8 +125,9 @@ class CNLSUEModelMSATest {
 	}
 
 	@Test
-	@DisplayName("REVIEW_REQUIRED SUE-1: a non-decreasing residual THROWS - consecutiveSUEErrorIncrease is never seeded")
-	void nonDecreasingErrorThrowsBecauseTheCounterIsNeverInitialised() {
+	@DisplayName("REVIEW_REQUIRED SUE-1: a non-decreasing residual THROWS on the constructor path - "
+			+ "generateRoutesAndOD is what seeds consecutiveSUEErrorIncrease")
+	void nonDecreasingErrorThrowsWhenTheCounterWasNeverSeeded() {
 		Rig r = new Rig(SyntheticNetworks.twoNodeNetwork());
 		r.setVolume(L1, 0.0);
 
@@ -134,7 +138,7 @@ class CNLSUEModelMSATest {
 		r.model.CheckConvergence(vols(L1, 3000.0), r.noTransit(), 1.0, TB, 2);
 
 		assertTrue(r.model.getConsecutiveSUEErrorIncrease().isEmpty(),
-				"nothing in the class ever seeds this map");
+				"the constructor does not seed this map; generateRoutesAndOD (line 314) is what does");
 		double before = r.volume(L1);
 		assertThrows(NullPointerException.class,
 				() -> r.model.UpdateLinkVolume(vols(L1, 3000.0), r.noTransit(), 2, TB),
@@ -151,7 +155,7 @@ class CNLSUEModelMSATest {
 		r.model.CheckConvergence(vols(L1, 1000.0), r.noTransit(), 1.0, TB, 1);
 		r.model.UpdateLinkVolume(vols(L1, 1000.0), r.noTransit(), 1, TB);
 
-		// the ONLY thing standing between the alpha branch and a functioning run is this seeding
+		// this harness bypasses generateRoutesAndOD, so seed what it seeds in production
 		r.model.getConsecutiveSUEErrorIncrease().put(TB, 0.0);
 
 		r.model.CheckConvergence(vols(L1, 3000.0), r.noTransit(), 1.0, TB, 2);
@@ -164,7 +168,7 @@ class CNLSUEModelMSATest {
 	}
 
 	@Test
-	@DisplayName("ORACLE: the step weight is the harmonic 1/beta, compared against the FIELD tolerance")
+	@DisplayName("ORACLE: the step weight is 1/beta, compared against the FIELD tolerance")
 	void updateReturnIsGovernedByTheFieldTolerance() {
 		Rig small = new Rig(SyntheticNetworks.twoNodeNetwork());
 		small.setVolume(L1, 0.0);
