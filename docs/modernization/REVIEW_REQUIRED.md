@@ -246,10 +246,12 @@ No formula, tolerance, optimizer constant or weighting was modified in this PR.
   (later `applyFactor` would NPE on `getSD().get("All")`). `"All"` is not a declared time bean.
 * **Evidence:** `MeasurementTypeTest.maasPackageUsageWritesAllLiteralKey`
   (volume present, `getSD().get("All") == null`).
-* **Related — MEAS-8b `READ`:** `MaaSPacakgeUsage.parseAttribute` wraps the MaaS package name in a
+* **Related — MEAS-8b `VERIFIED`:** `MaaSPacakgeUsage.parseAttribute` wraps the MaaS package name in a
   `FareLink` (`new FareLink(...)`), so reading a package name that is not a valid fare-link
   description throws. Inconsistent with `updateMeasurement`, which treats the attribute as a plain
-  package-key string.
+  package-key string. Verified by writing a measurement with package name `"pkg1"` and reading it
+  back: the reader throws `IllegalArgumentException`, so the type cannot round trip at all.
+  Evidence: `MeasurementTypeTransitAndFareTest.MaasPackageNameCannotRoundTrip`.
 
 ### MEAS-9 — `VERIFIED` — `averagePTOccumpancy` dereferences without a guard
 * **Where:** `modelOut.getAveragePtOccupancyOnLink().get(s).get(linkId)`.
@@ -259,6 +261,98 @@ No formula, tolerance, optimizer constant or weighting was modified in this PR.
   `modelOut.getTrainCount().get(timeBean).get(linkId)` and mutates volumes via
   `m.getVolumes().entrySet().forEach(v -> v.setValue(...))` — unguarded and a mutation during
   iteration of a `ConcurrentHashMap` (safe for the map, but the inner map may be absent).
+
+### MEAS-10 — `VERIFIED` — `TransitPhysicalLinkVolume` is not idempotent: it ADDS to the existing volume
+* **Where:** `MeasurementType.TransitPhysicalLinkVolume.updateMeasurement`:
+  `v.setValue(v.getValue() + modelOut.getTrainCount()...)`.
+* **Legacy:** the extractor accumulates into `m.getVolumes()` instead of replacing it. Calling it
+  twice on the same measurement **double-counts** (30 → 60). Every other extractor in
+  `MeasurementType` replaces the volume.
+* **Expected:** an extractor should be idempotent for a fixed model output, or the accumulation should
+  be explicit and paired with a reset.
+* **Evidence:** `MeasurementTypeTransitAndFareTest.TransitPhysicalLinkVolumeTests.isNotIdempotent`.
+* **Risk:** silent over-counting if a measurement container is re-used across iterations without
+  `resetMeasurements()`. `Measurements.updateMeasurements` does not reset first.
+* **Related — MEAS-10b `VERIFIED`:** a missing `MTRLineRouteStopLinkInfosName` attribute or a missing
+  train-count map is dereferenced without a guard (`NullPointerException`);
+  evidence `missingAttributeThrows`, `missingTrainCountThrows`. A line/route absent from the model
+  output, by contrast, contributes nothing silently (`unknownLineRouteContributesNothing`).
+
+### MTR-1 — `VERIFIED` — `MTRLinkVolumeInfo(String)` throws a raw `ArrayIndexOutOfBoundsException`
+* **Where:** `MTRLinkVolumeInfo(String s)` splits on `"___"` and indexes `part[0..3]` with no length
+  check.
+* **Legacy:** `new MTRLinkVolumeInfo("LINE_1___ROUTE_1")` throws `ArrayIndexOutOfBoundsException`.
+* **Expected:** a diagnostic `IllegalArgumentException` naming the
+  `line___route___stop___link` grammar.
+* **Evidence:** `MeasurementTypeTransitAndFareTest.MtrLinkVolumeInfoTests.truncatedDescriptionThrowsAIOOBE`.
+* **Risk:** the grammar is a serialization contract — `TransitPhysicalLinkVolume.writeAttribute`
+  emits comma-joined records in exactly this format and `parseAttribute` re-parses them, so a
+  malformed record aborts measurement deserialization.
+
+### MEAS-11 — `VERIFIED` — `maasSpecificFareLinkVolume` reads the correct container (contrast with MEAS-4)
+* **Where:** `MeasurementType.maasSpecificFareLinkVolume.updateMeasurement`.
+* **Legacy:** unlike `fareLinkVolume` (MEAS-4, whose MaaS fallback is dead code), this variant reads
+  `getMaaSSpecificFareLinkFlow()` directly and returns the true value; an unknown MaaS package or
+  fare-link key silently yields `0`.
+* **Evidence:** `MeasurementTypeTransitAndFareTest.MaasSpecificFareLinkVolumeTests.readsMaasSpecificFlow`,
+  `unknownPackageYieldsZero`, `correctContainerIsUsed`.
+* **Additional guards missing (`VERIFIED`):** a null `MaaSPackageAttributeName` is dereferenced
+  (`missingMaasAttributeThrows`), and an **empty** volume map dereferences
+  `getFareLinkVolume()` during initialisation, so a null `FareLinkVolume` throws
+  (`emptyVolumesThrowsWhenFareLinkVolumeIsNull`).
+
+### MEAS-12 — `VERIFIED` — `smartCardEntry` and `smartCardEntryAndExit` extraction is a NO-OP
+* **Where:** both `updateMeasurement` bodies are empty.
+* **Legacy:** calling `updateMeasurement` leaves any pre-existing volume untouched; these types are
+  produce-side only (populated by the MATSim event handlers), not model-output-derived.
+* **Evidence:** `MeasurementTypeTransitAndFareTest.SmartCardTests.smartCardEntryUpdateIsNoOp`,
+  `smartCardEntryAndExitUpdateIsNoOp`.
+* **Expected:** this is plausibly deliberate (the data comes from smart-card events, not from the SUE),
+  but it means `Measurements.updateMeasurements` silently skips them. Confirm intent and document it
+  in the type's contract rather than leaving an empty method.
+
+### MEAS-14 — `VERIFIED` — `MeasurementsWriter`'s generic attribute loop is DEAD CODE
+* **Where:** `MeasurementsWriter.write`:
+  ```java
+  for(String s:mm.getAttributes().keySet()) {
+      if(measurement.getAttribute(s)==null) {          // never true
+          measurement.setAttribute(s, mm.getAttribute(s).toString());
+      }
+  }
+  ```
+  `measurement` is a `org.w3c.dom.Element`, and `Element.getAttribute(name)` returns the **empty
+  string** for an absent attribute — it never returns `null`. The guard is therefore always false and
+  the loop body never executes.
+* **Legacy:** every measurement-level attribute that the type's `writeAttribute` does not set
+  explicitly is **silently not serialized**. Concretely, `smartCardEntry`'s optional
+  `ifForValidation` flag never reaches the XML and cannot come back on read.
+* **Expected:** the guard should be `measurement.hasAttribute(s)` (or `getAttribute(s).isEmpty()`),
+  so that the attribute copy actually runs — or the loop should be deleted if the copy is not wanted.
+* **Evidence:** `MeasurementTypeTransitAndFareTest.SmartCardTests.smartCardEntryValidationFlagDoesNotRoundTrip`
+  asserts both that `ifForValidation` is absent from the written XML and that it is `null` after reading.
+  (This test was originally written expecting a round trip; the failure is what exposed the defect.)
+* **Scope note:** this does **not** affect attributes written by each type's `writeAttribute`, which is
+  why `LineId`/`RouteId`/`BoardingStop`, `FareLink`, the fare-link cluster and the MTR info list all do
+  round trip. It affects only the *generic* fallback path.
+* **Proposed resolution:** fix the guard (one line) and add a round trip for an attribute that only the
+  generic path carries — `ifForValidation` is exactly such a case. Check callers first: if nothing ever
+  relied on the generic path, deleting the loop is the honest alternative.
+
+### MEAS-15 — `VERIFIED` — measurement-level attribute serialization is inconsistent by type
+* **Where:** `MeasurementType` — `parseAttribute` for `smartCardEntry`, `smartCardEntryAndExit`,
+  `fareLinkVolume`, `fareLinkVolumeCluster` and `maasSpecificFareLinkVolume` all read an optional
+  `ifForValidation` attribute, but only via that type's own `parseAttribute`; the writer can only supply
+  it through the dead generic path (MEAS-14). So the flag is readable-but-never-writable.
+* **Evidence:** `MeasurementTypeTransitAndFareTest` (round trips for the five types above).
+
+### MEAS-16 — `VERIFIED` — serialization coverage is now complete for the types that have an attribute contract
+* Added in PR 2's revision: round trips for `smartCardEntry`, `fareLinkVolume`, `fareLinkVolumeCluster`
+  and `TransitPhysicalLinkVolume`, alongside the existing `linkVolume`, `smartCardEntryAndExit` and
+  `maasSpecificFareLinkVolume` round trips.
+* `linkTravelTime` and `averagePTOccumpancy` have no type-specific attributes (their `writeAttribute`
+  and `parseAttribute` are empty), so there is nothing further to round trip; their link-list payload is
+  covered by the `linkVolume` round trip.
+* `MaaSPacakgeUsage` is the one type whose attribute **cannot** round trip (MEAS-8b).
 
 ---
 

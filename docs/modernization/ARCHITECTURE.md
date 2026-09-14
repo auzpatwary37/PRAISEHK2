@@ -19,7 +19,7 @@ PRAISEHK2/
 `package transitFareAndHandler does not exist`, `package cz.cvut.fit.jcool.core does not exist`.
 Root cause and remedy: `PRAISE_MATSIMHK_RELATIONSHIP.md`, `DEPENDENCIES.md`.
 
-### After (this PR)
+### After the trunk (PR 1 + PR 2)
 
 ```
 PRAISEHK2/
@@ -34,12 +34,13 @@ PRAISEHK2/
 │   ├── TEST_MATRIX.md
 │   ├── DEPENDENCIES.md
 │   ├── REVIEW_REQUIRED.md
+│   ├── OBJECTIVE_PURITY_PLAN.md
 │   ├── PRAISE_MATSIMHK_RELATIONSHIP.md
 │   └── PRAISE_ODE_RELATIONSHIP.md
 └── README.md
 ```
 
-Build: `cd MetaModelCalibration && mvn -o -B clean test` → BUILD SUCCESS, 82 tests, 0 failures, offline.
+Build: `cd MetaModelCalibration && mvn -o -B clean test` → BUILD SUCCESS, 106 tests, 0 failures, offline.
 
 The Hong Kong MATSim fork was first imported as a 153-file module, then reduced: the dependency
 closure was measured at 39 files / 11k LOC, but only **two** of those classes have any active use in
@@ -153,19 +154,29 @@ matsim-adapter/      ◀── matsimIntegration/*, and the vendored transit.far
 * No test requires: Hong Kong data, absolute paths, MATLAB, network access, `Math.random()`, or
   `HashMap` iteration order.
 * Offline verification: `cd MetaModelCalibration && mvn -o -B clean test`
-  → BUILD SUCCESS, 82 tests, 0 failures, zero compiler diagnostics.
+  → BUILD SUCCESS, 106 tests, 0 failures, zero compiler diagnostics.
 
 ## 6. Delivery roadmap (small, behaviour-protected PRs)
 
+The **PR numbers below are roadmap ordinals, not GitHub PR numbers** — GitHub numbering diverges
+because the CI workflow landed as its own GitHub PR (`#4`) and does not appear in this roadmap.
+
 Two tracks. Track B (ODEstimation) is **independent of** Track A and must not be deferred behind it:
 it is the gate for Track C.
+
+### Infrastructure
+
+| Item | Content | Status |
+|---|---|---|
+| CI | `.github/workflows/ci.yml` — deterministic suite on every PR into the trunk, plus a guard that fails if fewer than 80 tests report | done |
+| Protection | `modernization/main` requires the `mvn -B clean test (JDK 17)` check (strict); force-push and deletion disallowed | done |
 
 ### Track A — PRAISEHK characterization
 
 | PR | Content | Status |
 |---|---|---|
-| 1 | Audit + docs + build reproducibility + test harness + fixtures + ObjectiveCalculator/Measurement characterization | **this PR** |
-| 2 | `MeasurementType` extraction full coverage (remaining types) + measurement purity plan | next |
+| 1 | Audit + docs + build reproducibility + test harness + fixtures + ObjectiveCalculator/Measurement characterization | merged |
+| 2 | `MeasurementType` extraction full coverage (remaining types) + objective-purity plan | **this PR** |
 | 3 | `ParamReader` characterization → typed `ParameterDefinition`/`ParameterSpace` | planned |
 | 4 | Meta-model mathematical tests (weighted-ridge oracle; decide the fate of the 5 fitting paths) | planned |
 | 5 | Calibrator/trust-region deterministic state-machine tests (incl. CAL-1…CAL-8) | planned |
