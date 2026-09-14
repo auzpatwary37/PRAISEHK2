@@ -262,7 +262,7 @@ zero-denominator and accumulation policies are inconsistent.
   (`BeforeMorningPeak`, `MorningPeak`, `AfterMorningPeak`, `EveningPeak`, `AfterEveningPeak`) — this
   is what the test fixtures mirror.
 
-## 11. `matamodels/` — surrogates `[V]`
+## 11. `matamodels/` — surrogates `[V]` `[T]`
 
 All meta-models implement `MetaModel` and extend `MetaModelImpl`, which holds the measurement id,
 `timeBeanId`, `noOfParams`, `noOfMetaModelParams`, `params` (`Map<iteration, LinkedHashMap>`),
@@ -271,21 +271,36 @@ All meta-models implement `MetaModel` and extend `MetaModelImpl`, which holds th
 `AnalyticalQuadraticMetaModelName`, `LinearMetaModelName`, `QudaraticMetaModelName`,
 `GradientBased_I/II/III_MetaModelName`).
 
+The constructor requires iteration key **0** (`noOfParams = params.get(0).size()`), and the constructor
+of `AnalyticLinearMetaModel` calls the fitter and then **clears** `params`, `simData` and
+`analyticalData`.
+
 | Family | Formal model | Fitter actually used |
 |---|---|---|
-| `AnalyticLinearMetaModel` | `y = β0 + β_A·A(x) + βᵀx` with Euclidean distance-based weighting and a ridge penalty `‖β‖²·1e-3` | **COBYLA** (`Cobyla.findMinimum(..., 1500)`); four other fitters exist as dead code (MODEL-2) |
-| `AnalyticalQuadraticMetaModel` | quadratic in `A(x)` and `x` | `[U]` — reads `.md`-style; verify |
+| `AnalyticLinearMetaModel` | `y = β0 + β_A·A(x) + βᵀx` with Shepard distance weighting and a ridge penalty `‖β‖²·1e-3` | **COBYLA**, `findMinimum(…, rhobeg 0.5, rhoend 1e-6, iprint 0, maxfun 1500)`, started at `x = all ones`; the returned `CobylaExitStatus` is **discarded**. The other four fitters are **unreachable** (MODEL-2) |
+| `AnalyticalQuadraticMetaModel` | quadratic in `A(x)` and `x` | `[U]` |
 | `LinearMetaModel` | `y = β0 + βᵀx` | `[U]` |
 | `QuadraticMetaModel` | quadratic in `x` | `[U]` |
 | `GradientBasedMetaModel` (I) | uses supplied sim/ana gradients | `[U]` |
 | `GradientBaseOptimizedMetaModel` (II) | gradient meta-model with an internal fit | `[U]` |
 | `GradientOptimizedMetaModel` (III) | gradient meta-model with optimized weighting | `[U]` |
 | `SimAndAnalyticalGradientCalculator` | **numerical** gradient calculator (finite differences) for the sim/ana models — must be clearly distinguished from ODEstimation's analytic derivatives | `[V]` by name/role; internals `[U]` |
-| `MatrixBasedUnconstrainedAdam`, `MatrixBasedUnconstrainedGD` | first-order update rules used by the dead Adam fitter | `[V]` by role |
+| `MatrixBasedUnconstrainedAdam`, `MatrixBasedUnconstrainedGD` | first-order update rules used by the unreachable Adam fitter | `[V]` by role |
 
-Weighting (from the live path): `calcEuclDistanceBasedWeight(params, i, currentParamNo)` — a
-distance-based weight favouring sample points near the current parameter point. The exact expression
-is `[U]` and must be pinned by tests before the meta-model weighting is touched.
+**Weighting, now pinned exactly:** `calcEuclDistanceBasedWeight(params, i, currentParamNo)` is
+`1 / (1 + ‖x_i − x_current‖)` — `1.0` at the reference point itself, decaying with Euclidean distance.
+Two caveats, both verified: the distance sums over the **reference point's key set only**, so it is
+**asymmetric** and throws `NullPointerException` when the reference has a key the compared point lacks
+(MODEL-6).
+
+**Fitted model, now pinned:** with the live path the scaling fields are at their identity defaults, so
+`calcMetaModel` is the plain affine model `β0 + β_A·A + βᵀx` (MODEL-4). The declared objective is a
+weighted ridge problem whose closed-form solution is computed independently in
+`AnalyticLinearMetaModelOracleTest`. **The live fitter does not attain it**: on a dataset with O(1)–O(10)
+coefficients, COBYLA exhausts `maxfun = 1500` (`MAX_ITERATIONS_REACHED`, status ignored) and returns a
+point whose objective is **≈1076×** the optimum (MODEL-5). With O(1) coefficients near the start the
+same code *does* reach the optimum, which localises the fault to the optimizer setup rather than the
+objective or the model.
 
 ## 12. `Utils/` and the MATLAB dead end `[V]`
 

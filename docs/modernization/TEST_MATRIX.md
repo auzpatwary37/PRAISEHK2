@@ -13,7 +13,7 @@ The C/O distinction is load-bearing for the next phase: oracle-backed semantics 
 by a redesign, whereas characterized defects are free to be fixed deliberately (with a migration
 decision). A row must not be marked `O` merely because a test exists.
 
-Snapshot: **144 deterministic tests, 0 failures, ~9 s**, runnable offline
+Snapshot: **157 deterministic tests, 0 failures, ~9 s**, runnable offline
 (`mvn -o test` in `MetaModelCalibration`), enforced in CI on every PR into the trunk.
 
 ---
@@ -153,15 +153,15 @@ declaration). `FareLink`'s grammar is a serialization contract for `MeasurementT
 | `SetParamToConfig` GV-branch omissions | ✔ | — | ✔ | ✔ | `gvSubPopulationOmitsPtParameters` | **PARAM-8**; PT / waiting / line-switch / mode constants not written |
 | `setDefaultParams(Config, String)` | ✔ | ✔ | ✔ | ✔ | `setDefaultParamsWritesIntoNamedSubPopulation` | **PARAM-9**; second application path, does not touch qsim |
 | `getDefaultTimeBean` | ✔ | ✔ | — | — | `DefaultTimeBean.fiveCanonicalPeriods` | `O`: the five HK periods are a domain specification |
-| `AnalyticLinearMetaModel` `y = β0 + βA·A(x) + βᵀx` | — | P | — | — | — | P (phase 6); oracle = weighted ridge |
-| `AnalyticLinearMetaModel` weighting | — | — | — | — | — | P |
-| `AnalyticLinearMetaModel` 5 fitting paths equivalence | — | — | — | — | — | P (**MODEL-2**) |
-| `AnalyticLinearMetaModel` dense-index assumption | — | — | P | — | — | P (**MODEL-1**) |
-| `AnalyticLinearMetaModel` static `errorT` | — | — | P | — | — | P (**MODEL-3**) |
-| `LinearMetaModel`, `QuadraticMetaModel` | — | P | — | — | — | P |
-| `AnalyticalQuadraticMetaModel` | — | P | — | — | — | P |
-| `GradientBasedMetaModel` (I/II/III) | — | — | — | — | — | P |
-| `SimAndAnalyticalGradientCalculator` | — | P | — | — | — | P; must be distinguished from analytic derivatives |
+| `AnalyticLinearMetaModel` coefficients vs closed-form weighted ridge | ✔ | ✔ | ✔ | ✔ | `AnalyticLinearMetaModelOracleTest.fitMatchesOracleWhenParametersAreWellScaled`, `ridgeShrinksTheClosedFormSolution` | `O`: normal equations `(X'WX+λI)⁻¹X'Wy` solved by LU, independent of COBYLA |
+| `AnalyticLinearMetaModel` optimizer convergence | ✔ | ✔ | ✔ | — | `iterationBudgetIsExhaustedAndStatusIsIgnored` (replicates the legacy call, asserts `MAX_ITERATIONS_REACHED`, shows monotone improvement with a larger budget), `constantSimulationOutputIsAlsoShortOfTheOptimum`, `duplicateParameterPointsAreAlsoShortOfTheOptimum` | **MODEL-5**; expectation encoded as a `@Disabled` test |
+| `calcEuclDistanceBasedWeight` | ✔ | ✔ | ✔ | — | `weightFunctionMatchesItsDefinition`, `weightIgnoresKeysAbsentFromTheReferencePoint`, `referencePointChangesTheSolution` | `O` for the formula; **MODEL-6** for the asymmetry/NPE |
+| `AnalyticLinearMetaModel` fitting-path reachability | ✔ | — | ✔ | — | `alternativeFittersAreUnreachable` (all four throw) | **MODEL-2**; evidence for dropping ND4J/Smile |
+| scaling fields inert in the live path | ✔ | ✔ | — | — | `scalingFieldsAreIdentity` | **MODEL-4** |
+| constructor requires iteration key 0 | ✔ | — | ✔ | — | `constructorRequiresIterationZero` | **MODEL-1** |
+| static `errorT` | — | — | — | — | — | **MODEL-3**, record-only (unobservable: no getter) |
+| `LinearMetaModel`, `QuadraticMetaModel`, `AnalyticalQuadraticMetaModel` | — | P | — | — | — | P |
+| `GradientBasedMetaModel` (I/II/III), `SimAndAnalyticalGradientCalculator` | — | P | — | — | — | P; the gradient calculator must be distinguished from analytic derivatives |
 | `CalibratorImpl` trust ratio / accept / reject | — | P | — | — | — | P (phase 7) |
 | `CalibratorImpl` `maxTrRadius` init bug | — | — | P | — | — | P (**CAL-1**) |
 | `CalibratorImpl` NaN / Inf / zero predicted reduction | — | — | P | — | — | P (**CAL-3**) |

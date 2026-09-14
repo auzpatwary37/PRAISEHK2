@@ -594,40 +594,101 @@ matters for every reading of this class.
 
 ## Meta-models (`matamodels/`)
 
-### MODEL-1 — `READ` — dense array indexing assumes parameter iteration numbers are contiguous from 0
-* `AnalyticLinearMetaModel.calibrateMetaModelAnalytically` / `...WithApache` / `...WithSmile` /
-  `...WithAdam` all use the iteration number as a **dense array index**:
-  ```java
-  double[] weights = new double[this.params.size()];
-  for (int i : params.keySet()) { weights[i] = …; y[i] = simData.get(i); x.setRow(i, xrow); }
-  ```
-  If `params` keys are not exactly `{0,1,…,n−1}` — which is possible after rejected iterations,
-  random restarts, or the deserialisation constructor `CalibratorImpl(int iterPerformed, …)` —
-  this throws `ArrayIndexOutOfBoundsException` or, if keys are a dense set that does not start at 0,
-  silently misaligns rows. Must be characterized with a gapped/offset key set.
+### MODEL-1 — `VERIFIED` — the constructor requires iteration key 0; the alternative fitters assume dense 0-based keys
+* `MetaModelImpl` does `this.noOfParams = params.get(0).size()`, so a parameter map without iteration
+  **0** throws `NullPointerException`. Reachable in principle after a restart or the deserialisation
+  constructor; latent in practice because calibration always starts at iteration 0.
+* Separately, `calibrateMetaModelAnalytically` / `...WithApache` / `...WithSmile` / `...WithAdam` use the
+  iteration number as a **dense array index** (`weights[i]`, `y[i]`, `x.setRow(i, …)`), so a gapped or
+  offset key set would throw `AIOOBE` or silently misalign rows. The **live** COBYLA path does not do
+  this — it iterates `params.keySet()` directly.
+* **Evidence:** `AnalyticLinearMetaModelOracleTest.constructorRequiresIterationZero`. The dense-index
+  variants are unreachable (see MODEL-2), so they are recorded rather than pinned.
 
-### MODEL-2 — `READ` — `AnalyticLinearMetaModel` contains five fitting paths, only one is live
-* Paths present: COBYLA (`calibrateMetaModel`, **invoked by the constructor**), analytical
-  matrix/ND4J (`calibrateMetaModelAnalytically`), Apache GLS (`calibrateMetaModelWithApache`),
-  Smile LASSO (`calibrateMetaModelWithSmile`), and Adam/ND4J (`calibrateMetaModelWithAdam`).
-  The other four are dead code reachable only by direct call. `deeplearning4j-core`, `nd4j-native-platform`
-  and `smile-core`/`smile-data` exist **only** to support these dead paths.
-* Consequence to verify: `scaleMean`/`scaleSigma`/`scaleMeanY`/`scaleSigmaY` are initialised to
-  `0`/`1` in the constructor and are only *populated* by the Adam path. Since the live path is
-  COBYLA, `calcMetaModel` currently applies the **identity** scaling
-  (`(A−0)/1`, `(d−0)/1`, `*1+0`). If the Adam path were ever enabled, the scaling would change all
-  fitted coefficients. This coupling must be pinned by tests before any of the five paths is removed
-  or promoted.
+### MODEL-2 — `VERIFIED` — four of the five fitting paths are UNREACHABLE, not merely unused
+* Paths: COBYLA (`calibrateMetaModel`, invoked by the constructor), analytical matrix/ND4J
+  (`calibrateMetaModelAnalytically`), Apache GLS (`...WithApache`), Smile LASSO (`...WithSmile`) and
+  Adam/ND4J (`...WithAdam`).
+* The constructor calls **only** COBYLA and then executes
+  `this.params.clear(); this.simData.clear(); this.analyticalData.clear();`. Every alternative fitter
+  iterates exactly those three cleared collections, so **none of them can produce a fit after
+  construction** — they are not "alternative implementations that happened to fall out of use", they
+  are unreachable code paths.
+* **Evidence:** `AnalyticLinearMetaModelOracleTest.alternativeFittersAreUnreachable` — all four throw.
+* **Consequence:** `deeplearning4j-core`, `nd4j-native-platform`, `smile-core` and `smile-data` exist
+  **only** to support these four unreachable paths. This is the evidence `DEPENDENCIES.md` asked for
+  before removing them; the removal itself is a separate, isolated change.
 
 ### MODEL-3 — `READ` — static mutable state
 * `private static double errorT = 0;` and `public static synchronized void updateErrorT(double e)`
-  accumulate across **all** instances and tests. This is process-global state that makes tests
-  order-dependent and cannot be reset.
+  accumulate across **all** instances. It is only written by the (unreachable) Adam path and has no
+  getter, so it is currently unobservable — which is why it is recorded rather than tested. It must not
+  survive the redesign.
 
-### MODEL-4 — `READ` — silent debug side effects
-* `calcMetaModel` prints on `out > 6000`; `calibrateMetaModelWithAdam` prints every iteration;
-  `getSmile`/LASSO ignores the computed distance weights entirely. Test hygiene requires these to be
-  characterized, not relied upon.
+### MODEL-4 — `VERIFIED` — the live scaling fields are inert, and diagnostics go to stdout
+* `scaleMean`/`scaleSigma` are initialised to `0`/`1` (and `scaleMeanY`/`scaleSigmaY` to `0`/`1`) and
+  are only ever **populated** by the unreachable Adam path. In the live COBYLA path `calcMetaModel` is
+  therefore the plain affine model `beta0 + betaA*A + beta^T x` — the scaling scaffolding is dead
+  weight, and if it were ever activated it would change every fitted coefficient.
+* **Evidence:** `AnalyticLinearMetaModelOracleTest.scalingFieldsAreIdentity` (asserts the identity
+  values; the oracle in the same class relies on them).
+* Also recorded: `calcMetaModel` prints when `out > 6000` and the Adam path prints every iteration, so a
+  test must not depend on stdout being clean.
+
+### MODEL-5 — `VERIFIED` — the live fitter exhausts its evaluation budget and DISCARDS the error status
+* **Where:** `calibrateMetaModel` → `Cobyla.findMinimum(optimization, noOfMetaModelParams, 0, x, 0.5, 1e-6, 0, 1500)`.
+  The returned `CobylaExitStatus` is assigned to `result` and then never inspected.
+* **Legacy:** on a dataset whose true coefficients are O(1)–O(10) and whose analytical part is
+  `A ≈ 100`, COBYLA returns **`MAX_ITERATIONS_REACHED`** after its 1500 evaluations, having barely moved
+  the coefficients. The declared objective at the returned point is **16.3615**, against **0.015204**
+  at the closed-form optimum — a factor of **≈1076**. Raising the budget improves the objective
+  monotonically (**5000 → 12.84, 20000 → 6.09, 100000 → 0.245**) and the status remains
+  `MAX_ITERATIONS_REACHED` each time.
+* **Expected:** attain (or approach) the optimum, and at minimum **detect and report** non-convergence
+  instead of returning a silently poor fit. Contributing cause: the design matrix is badly scaled —
+  `A ≈ 100` beside `x ≈ 1` — which is precisely what the (unreachable) Adam path's
+  `scaleMean`/`scaleSigma` standardisation was for.
+* **Method:** independent closed-form weighted ridge, `beta = (X'WX + λI)⁻¹ X'Wy`, solved by LU
+  decomposition (`commons-math3`), with the legacies' own weight function and `λ = 1e-3`.
+* **Numerical example** (`farOptimum`: 5 iterations, 2 parameters, `A = 100 + 3x₁² − 2x₂`,
+  `y = 1.5A + 2x₁ − 3x₂`):
+  * legacy fit `[1.6205, 1.4529, 1.0671, 0.7340]`, objective 16.3615
+  * closed-form optimum `[-0.1714, 1.5018, 1.9861, -2.9932]`, objective 0.015204 — it recovers the
+    generating coefficients `βA = 1.5, β₁ = 2, β₂ = −3` exactly.
+* **Contrast (proves the objective is correct):** with O(1) coefficients near the hard-coded all-ones
+  start, the same code **does** reach the closed-form optimum to within 5e-2. So the objective and the
+  model are right; the optimizer setup is what fails.
+* **Evidence:** `AnalyticLinearMetaModelOracleTest.iterationBudgetIsExhaustedAndStatusIsIgnored`
+  (replicates the legacy call, asserts the identical objective, asserts `MAX_ITERATIONS_REACHED`, and
+  shows the monotone improvement with a larger budget), `fitMatchesOracleWhenParametersAreWellScaled`,
+  `constantSimulationOutputIsAlsoShortOfTheOptimum`, `duplicateParameterPointsAreAlsoShortOfTheOptimum`.
+  The mathematical expectation is encoded as a **disabled** test,
+  `fitShouldAttainTheClosedFormOptimum`, to be enabled when this is resolved.
+* **Proposed resolution:** inspect `CobylaExitStatus` and fail or warn; raise `maxfun`; and standardise
+  the columns (the machinery already exists but is only wired into the unreachable Adam path). Each
+  step needs the closed-form oracle to stay green.
+
+### MODEL-6 — `VERIFIED` — `calcEuclDistanceBasedWeight` is asymmetric and can throw
+* **Where:** `MetaModelImpl.calcEuclDistanceBasedWeight` iterates `param1.keySet()` (the **reference**
+  point) and reads `param2.get(s)` for the compared point.
+* **Legacy:** the summation set is the reference point's key set, so:
+  * a key present in the **compared** point but absent from the reference is **silently ignored** — the
+    distance is too small and the weight is too large (in the extreme, `1.0`, as if the points were
+    identical);
+  * a key present in the **reference** point but absent from the compared point makes
+    `param2.get(s)` return `null` → **`NullPointerException`** on unboxing.
+  The weight is therefore **not symmetric** in its two arguments: `w(a,b) ≠ w(b,a)`, and whether it
+  throws depends on which point is the reference.
+* **Expected:** a symmetric distance over the union of keys, or an explicit error — silently weighting a
+  point as if it were identical is the worst option, because the fit still looks plausible.
+* **Numerical example:** reference `{θ₁: 0}`, compared `{θ₁: 0, θ₂: 4}` → weight `1.0` (θ₂ ignored).
+  Reversed reference → `NullPointerException`.
+* **Evidence:** `AnalyticLinearMetaModelOracleTest.weightFunctionMatchesItsDefinition`,
+  `weightIgnoresKeysAbsentFromTheReferencePoint`.
+
+### MODEL-7 — `VERIFIED` — the fitting corpus is serialised with the `Analysis` container
+* `Measurements`/`Measurement` are the fitting corpus, so any measurement-serialization defect
+  (MEAS-14/15) also affects meta-model reproducibility. Recorded for the redesign; no separate test.
 
 ---
 
