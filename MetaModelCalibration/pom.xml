@@ -109,6 +109,27 @@
 					     REVIEW_REQUIRED.md (PARAM-1).
 					-->
 					<workingDirectory>${project.basedir}</workingDirectory>
+					<!--
+					     Tests must not require network access.
+
+					     ParamReader.SetParamToConfig writes a MATSim Config to disk and reloads it via
+					     ConfigUtils.loadConfig, whose XML parser resolves the DTD declared in the file -
+					     http://www.matsim.org/files/dtd/config_v2.dtd - REMOTELY by default. That made the
+					     SetParamToConfig characterization tests depend on reaching www.matsim.org: they
+					     passed locally (networked / already cached) and FAILED on a CI runner, which is
+					     how the latent flake was found.
+
+					     The DTD ships inside the MATSim jar as dtd/config_v2.dtd. This property makes the
+					     parser take it from the classpath instead of the network.
+
+					     The invalid proxy below ENFORCES the rule rather than merely documenting it: any
+					     test that tries to open an HTTP(S) connection fails fast with a connection
+					     refused, locally and in CI alike, so the flake above cannot come back unnoticed.
+					     Verified: the full suite passes with this argLine, with the parser logging
+					     "Using local DTD from classpath:dtd/config_v2.dtd" and no request to
+					     www.matsim.org.
+					-->
+					<argLine>-Dmatsim.preferLocalDtds=true -Dhttp.proxyHost=127.0.0.1 -Dhttp.proxyPort=1 -Dhttps.proxyHost=127.0.0.1 -Dhttps.proxyPort=1</argLine>
 					<excludes>
 						<exclude>**/AnalyticLinearMetaModelTest.java</exclude>
 						<exclude>**/MeasurementCreator.java</exclude>

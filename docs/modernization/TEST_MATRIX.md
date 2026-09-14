@@ -208,7 +208,7 @@ declaration). `FareLink`'s grammar is a serialization contract for `MeasurementT
 | No Hong Kong production data required | ✔ | all fixtures in-memory; only `paramReaderTrial1.csv` values copied as literals |
 | No absolute filesystem paths in tests | ✔ | `@TempDir` used; legacy absolute-path helper excluded |
 | No MATLAB required | ✔ | MATLAB jars unused; `MatlabOptimizer` returns null |
-| No network required | ✔ | offline run verified |
+| No network required | ✔ | **enforced**: surefire runs with an invalid proxy set, so any test that opens an HTTP(S) connection fails fast. `ParamReader.SetParamToConfig` round trips through `ConfigUtils.loadConfig`, which resolved the MATSim DTD **remotely** by default - that was a latent flake (green locally, red on a CI runner) until `-Dmatsim.preferLocalDtds=true` made it read `dtd/config_v2.dtd` from the MATSim jar instead |
 | No `Math.random()` in tests | ✔ | new tests deterministic; legacy nondeterministic test excluded |
 | No `HashMap` iteration-order dependence | ✔ | CSV assertions are order-independent |
 | Legacy nondeterministic/hanging test quarantined | ✔ | surefire `<excludes>` in `MetaModelCalibration/pom.xml` |
