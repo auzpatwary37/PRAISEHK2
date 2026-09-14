@@ -23,7 +23,8 @@ Root cause and remedy: `PRAISE_MATSIMHK_RELATIONSHIP.md`, `DEPENDENCIES.md`.
 
 ```
 PRAISEHK2/
-├── MetaModelCalibration/           # single Maven module again (no aggregator needed)
+├── pom.xml                         # reactor aggregator (root-level `mvn test`); no deps, no parent
+├── MetaModelCalibration/           # the single module today
 │   ├── pom.xml                     # + junit5/surefire, + jcool system dep; MATSim-HK dependency REMOVED
 │   └── src/{main,test}/java/ust/hk/praisehk/metamodelcalibration/
 │       ├── transit/fare/           # NEW: 2 vendored classes (FareCalculator, FareLink)
@@ -147,8 +148,11 @@ matsim-adapter/      ◀── matsimIntegration/*, and the vendored transit.far
 
 ## 5. Build & test infrastructure (as of this PR)
 
-* **Single Maven module.** There is no aggregator: `MetaModelCalibration/pom.xml` is the only POM.
-  All commands are run from `MetaModelCalibration/`.
+* **One module, plus a root aggregator.** `pom.xml` at the repository root is a pure aggregator: it
+  declares `<module>MetaModelCalibration</module>` and nothing else (no parent, no dependencies, no
+  plugins), so the module keeps its own coordinates and build. It exists so `mvn test` works from the
+  repository root and so the planned multi-module system has a place to grow. CI still runs inside
+  `MetaModelCalibration/` deliberately, because the surefire working directory is pinned there.
 * JUnit 5 + `junit-vintage-engine`; surefire 3.2.5 with the legacy nondeterministic test excluded.
 * Fixtures live in `src/test/java/.../fixtures/` and are data + in-memory network builders only.
 * No test requires: Hong Kong data, absolute paths, MATLAB, network access, `Math.random()`, or

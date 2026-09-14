@@ -17,6 +17,7 @@ Modernization work happens on feature branches created from it.
 
 ```
 PRAISEHK2/
+├── pom.xml                  reactor aggregator - lets Maven run from the repository root
 ├── MetaModelCalibration/    PRAISEHK core: analytical SUE, measurements, objectives,
 │                            calibrator, meta-models, MATSim integration
 ├── docs/modernization/      Forensic audit, behaviour catalogue, test matrix, defects
@@ -34,11 +35,15 @@ their `package` declaration. See
 Requirements: JDK 17. The build is self-contained and works **offline** once dependencies are cached.
 
 ```bash
-cd MetaModelCalibration
-mvn -B test          # full deterministic test suite
-mvn -o -B test       # same, offline (no network access)
+mvn -B test              # full deterministic test suite
+mvn -o -B test           # same, offline (no network access)
 mvn -B -DskipTests test-compile
 ```
+
+There is a reactor POM at the repository root, so Maven can be run from the top level; `cd
+MetaModelCalibration` works identically. Tests are network-free by construction: surefire sets
+`-Dmatsim.preferLocalDtds=true` and an invalid proxy, so any test that attempts an HTTP(S) connection
+fails fast. See `MetaModelCalibration/pom.xml` for the reasoning.
 
 `MetaModelCalibration/src/main/resources/jcool-core.jar` is declared with `system` scope because it is
 not published anywhere. See `docs/modernization/DEPENDENCIES.md`.
