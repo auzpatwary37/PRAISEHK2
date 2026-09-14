@@ -541,6 +541,28 @@ matters for every reading of this class.
   grows. Standard trust-region logic would reject a step with `rho` below the threshold. This is
   the policy the brief explicitly asks to preserve until it is compared with the publication.
 
+### CAL-11 — `VERIFIED` — the internal recalibration is invoked and its RESULT IS DISCARDED
+* **Where:** `CalibratorImpl.generateNewParam`:
+  ```java
+  Map<Integer,Measurements> newAnaMeasurements = this.sueAssignment.calibrateInternalParams(
+          this.simMeasurements, scaledParam, …);      // recalibrated measurements
+  this.updateAnalyticalMeasurement(newAnaMeasurements);
+  this.successiveRejection = 0;                       // reset regardless
+  ```
+* **Legacy:** `this.simMeasurements` and `this.anaMeasurements` hold the same iteration keys, so the two
+  maps have **equal sizes**. `updateAnalyticalMeasurement` short-circuits entirely on equal sizes
+  (CAL-5), so the recalibrated measurements **never reach the calibrator's state**, while the rejection
+  counter is reset anyway. The recovery mechanism therefore *appears* to run and recovers nothing: the
+  model keeps its old analytical measurements and the trigger can fire again later with the same effect.
+* **Evidence:** `CalibratorImplStateMachineTest.StateMachine.internalCalibrationResultIsDiscarded` — the
+  stub returns the same iteration keys with volume `777`, and all three recorded iterations still hold
+  `100` after the call, with `successiveRejection` reset to 0. Also
+  `counterRestartsAfterTheTrigger`, which proves the counter genuinely restarts (so the trigger is not
+  immediately re-entered) and that the radius is *not* reset by the trigger.
+* **Combined with CAL-5**, this makes the successive-rejection recovery path effectively inert. That
+  changes the interpretation of the whole trust-region mechanism, so it is recorded as its own item -
+  the reviewer's point, confirmed by test rather than by inspection.
+
 ### CAL-3 — `READ` — `rho` has no guard for a zero predicted reduction
 * `double rouk = SimObjectiveChange / MetaObjectiveChange;` — with
   `MetaObjectiveChange == 0` this yields `±Infinity` or `NaN` (0/0). Downstream comparisons

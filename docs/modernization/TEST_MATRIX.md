@@ -168,7 +168,8 @@ declaration). `FareLink`'s grammar is a serialization contract for `MeasurementT
 | `SimAndAnalyticalGradientCalculator` | — | P | — | — | — | P; must be distinguished from analytic derivatives |
 | `CalibratorImpl` constructor / tunables | ✔ | — | — | — | `CalibratorImplStateMachineTest.Construction.tunablesArePinned`, `maxTrRadiusIgnoresTheConfiguredInitialRadius` | **CAL-1** |
 | `CalibratorImpl` iteration 0 (no acceptance test) | ✔ | — | — | ✔ | `StateMachine.iterationZeroHasNoAcceptanceTest` | also asserts the legacy `0th Objective Value` stdout report |
-| acceptance policy: improvement / worsening | ✔ | — | ✔ | ✔ | `StateMachine.improvedObjectiveIsAccepted`, `worsenedObjectiveIsRejected` | **CAL-2**; radius grows-or-holds vs `*0.9` |
+| acceptance policy: accept vs reject | ✔ | — | ✔ | ✔ | `StateMachine.improvedObjectiveIsAccepted` (asserts only "not shrunk"), `worsenedObjectiveIsRejected` (`25 -> 22.5`), `radiusIsFlooredAtMinTrRadius` | **CAL-2**; the two ACCEPTED sub-branches (grow on `rho >= 0.01` vs hold below it) are **not** distinguished - `rho` is not settable from outside. **CAL-3** pending |
+| internal-recalibration result application | ✔ | — | ✔ | ✔ | `StateMachine.internalCalibrationResultIsDiscarded`, `counterRestartsAfterTheTrigger` | **CAL-11**: the callback fires and the counter resets, but the recalibrated measurements are **discarded** |
 | trust-radius floor (`minTrRadius`) | ✔ | ✔ | ✔ | — | `StateMachine.radiusIsFlooredAtMinTrRadius` | `max(24, 22.5)` |
 | consecutive rejection -> internal parameter calibration | ✔ | — | ✔ | ✔ | `StateMachine.consecutiveRejectionTriggersInternalCalibration` | trigger reached and counter reset |
 | `updateAnalyticalMeasurement` gate | ✔ | — | ✔ | — | `UpdateAnalyticalMeasurement.*` (4 tests) | **CAL-5** |

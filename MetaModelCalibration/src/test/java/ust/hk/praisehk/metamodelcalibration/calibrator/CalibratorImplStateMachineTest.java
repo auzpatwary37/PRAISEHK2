@@ -42,8 +42,14 @@ import ust.hk.praisehk.metamodelcalibration.transit.fare.FareCalculator;
  * PHASE 7 - deterministic state machine for {@link CalibratorImpl}'s trust-region loop.
  *
  * <p>Driven through a stub {@link AnalyticalModel}, so the loop can be exercised without a network, a
- * Hong Kong dataset or MATSim runtime. The three outcomes of the acceptance policy are observable from
- * the outside because each one changes {@code TrRadius} differently:</p>
+ * Hong Kong dataset or MATSim runtime.</p>
+ *
+ * <p><b>Scope, stated precisely (review point HIGH 2).</b> The policy has three outcomes, but the tests
+ * below distinguish only <b>accept</b> from <b>reject</b>. The two accepted sub-branches - grow on
+ * {@code rho >= 0.01}, and hold when {@code rho < 0.01} - are <b>not</b> pinned, because {@code rho}
+ * depends on the fitted meta-model prediction and cannot be set from outside without first extracting
+ * the policy, which would be a refactor. What is pinned is the rejection arithmetic ({@code * 0.9}, the
+ * floor) and that an accepted step is never shrunk <i>while</i> {@code TrRadius <= maxTrRadius}:</p>
  * <pre>
  *   SimObjectiveChange &gt; 0 and rho &gt;= 0.01  -&gt; accept, TrRadius *= 1.25 (capped)
  *   SimObjectiveChange &gt; 0 and rho &lt;  0.01  -&gt; accept, TrRadius unchanged
@@ -71,6 +77,8 @@ class CalibratorImplStateMachineTest {
 		double anaVolume = 0;
 		int perFormSUECalls = 0;
 		int internalCalibrationCalls = 0;
+		/** When >= 0, calibrateInternalParams returns the SAME iteration keys with this volume. */
+		double internalCalibrationVolume = -1;
 		String fileLoc = "";
 
 		StubSUE(Measurements template) {
@@ -100,7 +108,16 @@ class CalibratorImplStateMachineTest {
 				Map<Integer, LinkedHashMap<String, Double>> params,
 				LinkedHashMap<String, Double> initialParam, int currentParamNo) {
 			internalCalibrationCalls++;
-			return simMeasurements;
+			if (internalCalibrationVolume < 0) {
+				return simMeasurements;
+			}
+			// Same iteration keys, so same SIZE as the calibrator's anaMeasurements (the normal
+			// shape for an internal recalibration), but obviously different volumes.
+			Map<Integer, Measurements> recalibrated = new HashMap<>();
+			for (Integer key : simMeasurements.keySet()) {
+				recalibrated.put(key, newMeasurements(internalCalibrationVolume));
+			}
+			return recalibrated;
 		}
 
 		@Override
@@ -331,13 +348,15 @@ class CalibratorImplStateMachineTest {
 			assertTrue(p.get("1") >= -300.0 && p.get("1") <= -100.0);
 			assertTrue(p.get("2") >= -0.02 && p.get("2") <= -0.001);
 
-			// two consecutive draws differ: there is no seed to inject
-			boolean anyDifference = false;
-			for (int i = 0; i < 5 && !anyDifference; i++) {
+			// NOTE (MEDIUM 3): this test deliberately does NOT assert that two runtime draws differ.
+			// That would make the "deterministic" suite depend on Math.random() and could fail by
+			// chance. The non-injectable RNG is established from the source (see CAL-6) and by the
+			// absence of any seed parameter, not by comparing random outcomes.
+			for (int i = 0; i < 20; i++) {
 				LinkedHashMap<String, Double> q = c.drawRandomPoint(limits);
-				anyDifference = !q.get("1").equals(p.get("1")) || !q.get("2").equals(p.get("2"));
+				assertTrue(q.get("1") >= -300.0 && q.get("1") <= -100.0);
+				assertTrue(q.get("2") >= -0.02 && q.get("2") <= -0.001);
 			}
-			assertTrue(anyDifference, "Math.random() makes the restart point unreproducible");
 		}
 	}
 
@@ -492,20 +511,59 @@ class CalibratorImplStateMachineTest {
 		}
 
 		@Test
-		@DisplayName("CHARACTERIZATION: enough consecutive rejections trigger the internal parameter "
-				+ "calibration and reset the rejection counter")
-		void consecutiveRejectionTriggersInternalCalibration(@TempDir Path dir) throws IOException {
-			CalibratorImpl c = calibrator(dir, true, 25.0, 1); // maxSuccesiveRejection = 1
+		@DisplayName("REVIEW_REQUIRED CAL-11: the rejection threshold fires the internal recalibration, but "
+				+ "the RECALIBRATED MEASUREMENTS ARE DISCARDED because updateAnalyticalMeasurement "
+				+ "short-circuits on equal sizes - only the counter is reset")
+		void internalCalibrationResultIsDiscarded(@TempDir Path dir) throws IOException {
+			CalibratorImpl c = calibrator(dir, true, 25.0, 2); // trigger at two consecutive rejections
+			StubSUE sue = new StubSUE(newMeasurements(100.));
+			sue.anaVolume = 100.;
+			sue.internalCalibrationVolume = 777.; // what the recalibration "returns"
+
+			runQuietly(c, sue, newMeasurements(105.));   // iteration 0: objective 25
+			runQuietly(c, sue, newMeasurements(200.));   // iteration 1: rejected
+			assertEquals(1.0, c.getSuccessiveRejection(), 0.0);
+			assertEquals(0, sue.internalCalibrationCalls, "not yet: threshold is 2");
+
+			runQuietly(c, sue, newMeasurements(210.));   // iteration 2: rejected -> threshold reached
+
+			// The callback DID fire...
+			assertEquals(1, sue.internalCalibrationCalls);
+			// ...and returned measurements for the SAME iteration keys with volume 777.
+			// updateAnalyticalMeasurement sees equal sizes and skips the whole update, so the
+			// calibrator's analytical state is left at the OLD volume.
+			// iterations 0, 1 and 2 are all present (2 was recorded before the acceptance test)
+			assertEquals(3, c.anaMeasurements.size());
+			for (int i = 0; i < 3; i++) {
+				assertEquals(100., c.anaMeasurements.get(i).getMeasurements().get(M_ID).getVolume(TB), 0.,
+						"iteration " + i + ": the recalibrated volume 777 was discarded, state is stale");
+			}
+			// ...while the rejection counter is reset regardless, so the calibration LOOKS recovered.
+			assertEquals(0.0, c.getSuccessiveRejection(), 0.0);
+		}
+
+		@Test
+		@DisplayName("REVIEW_REQUIRED CAL-11: after the trigger the counter really does restart, so the "
+				+ "trigger is not immediately re-entered before the threshold is reached again")
+		void counterRestartsAfterTheTrigger(@TempDir Path dir) throws IOException {
+			CalibratorImpl c = calibrator(dir, true, 25.0, 2);
 			StubSUE sue = new StubSUE(newMeasurements(100.));
 			sue.anaVolume = 100.;
 
-			runQuietly(c, sue, newMeasurements(105.));   // iteration 0
-			runQuietly(c, sue, newMeasurements(200.));   // iteration 1: rejected -> threshold reached
+			runQuietly(c, sue, newMeasurements(105.));   // 0
+			runQuietly(c, sue, newMeasurements(200.));   // 1: rejected (1)
+			runQuietly(c, sue, newMeasurements(210.));   // 2: rejected (2) -> trigger, reset to 0
+			assertEquals(1, sue.internalCalibrationCalls);
+			assertEquals(0.0, c.getSuccessiveRejection(), 0.0);
+			assertEquals(20.25, c.getTrRadius(), 1e-9, "the radius is NOT reset by the trigger");
+
+			runQuietly(c, sue, newMeasurements(220.));   // 3: rejected (1) -> below the threshold again
 
 			assertEquals(1, sue.internalCalibrationCalls,
-					"the analytical model's internal parameters are recalibrated");
-			assertEquals(0.0, c.getSuccessiveRejection(),
-					"and the counter is reset, so the trigger is not re-entered immediately");
+					"the trigger is not re-entered: the counter had restarted from 0");
+			assertEquals(1.0, c.getSuccessiveRejection(), 0.0);
+			assertEquals(18.225, c.getTrRadius(), 1e-9, "22.5 * 0.9 * 0.9 * 0.9, continuing to shrink");
 		}
+
 	}
 }
