@@ -153,6 +153,14 @@ matsim-adapter/      ◀── matsimIntegration/*, and the vendored transit.far
 * Fixtures live in `src/test/java/.../fixtures/` and are data + in-memory network builders only.
 * No test requires: Hong Kong data, absolute paths, MATLAB, network access, `Math.random()`, or
   `HashMap` iteration order.
+* **Network access, stated precisely.** Tests were silently *depending* on it: `SetParamToConfig`
+  round trips through `ConfigUtils.loadConfig`, which resolved the MATSim DTD from `www.matsim.org`.
+  That is now **fixed deterministically** with `-Dmatsim.preferLocalDtds=true`, which makes the parser
+  read `dtd/config_v2.dtd` from the MATSim jar. Surefire additionally sets an invalid proxy as
+  **defence in depth** for HTTP clients that honour JVM proxy properties — but that is **not a
+  process-level network sandbox**, so residual egress remains possible for a client using a raw socket,
+  `Proxy.NO_PROXY`, or its own proxy configuration. Hard isolation, if required, needs enforcement
+  outside the JVM (network namespace, firewall, or a no-egress container) and is **not** in place.
 * Offline verification: `cd MetaModelCalibration && mvn -o -B clean test`
   → BUILD SUCCESS, 153 tests, 0 failures, zero compiler diagnostics.
 
