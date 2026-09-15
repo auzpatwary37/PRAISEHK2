@@ -13,12 +13,12 @@ The C/O distinction is load-bearing for the next phase: oracle-backed semantics 
 by a redesign, whereas characterized defects are free to be fixed deliberately (with a migration
 decision). A row must not be marked `O` merely because a test exists.
 
-Snapshot: **191 tests (1 skipped), 0 failures, ~9 s**, runnable offline
+Snapshot: **192 tests (1 skipped), 0 failures, ~9 s**, runnable offline
 (`mvn -o test` in `MetaModelCalibration`), enforced in CI on every PR into the trunk.
 
 How the count is composed: **158** on the trunk after the meta-model oracle merged, **+14** from the
 trust-region state machine (one `@Disabled` by design, see MODEL-5), **+9** from the clone/CSV
-characterization gaps, **+10** from the `CNLSUEModel` MSA core (SUE-1..SUE-5). This snapshot line and
+characterization gaps, **+11** from the `CNLSUEModel` MSA core (SUE-1..SUE-6). This snapshot line and
 the two counts in `ARCHITECTURE.md` are the only
 hand-maintained numbers; a deliberate change to any of them must be visible in the same PR.
 
@@ -43,8 +43,8 @@ hand-maintained numbers; a deliberate change to any of them must be visible in t
 | `CNLTransitDirectLink` travel components | — | P | — | — | — | P |
 | `CNLTransitTransferLink` travel components | — | P | — | — | — | P |
 | `CNLSUEModel` MSA β sequence / update weight (**car / no-transit**) | ✔ | ✔ | ✔ | — | `CNLSUEModelMSATest.firstIterationTakesTheFullStep`, `decreasingErrorGrowsBetaByGamma`, `nonDecreasingErrorGrowsBetaByAlphaOnceTheCounterIsSeeded`, `updateReturnIsGovernedByTheFieldTolerance` | `O`: β recovered from the observable volume change alone; β₁ = 1, then +γ on a decreasing residual, giving the **adaptive `1/(1 + 0.1(k−1))`** weight — *not* the harmonic `1/k` (commented out). Transit half of the loop not covered — SUE-5 |
-| `CNLSUEModel` convergence error / stopping rule (**car / no-transit**) | ✔ | ✔ | ✔ | — | `convergenceBoundaryIsTheUnitSquaredErrorNorm`, `theToleranceArgumentAloneForcesConvergence`, `convergesWhenEveryLinkIsBelowOne`, `unloadedLinksAreExcludedFromThePointwiseDisjunct` | **SUE-2**, **SUE-3**; `O` only for the unit-norm boundary. Transit half of the loop (and its separate NaN/±Inf guard) untested — SUE-5 |
-| `CNLSUEModel` MSA α branch reachability | ✔ | — | ✔ | — | `nonDecreasingErrorThrowsWhenTheCounterWasNeverSeeded` | **SUE-1** (*corrected*): throws only on the constructor path — `generateRoutesAndOD` is what seeds the counter, so this is not production-reachable |
+| `CNLSUEModel` convergence error / stopping rule (**car / no-transit**) | ✔ | ✔ | ✔ | — | `convergenceBoundaryIsTheUnitSquaredErrorNorm`, `theToleranceArgumentAloneForcesConvergence`, `theMiddleCriterionIsScaleDependent`, `convergesWhenEveryLinkIsBelowOne`, `unloadedLinksAreExcludedFromThePointwiseDisjunct` | **SUE-2**, **SUE-3**, **SUE-6**; `O` for the unit-norm boundary and the scale contrast. Transit half of the loop (and its separate NaN/±Inf guard) untested — SUE-5 |
+| `CNLSUEModel` MSA counter init / lifecycle coupling | ✔ | — | ✔ | — | `nonDecreasingErrorThrowsWhenTheCounterWasNeverSeeded`, `nonDecreasingErrorGrowsBetaByAlphaOnceTheCounterIsSeeded` | **SUE-1**: the α branch reads state that only `generateRoutesAndOD` seeds. Constructor-path failure only - not a production-reachability claim |
 | `CNLSUEModel` stopping-rule numerical robustness (**car / no-transit**) | ✔ | — | ✔ | — | `nanErrorIsSilentlyReportedAsConverged` | **SUE-4**: the `== Double.NaN` guards are dead, and NaN reports converged |
 | `CNLSUEModel` logit route split | — | P | — | — | — | P |
 | `CNLSUEModel` OD demand conservation | — | P | — | — | — | P |

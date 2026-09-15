@@ -130,18 +130,20 @@ See `PRAISE_MATSIMHK_RELATIONSHIP.md` §4.
   `beta` is a per-time-bean `ArrayList<Double>` seeded to `1.0` at `counter == 1` - so the first step
   takes the full loaded volume - and thereafter grown by `+gammaMSA = 0.1` on a strictly decreasing
   residual, or `+alphaMSA = 1.9` otherwise. Every link and transit link moves by
-  `(1 / beta[counter-1]) * (loaded - current)`: an **adaptive `1/beta`**, not the harmonic `1/k` (that
-  variant is present in the source but commented out). Along an all-decreasing run the weight is
-  `1/(1 + 0.1(k-1))` - see REVIEW_REQUIRED for the derivation and the correction of the earlier wording.
+  `(1 / beta[counter-1]) * (loaded - current)`: an **adaptive `1/beta`**. Along an all-decreasing run
+  the weight is `1/(1 + 0.1(k-1))`; a harmonic `1/counter` variant exists in the source but is commented
+  out. Derivation in REVIEW_REQUIRED.
 * The step norm is `sqrt(sum of squared moves)` and is compared against the **field** `tollerance`
   (default `1`), not against a parameter - `UpdateLinkVolume` takes none.
 * The α branch reads `consecutiveSUEErrorIncrease`, which only `generateRoutesAndOD` seeds (line 314).
-  SUE-1 records why that is a latent initialisation defect rather than a production outage.
+  The intended production lifecycle therefore reaches the α branch normally, but `UpdateLinkVolume`
+  itself does not establish the state it reads - see SUE-1.
 * **Stopping rule - now `[V]`.** `CheckConvergence` appends the residual norm to `error` and returns
-  true if **any** of: the squared-error norm is `<= 1`; no link breaches the relative `tollerance`
-  **parameter**; or every link is below a squared error of 1. The three criteria are of different
-  kinds and interact (SUE-2, SUE-3), and the `== Double.NaN` guards are dead so a NaN residual reports
-  convergence (SUE-4). Full statements in REVIEW_REQUIRED.
+  true if **any** of: the squared-error norm is `<= 1` (hardcoded); no link breaches the `tollerance`
+  **parameter**; or every link is below a squared error of 1. The three criteria are of different kinds
+  and interact (SUE-2, SUE-3), the middle one is not actually a relative error and is scale dependent
+  (SUE-6), and the `== Double.NaN` guards are dead so a NaN residual reports convergence (SUE-4). Full
+  statements in REVIEW_REQUIRED.
 * **Logit/mode split**: route and mode probabilities use a numerically stabilised logit — the
   accumulation is written `totalUtility += Math.exp(d - u)`, i.e. a max-shifted (log-sum-exp)
   denominator. The shift variable `d` and the dispersion parameters (`LinkMiu`, `ModeMiu`) are `[U]`

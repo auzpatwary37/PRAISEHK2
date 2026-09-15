@@ -457,38 +457,28 @@ of those norms in `UpdateLinkVolume` to advance `beta` and move every volume by
 `(1/beta) * (loaded - current)`. Characterized with the step weight recovered from the observable
 volume change, so the test does not trust the internal list.
 
-**The step weight is an adaptive `1/beta`, NOT the classic harmonic `1/k`.** `beta` is a per-time-bean
+**The step weight is an adaptive `1/beta`, not the harmonic `1/k`.** `beta` is a per-time-bean
 `ArrayList<Double>` seeded to `1.0` at `counter == 1` and thereafter advanced by `+gammaMSA` (0.1) on a
 strictly decreasing residual, or `+alphaMSA` (1.9) otherwise; the move then uses `1/beta[counter-1]`.
 Along an all-decreasing run that is `beta_k = 1 + 0.1(k-1)`, i.e. a weight of **`1/(1 + 0.1(k-1))`** —
-1, 1/1.1, 1/1.2, … An earlier revision of this document said "classic harmonic `1/k`" *and* `1/(1 + 0.1k)`;
-both were wrong (an off-by-one on the second, the wrong sequence on the first). The `1./counter` variant
-does exist in the source, but it is **commented out** (line 1226).
+1, 1/1.1, 1/1.2, … A harmonic `1/counter` update exists in the source but is **commented out**
+(line 1226).
 
-### SUE-1 — `CORRECTED` — the α branch depends on state that only `generateRoutesAndOD` initialises
-
-*This item previously read "`consecutiveSUEErrorIncrease` is never seeded, so the alpha branch THROWS",
-concluded that the adaptive policy is "inert", and gave the weight as `1/(1 + 0.1k)`. **All three claims
-were wrong.** The correction is recorded rather than quietly edited, because the original reasoning is
-exactly the kind the redesign would have relied on.*
-
-* `consecutiveSUEErrorIncrease` **is** seeded per time bean: `generateRoutesAndOD`,
-  line 314 — `this.getConsecutiveSUEErrorIncrease().put(timeBeanId, 0.);`. The write in
-  `UpdateLinkVolume` is **not** its only write; the earlier claim that it was is false.
-* It is *not* seeded by the constructor (lines 140–163, which do initialise `beta`/`error`/`error1`) nor
-  by `perFormSUE`.
-* **It cannot be unseeded in a working production run.** `generateRoutesAndOD` is also the *only* code
+### SUE-1 — `VERIFIED` — the α branch is coupled to state that only `generateRoutesAndOD` initialises
+* `consecutiveSUEErrorIncrease` **is** seeded per time bean by `generateRoutesAndOD`
+  (line 314, `put(timeBeanId, 0.)`). It is seeded by neither the constructor (lines 140–163, which do
+  initialise `beta`, `error` and `error1`) nor `perFormSUE`.
+* **Not reachable through the intended production lifecycle.** `generateRoutesAndOD` is the only code
   that populates `networks` (line 303), and `perFormSUE` dereferences
-  `this.networks.get(timeBeanId).getLinks()`. So any run that reaches the MSA loop has, by construction,
-  already executed the very method that seeds the counter. The α branch is therefore **reachable in
-  production**, and the weight *does* respond to stagnation.
+  `this.networks.get(timeBeanId).getLinks()`; a run that reaches the MSA loop has therefore already
+  executed the method that seeds the counter. This is a lifecycle argument, **not** an enforced
+  invariant — the class exposes its mutable network map through `getNetworks()`, so a caller that
+  populates `networks` by hand does reach the α branch with the counter unset.
 
-What survives is a narrower and lower-severity point: `UpdateLinkVolume`'s α branch reads state that
-neither the constructor nor `perFormSUE` establishes, so the MSA core is **not self-contained**. Driving
-the loop on a model built by the constructor alone — injecting a network by hand, as the unit harness
-does — hits `null + 1` and throws `NullPointerException` before any volume moves. Such a caller would in
-any case fail earlier on the unpopulated `networks` map, so this is a latent initialisation/coupling
-defect, not a production outage.
+* The defect is coupling, not an outage: `UpdateLinkVolume`'s α branch reads state that neither the
+  constructor nor `perFormSUE` establishes, so the MSA core is **not self-contained**. Driving the loop
+  on a constructor-built model — injecting a network by hand, as the unit harness does — throws
+  `NullPointerException` at `null + 1` before any volume moves.
 
 ```java
 if (error.get(timeBeanId).get(counter-1) < error.get(timeBeanId).get(counter-2)) {
@@ -512,19 +502,22 @@ if (error.get(timeBeanId).get(counter-1) < error.get(timeBeanId).get(counter-2))
 ### SUE-2 — `VERIFIED` — the stopping rule ORs three criteria of different kinds, and the tolerance argument can force convergence
 * `CheckConvergence` returns true when **any** of:
   ```java
-  squareSum <= 1                                        // absolute: norm of SQUARED errors
-  || sum == 0                                           // relative: no link breaches `tollerance`
+  squareSum <= 1                                        // absolute: norm of SQUARED errors, hardcoded 1
+  || sum == 0                                           // middle: no link breaches `tollerance`
   || linkBelow1 == linkVolume.size()+transitlinkVolume.size()   // pointwise: every link below 1
   ```
 * The middle disjunct is decided by `error / newVolume * 100 > tollerance`, where `tollerance` is a
   **method parameter** — so passing a large value declares convergence regardless of the actual state.
   (Note `UpdateLinkVolume` takes no such parameter and instead reads the `tollerance` *field*: the same
   quantity is a parameter in one method and a field in the other.)
-* The first disjunct compares a norm of *squared* errors against 1, so it means "the root-sum-square of
-  the deltas is at most 1" — easy to mistake for a tolerance test.
+* That middle criterion is **not a relative error** — `error` is `(current - new)^2`, so the expression
+  carries units of volume and is scale dependent. See **SUE-6**.
+* The first disjunct compares a norm of *squared* errors against a **hardcoded 1**, so it means "the
+  root-sum-square of the deltas is at most 1" and is independent of `tollerance` — easy to mistake for a
+  tolerance test.
 * **Evidence:** `theToleranceArgumentAloneForcesConvergence` (identical state, converged only because
   the argument was raised to 1000), `convergenceBoundaryIsTheUnitSquaredErrorNorm` (passes at exactly
-  `|diff| = 1`, fails at `|diff| = 2`).
+  `|diff| = 1`, fails at `|diff| = 2`), `theMiddleCriterionIsScaleDependent`.
 
 ### SUE-3 — `VERIFIED` — an UNLOADED link is excluded from `linkBelow1`, making the pointwise disjunct unreachable
 * The `if (error < 1) { linkBelow1++; }` increment sits **inside** the `else` branch of
@@ -561,11 +554,29 @@ if (error.get(timeBeanId).get(counter-1) < error.get(timeBeanId).get(counter-2))
   `(…, String timeBeanId, int counter)` — the argument order is transposed between the two halves of
   the same loop.
 
+### SUE-6 — `VERIFIED` — the middle stopping criterion is `(delta² / new) * 100`, which is NOT a relative error
+* `CheckConvergence` computes `error = Math.pow(currentVolume - newVolume, 2)` and then compares
+  `error / newVolume * 100` against `tollerance`. A percentage-relative test would be
+  `abs(current - new) / new * 100`; **squaring the delta** makes the expression carry units of volume
+  (vehicles, if volumes are vehicles) and therefore makes it **scale dependent**.
+* Consequence: the same *fractional* mismatch is judged differently at different demand scales. At one
+  tolerance a 40% mismatch converges at volume ≈ 5 and fails at volume ≈ 50, purely because the volume
+  is ten times larger. Equivalently, the effective tolerance is `tollerance / scale`.
+* This is a likely mathematical bug in the legacy stopping rule rather than a presentation issue: the
+  criterion is not dimensionless, so it is not comparable to a fixed tolerance across time beans or
+  scenarios with different demand levels. The redesign must decide whether convergence is tested on a
+  *relative* change (scale invariant) or an *absolute* one, and state the choice.
+* **Evidence:** `CNLSUEModelMSATest.theMiddleCriterionIsScaleDependent` — asserts that the fractional
+  mismatch is identical (40%) at both scales, that the criterion differs by exactly ×10
+  (133.33 vs 1333.33), and that a single tolerance (500) produces opposite verdicts. The verdict
+  difference is the observable part: the first disjunct is a hardcoded `squareSum <= 1` and neither
+  state is pointwise-converged, so the middle disjunct alone decides.
+
 ## ParamReader (`calibrator/ParamReader.java`)
 
-All six items below are now `VERIFIED` by `ParamReaderTest` (23 tests). Correction to an earlier draft:
-the internal maps are keyed by the CSV **Code** column and the `id` column is ignored entirely, which
-matters for every reading of this class.
+All six items below are now `VERIFIED` by `ParamReaderTest` (23 tests). The internal maps are keyed by
+the CSV **Code** column and the `id` column is ignored entirely, which matters for every reading of this
+class.
 
 ### PARAM-1 — `VERIFIED` — silent fallback to a **relative** default path
 * `new ParamReader(fileLoc)`: if `fileLoc` does not exist, `this.paramFile = new File("src/main/resources/paramReaderTrial1.csv")` with **no warning and no exception**. The path is relative to the process CWD, so the same call loads the bundled sample parameters or silently yields **empty maps**, depending on where the JVM was launched. A missing *requested* file therefore produces the wrong parameter set rather than an error.

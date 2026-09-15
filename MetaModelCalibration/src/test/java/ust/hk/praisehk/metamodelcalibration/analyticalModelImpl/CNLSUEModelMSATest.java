@@ -37,7 +37,7 @@ import ust.hk.praisehk.metamodelcalibration.fixtures.TimeBeans;
  * {@code (1/beta) * (new - old)} and both volumes are readable from the network, the test solves for
  * {@code beta} from the volume change instead of trusting the internal list.</p>
  *
- * @see docs/modernization/REVIEW_REQUIRED.md (SUE-1 .. SUE-5)
+ * @see docs/modernization/REVIEW_REQUIRED.md (SUE-1 .. SUE-6)
  */
 class CNLSUEModelMSATest {
 
@@ -100,7 +100,7 @@ class CNLSUEModelMSATest {
 		r.model.CheckConvergence(vols(L1, 1000.0), r.noTransit(), 1.0, TB, 1);
 		boolean converged = r.model.UpdateLinkVolume(vols(L1, 1000.0), r.noTransit(), 1, TB);
 
-		assertEquals(1000.0, r.volume(L1), 1e-9, "beta_1 = 1, so volume becomes exactly the target");
+		assertEquals(1000.0, r.volume(L1), 1e-9);
 		assertFalse(converged, "the step norm is 1000, which is not < the field tolerance of 1");
 	}
 
@@ -118,7 +118,7 @@ class CNLSUEModelMSATest {
 		r.model.CheckConvergence(vols(L1, 1100.0), r.noTransit(), 1.0, TB, 2);
 		r.model.UpdateLinkVolume(vols(L1, 1100.0), r.noTransit(), 2, TB);
 
-		// beta recovered from the volume change alone: move = (new - old) / beta
+		// beta recovered from the volume change alone
 		double observedBeta = (1100.0 - 1000.0) / (r.volume(L1) - 1000.0);
 		assertEquals(1.0 + GAMMA, observedBeta, 1e-9);
 		assertEquals(1000.0 + 100.0 / 1.1, r.volume(L1), 1e-9);
@@ -195,12 +195,11 @@ class CNLSUEModelMSATest {
 		Rig r = new Rig(SyntheticNetworks.twoNodeNetwork());
 
 		r.setVolume(L1, 5.0);
-		// (5 - 4)^2 = 1 -> norm 1 <= 1
+		// (5 - 4)^2 = 1, so the norm is exactly the hardcoded 1 the first disjunct compares against
 		assertTrue(r.model.CheckConvergence(vols(L1, 4.0), r.noTransit(), 1.0, TB, 1));
 
 		r.setVolume(L1, 5.0);
-		// (5 - 3)^2 = 4 -> norm 2; and 4 < 1 is false, so the third disjunct fails too
-		assertEquals(2.0, Math.sqrt(Math.pow(5.0 - 3.0, 2)), 1e-12);
+		// (5 - 3)^2 = 4 -> norm 2; 133 >= 1 so sum != 0, and 4 is not < 1 so linkBelow1 stays 0
 		assertFalse(r.model.CheckConvergence(vols(L1, 3.0), r.noTransit(), 1.0, TB, 2));
 	}
 
@@ -214,14 +213,42 @@ class CNLSUEModelMSATest {
 
 		Rig loose = new Rig(SyntheticNetworks.twoNodeNetwork());
 		loose.setVolume(L1, 5.0);
-		// the relative test is (error / newVolume) * 100 = 4/3*100 = 133%, which 1000 clears
+		// the middle criterion is (error / newVolume) * 100 = 4/3*100 = 133%, which 1000 clears
 		assertTrue(loose.model.CheckConvergence(vols(L1, 3.0), loose.noTransit(), 1000.0, TB, 1),
-				"identical state, converged only because the argument suppresses the relative disjunct");
+				"identical state, converged only because the argument suppresses the middle disjunct");
+	}
+
+	@Test
+	@DisplayName("REVIEW_REQUIRED SUE-6: the middle criterion is (delta^2 / new) * 100, which is NOT "
+			+ "dimensionless - the same 40% mismatch converges at one scale and fails at another")
+	void theMiddleCriterionIsScaleDependent() {
+		Rig small = new Rig(SyntheticNetworks.twoNodeNetwork());
+		small.setVolume(L1, 5.0);
+		Rig large = new Rig(SyntheticNetworks.twoNodeNetwork());
+		large.setVolume(L1, 50.0);
+
+		// independent oracle: the FRACTIONAL mismatch is identical at both scales
+		assertEquals((5.0 - 3.0) / 5.0, (50.0 - 30.0) / 50.0, 1e-12, "both are a 40% mismatch");
+
+		// but the criterion is (delta^2 / new) * 100, which carries units of volume and therefore
+		// scales by 10 when both volumes do - a true relative error would be scale invariant
+		double smallCriterion = Math.pow(5.0 - 3.0, 2) / 3.0 * 100.0;
+		double largeCriterion = Math.pow(50.0 - 30.0, 2) / 30.0 * 100.0;
+		assertEquals(133.333333, smallCriterion, 1e-5);
+		assertEquals(10.0, largeCriterion / smallCriterion, 1e-9);
+
+		// one tolerance, one fractional mismatch, two verdicts: only the scale differs. The first
+		// disjunct is a HARDCODED `squareSum <= 1` (not the tolerance argument), and neither state is
+		// pointwise-converged, so the middle disjunct alone decides.
+		assertTrue(small.model.CheckConvergence(vols(L1, 3.0), small.noTransit(), 500.0, TB, 1),
+				"133% does not clear 500, so sum stays 0 and the small-scale state is judged converged");
+		assertFalse(large.model.CheckConvergence(vols(L1, 30.0), large.noTransit(), 500.0, TB, 1),
+				"the same 40% mismatch reads 1333% at 10x the volume and does clear 500");
 	}
 
 	@Test
 	@DisplayName("REVIEW_REQUIRED SUE-2: the rule fires when EVERY link is below a squared error of 1, "
-			+ "even while the norm is above 1 and a link exceeds the relative tolerance")
+			+ "even while the norm is above 1 and a link exceeds the middle criterion")
 	void convergesWhenEveryLinkIsBelowOne() {
 		Rig r = new Rig(SyntheticNetworks.twoRouteNetwork());
 		r.setVolume(L1, 1.4);
@@ -236,9 +263,9 @@ class CNLSUEModelMSATest {
 		// oracle: three squared errors of 0.81 each
 		double each = Math.pow(1.4 - 0.5, 2);
 		double norm = Math.sqrt(3 * each);
-		assertTrue(each < 1.0, "every link must be below the pointwise threshold");
+		assertTrue(each < 1.0);
 		assertTrue(norm > 1.0, "the norm must exceed 1, or the first disjunct would explain the result");
-		assertTrue(each / 0.5 * 100 > 1.0, "a link must breach the relative tolerance, so sum != 0");
+		assertTrue(each / 0.5 * 100 > 1.0, "a link must breach the middle criterion, so sum != 0");
 
 		assertTrue(r.model.CheckConvergence(loaded, r.noTransit(), 1.0, TB, 1),
 				"only the third disjunct can explain this: linkBelow1 == 3 == every link");
@@ -259,9 +286,8 @@ class CNLSUEModelMSATest {
 		allLoaded.put(L3, 0.5);
 		assertTrue(threeLoaded.model.CheckConvergence(allLoaded, threeLoaded.noTransit(), 1.0, TB, 1));
 
-		// now unload ONE link. Its error is forced to 0 by the `linkVolume.get(linkid) == 0` branch,
-		// but the `error < 1` increment lives INSIDE the else, so it never reaches linkBelow1 - which
-		// can then only ever total 2, never the 3 that the disjunct compares against.
+		// unloading ONE link: its error is forced to 0, but the error<1 increment sits inside the
+		// else, so linkBelow1 can only reach 2 of 3
 		Rig oneIdle = new Rig(SyntheticNetworks.twoRouteNetwork());
 		oneIdle.setVolume(L1, 0.0);
 		oneIdle.setVolume(L2, 1.4);
@@ -273,7 +299,7 @@ class CNLSUEModelMSATest {
 
 		double each = Math.pow(1.4 - 0.5, 2);
 		assertTrue(Math.sqrt(2 * each) > 1.0, "the two loaded links already push the norm past 1");
-		assertTrue(each / 0.5 * 100 > 1.0, "and they breach the relative tolerance, so sum != 0");
+		assertTrue(each / 0.5 * 100 > 1.0, "and they breach the middle criterion, so sum != 0");
 
 		assertFalse(oneIdle.model.CheckConvergence(withIdle, oneIdle.noTransit(), 1.0, TB, 1),
 				"the idle link contributes 0 to the norm but is not counted as 'below 1', so the "

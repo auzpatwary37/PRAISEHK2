@@ -42,12 +42,8 @@ PRAISEHK2/
 ```
 
 Build: `mvn -o -B clean test` from the repository root, or `cd MetaModelCalibration && mvn -o -B
-clean test` → BUILD SUCCESS, **191 tests (1 skipped), 0 failures**, offline. Both invocations are
+clean test` → BUILD SUCCESS, **192 tests (1 skipped), 0 failures**, offline. Both invocations are
 verified equivalent.
-
-> **Counts are post-consolidation.** This branch was rebased onto the trunk *after* the consolidation
-> PR (`#16`, 181 tests), and the **191** above is measured on the rebased tree rather than added across
-> branches: 181 + 10 from the `CNLSUEModel` MSA core (SUE-1..SUE-5).
 
 The Hong Kong MATSim fork was first imported as a 153-file module, then reduced: the dependency
 closure was measured at 39 files / 11k LOC, but only **two** of those classes have any active use in
@@ -181,7 +177,7 @@ matsim-adapter/      ◀── matsimIntegration/*, and the vendored transit.far
   `Proxy.NO_PROXY`, or its own proxy configuration. Hard isolation, if required, needs enforcement
   outside the JVM (network namespace, firewall, or a no-egress container) and is **not** in place.
 * Offline verification: `cd MetaModelCalibration && mvn -o -B clean test`
-  → BUILD SUCCESS, **191 tests (1 skipped), 0 failures**, zero compiler diagnostics.
+  → BUILD SUCCESS, **192 tests (1 skipped), 0 failures**, zero compiler diagnostics.
 
 ## 6. Delivery roadmap (small, behaviour-protected PRs)
 
@@ -239,10 +235,8 @@ of the following are green (tracked in `TEST_MATRIX.md` §5):
 8. a seeded gradient fire test.
 
 Rationale: the sensitivity engine constrains the SUE boundary, so the one-canonical-SUE decision must
-not outrun derivative validation. Note also that PR 9 in an earlier draft named "MATSim-HK core
-extraction + `FareLink`/`FareCalculator` characterization"; that is obsolete — `FareLink` is already
-characterized in this PR and the fork is no longer a dependency, so PR 9 is now the fare-calculation
-and adapter-boundary decision above.
+not outrun derivative validation. `FareLink`/`FareCalculator` are already characterized and the MATSim-HK
+fork is no longer a dependency, so PR 9 is now the fare-calculation and adapter-boundary decision above.
 
 ## 7. Known architectural debt (summary; details in `REVIEW_REQUIRED.md`)
 
