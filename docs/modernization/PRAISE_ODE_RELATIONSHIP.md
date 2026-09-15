@@ -136,9 +136,91 @@ avoid is *ODDifferentiableSUEModel duplicating the SUE iteration* that `CNLSUEMo
 
 ## 3. Differentiation method — evidence
 
-**Conclusion: forward-mode (tangent) sensitivity propagation, not reverse-mode/adjoint, and
-not finite differences.** The README's "back propagation" label is **misleading** and must not
-be carried into modern naming.
+### Published specification (authoritative)
+
+The implementation is a realisation of the authors' published method, so the papers — not the code —
+are the authority for what the equations are *intended* to be. The working rule agreed for this
+project: **treat the code as correct unless it is inconsistent with these equations, or internally
+inconsistent.**
+
+| Reference | Scope | Key equations |
+|---|---|---|
+| A.U.Z. Patwary, S. Wang, H.K. Lo (2023), *Iterative Backpropagation Method for Efficient Gradient Estimation in Bilevel Network Equilibrium Optimization Problems*, Transportation Science 57(5):1134–1159, doi:10.1287/trsc.2021.0110 | The gradient method itself: the IB recursion, BPR and logit derivatives, the objective and its gradient, the small-network validation | (3) chain rule; (6) MSA flow update; (7), (13), (16) gradient update; (8)–(9) cost/choice gradients; (10)–(11) link-flow aggregation; (14) BPR function and its derivative; (15) logit derivative; (17) finite-difference reference; (18) objective; (19) objective gradient; (27)–(30) route and mode utilities |
+| A.U.Z. Patwary et al. (2021), *Metamodel-based calibration of large-scale multimodal microscopic traffic simulation*, Transportation Research Part C (S0968090X20307592) | The calibration framework: trust-region metamodel calibration, the objective PRAISEHK actually uses, the multimodal SUE formulation | **not yet extracted** — paywalled; see open item below |
+
+Two facts from (2023) that constrain this repository directly:
+
+* **Eq (6)/(13) require the flow update and the gradient update to use the SAME learning rate** `α`
+  (MSA: `α = 1/ia`). `GradientUtils.getLinkFlowGrad` applies `1/beta` to the sensitivity update and
+  `CNLSUEModel` applies its counter to the flow update; whether the *same* `ia` reaches both is
+  testable and is the first thing to check on that leaf.
+* **Eq (14)'s printed BPR derivative carries no `/3600` factor.** The canonical `/3600` in these
+  papers sits in the route *utility* (Eq (27): `v_{r,t} = (1/3600)κ₇T_{r,t} + …`), and
+  `CNLRoute.calcRouteUtility` already applies it separately there. That is independent support for
+  **DIFF-1**, beyond the finite-difference disagreement.
+
+**Open item:** the 2021 Part C paper is the authority for the trust-region policy and for the
+objective weighting (the `1/(1+SD)` vs `1/(1+SD²)` question in CC-4). Its equations should be
+extracted before the objective in step 8 of the work order is called canonical.
+
+A third fact, which lands directly on CC-4 and on step 8 of the work order:
+
+* **Eq (18) defines the objective as `(1/2)·Σ_t Σ_l (x*_{l,t} − x^obs_{l,t})²` — unweighted, with an
+  explicit `1/2`** — and Eq (19) gives its gradient as the residual-weighted contraction
+  `Σ (x* − x^obs)·∇θx*`. So the gradient of the objective is *linear in the residual*, which is what
+  makes it cheap to validate against finite differences. Two discrepancies with the legacy code to
+  settle deliberately rather than assume:
+  * the legacy `ObjectiveCalculator` (both the plain and the SD-weighted branches) omits the `1/2`
+    factor — a constant scaling, so it changes gradient magnitudes but not the argmin;
+  * **this paper's OD-estimation objective carries no SD weighting at all**, whereas PRAISEHK offers
+    plain / SD-weighted / GEH / SD-weighted-GEH variants. Which variant is canonically "the"
+    objective, and whether the `1/(1+SD)` or `1/(1+SD²)` form is intended, cannot be resolved from
+    the 2023 paper — it is a (2021) or publication-independent question, and is the first thing the
+    objective step must decide.
+
+#### Published oracle: the two-link network (2023, §3, Tables 1–2)
+
+The paper's small-network validation is directly reproducible as a fixture: two links `O→D`, both
+free-flow time 10, capacities **50** and **70**, BPR with `α = 0.15`, `β = 4`, logit route choice,
+demands `q = 10` and `q = 100`. Published equilibrium values (Table 1, SUE):
+
+| q | link 1 flow | link 2 flow | P(link 1) | P(link 2) | t₁ | t₂ |
+|---|---|---|---|---|---|---|
+| 10 | 9.933 | 0.067 | 0.9933 | 0.0067 | 10.002 | 15 |
+| 100 | 65.629 | 34.371 | 0.6563 | 0.3437 | 14.453 | 15.099 |
+
+Published gradients (Table 2, IB against FD): at `q = 10`, `∇t = (9.35E-04, 5.71E-13)` with FD
+reporting `0` for the second component; at `q = 100`, `∇x = (0.1242, 0.8758)`,
+`∇w = (0.0053, 0.0053)`, `∇t = (0.0338, 0.0101)`. The single IB/FD disagreement in the paper is a
+**documented machine-precision artefact**, not an algorithm error: the true change was ~5.7E-21
+against a 1E-8 step, below MATLAB's 1E-16 precision.
+
+This is an **external oracle in the strongest sense** — published numbers from an independent
+implementation — and it should be encoded before any derivative leaf is trusted, because one fixture
+then exercises the forward SUE, the logit derivative, the route-flow product rule, link-flow
+aggregation and the objective gradient together. The paper's own FD uses a **forward** difference at
+a fixed `c = 1E-8`; the harness's central-difference sweep over several step sizes is better
+conditioned, and where the two disagree at `1E-8` the artefact above explains why.
+
+### Method — evidence from the implementation
+
+**Conclusion: this is the authors' Iterative Backpropagation (IB).** It is **not** reverse-mode
+automatic differentiation of an objective covector, and **not** finite differences. The naming has to
+be stated precisely, because it is easy to get wrong in either direction:
+
+* The published method is *named* "iterative backpropagation"; the paper names the gradient step
+  itself "gradient backpropagation" (§2.2) and labels Step 3 of the algorithm the "**backward pass**"
+  (§3.2, Figure 1) with Step 2 the "forward pass". So "backpropagation" is the authors' own term —
+  it is **not** a misnomer, and an earlier revision of this document was wrong to say it was.
+* What "backward pass" means here is a **reverse-order sweep over the assignment sub-components
+  within an iteration** (cost → choice → flow), not a reverse sweep of the whole equilibrium. The
+  sensitivity carrier is a dense `double[]` with one entry per decision variable — a Jacobian column,
+  not an objective covector — and it is accumulated **across** iterations by the MSA recursion of
+  Eq (7)/(13).
+
+**Withdrawn:** the earlier claim that "the README's 'back propagation' label is misleading and must
+not be carried into modern naming". Recorded here rather than deleted so the correction is visible.
+
 
 Evidence:
 
