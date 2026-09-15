@@ -218,9 +218,13 @@ No parameterisation of the logit reproduces the published Table 1 from those val
   value in both rows**: `P(link 1) = 1/(1+e^{−5}) = 0.9933` and `t₂ = 15.000` at `q = 10`; at
   `q = 100`, `t₁ = 10(1+0.15(65.629/50)⁴) = 14.455` and `c₂ = 34.371/(0.044)^{1/4} = 75.0`.
 
-The fixture therefore uses free flow **(10, 15)** and capacities **(50, 75)** — the only
-parameterisation consistent with the published numbers. The prose values are treated as a typo and
-recorded as **PUB-1**. This is the concrete reason the rule at the top of this section is written as
+The fixture therefore uses free flow **(10, 15)** and capacities **(50, 75)**, which reproduces every
+published number exactly. **But that is not the only reading** — see PUB-1: a free-flow of 10 on both
+links with a constant **+5 on link 2** also reproduces the `q = 10` rows exactly (and the `q = 100`
+row to 0.06%), and it honours the prose's capacity of 70. The tables exclude the *literal* prose
+(which fails every row — `5.000` against `9.933`, and `4.167` against `10.000`) but do not single out
+one parameterisation. The choice between them is the author's, and the fixture must not silently
+decide it. This is the concrete reason the rule at the top of this section is written as
 reproduce-the-numbers rather than trust-the-text. Published equilibrium values (Table 1, SUE):
 
 | q | link 1 flow | link 2 flow | P(link 1) | P(link 2) | t₁ | t₂ |

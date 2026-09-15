@@ -1033,6 +1033,22 @@ class.
 * **Consequence for the oracle:** the fixture must use free flow **(10, 15)** and capacities
   **(50, 75)**. Table 1 and Table 2 are a solved equilibrium and remain a valid external oracle; the
   prose parameter sentence is treated as a typo.
+
+* **Second reading, which I initially missed and which honours the prose.** The published `t2 = 15.000`
+  at `x2 = 0.067` can equally be a free-flow time of 15 **or** a free-flow of 10 with a constant +5 on
+  link 2 (a fixed cost / distance term). Under that second reading, **free flow 10 for both and
+  capacity 70 reproduce the published rows**:
+  | parameterisation | UE q=10 | SUE q=10 | SUE q=100 | verdict |
+  |---|---|---|---|---|
+  | prose literally, no constant | (4.167, 5.833) | (5.000, 5.000) | (43.735, 56.265) | fails every row |
+  | free flow (10, 15), capacity (50, 75) | **(10.000, 0.000)** | **(9.933, 0.067)** | **(65.629, 34.371)** | exact, all three |
+  | free flow 10 both + 5 on link 2, capacity (50, 70) | **(10.000, 0.000)** | **(9.933, 0.067)** | (65.592, 34.408) | exact on q=10, 0.06% on q=100 |
+  | free flow 10 both + 5 on link 2, capacity (50, 67.79) | (10.000, 0.000) | (9.933, 0.067) | (65.629, 34.371) | exact, all three |
+  So the tables exclude the **literal** prose, but they do **not** single out one parameterisation, and
+  my earlier claim that free flow (10, 15) with capacity (50, 75) is the **only** one consistent with
+  the published numbers was **too strong** — it follows only if no constant term is allowed. Which
+  reading is intended is the author's call, not an inference from three printed numbers.
+
 * **Why this is recorded rather than quietly fixed:** it is the evidence for the working rule in
   `PRAISE_ODE_RELATIONSHIP.md` section 3 — reproduce published **numbers**, do not adopt published
   **prose**. It also removed a false confidence: DIFF-1 was originally argued partly from a printed
