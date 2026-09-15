@@ -5,6 +5,15 @@
 unified architecture is designed, and identify the genuinely new mathematics that must
 be preserved.
 
+**Follow-up (this document is now actionable):** the differentiability subset has been brought into
+the reactor as the `differentiation` module, so the derivative leaves can be characterised in place.
+Two inert source changes were required — the HK-fork imports were redirected to the classes already
+vendored in `MetaModelCalibration`, and two CPLEX-bound debug printers were removed. See
+`REVIEW_REQUIRED.md` DIFF-3 (the change) and ARCH-1 (why the module depends on `MetaModelCalibration`,
+reproducing the inversion this document describes rather than fixing it). The first characterisation
+results are DIFF-1 and DIFF-2, and they are significant: the BPR sensitivity was measured at **3600×**
+too small against the travel-time function it is paired with.
+
 ## Baselines audited (evidence: `git rev-parse HEAD`)
 
 | Repository | Branch | Commit | Location |

@@ -988,6 +988,91 @@ class.
   Tests must capture stdout rather than assume it is clean —
   `CalibratorImplStateMachineTest` does exactly that.
 
+## `differentiation` (ODEstimation forward sensitivity, brought in as a module)
+
+### DIFF-1 — `VERIFIED` [`legacy-observed`] — the BPR sensitivity is 3600× smaller than the derivative of the travel-time function it differentiates
+* **Where:** `GradientUtils.getLinkTravelTimeGrad` — the local partial is
+  `α·β·t₀/cap^β · flow^(β−1) / 3600`.
+* **Legacy:** measured on a synthetic link: length 1000 m, free speed 20 m/s (so `t₀ = 50 s`),
+  capacity 2000 veh/h, car volume 1000, transit volume 0, capacity multiplier 1, `BPRalpha=0.15`,
+  `BPRbeta=4`, one-hour time bean. The central difference of the paired
+  `CNLLink.getLinkTravelTime` is **1.875e-3**, identical at `h = 1e-1, 1e-2, 1e-3` — the agreement
+  across three decades of step size is what rules out a precision artefact and makes this a genuine
+  derivative error. The returned sensitivity is **5.208e-7**. The ratio is **exactly 3600**.
+* **Expected:** the `/3600` has no counterpart in the paired travel-time function, whose derivative
+  with respect to flow is `t₀·α·β·v^(β−1)/cap^β`. Either the factor is spurious, or travel time is
+  meant to be expressed per second while the function returns seconds.
+* **Evidence:** `BprDerivativeTest.implementedSensitivityAgreesWithThePairedTravelTimeFunction`
+  (`@Disabled`, carries the measured sweep) and `implementedPartialIsSmallerByAFactorOf3600`
+  (enabled, pins the 3600 ratio as the observed behaviour).
+* **Do not change:** any calibration output produced with this derivative was produced under it.
+  Resolve deliberately, with the finite-difference harness already in place.
+
+### DIFF-2 — `VERIFIED` [`legacy-observed`] — the BPR sensitivity differentiates a different flow than the travel-time function uses
+* **Where:** `GradientUtils.getLinkTravelTimeGrad` uses `flow = getLinkCarVolume() + getLinkTransitVolume()`
+  (raw transit volume, no residual), whereas `CNLLink.getLinkTravelTime` uses
+  `car + transit·CapacityMultiplier + residual`.
+* **Legacy:** with transit volume 500 and capacity multiplier 2, the central difference is
+  **9.375e-4** against a returned sensitivity of **1.0986e-7** — a factor of **8533**, i.e. the 3600
+  of DIFF-1 compounded by evaluating the partial at flow 1500 instead of the 2000 the function uses.
+  The two defects are therefore separable but compose.
+* **Expected:** the partial must be evaluated at the same flow the function differentiates, including
+  the multiplier applied to transit volume.
+* **Evidence:** `BprDerivativeTest.implementedSensitivityAccountsForTheCapacityMultiplierOnTransitVolume`
+  (`@Disabled`, carries the measured sweep).
+
+### MAP-1 — `VERIFIED` [`legacy-observed`] — `MapToArray` silently writes `0.0` for a variable absent from the map
+* **Where:** `core.MapToArray.getMatrix`. The dimension check is present but commented out, and the
+  body assigns only `if (map.get(keySet.get(i)) != null)`.
+* **Legacy:** a variable missing from the map and a variable whose sensitivity is genuinely zero are
+  indistinguishable; an entirely empty map yields an all-zero gradient of the correct length rather
+  than an error.
+* **Risk:** during forward propagation a silently-zero seed zeroes that coordinate for the remainder
+  of the run with no diagnostic anywhere.
+* **Evidence:** `MapToArrayTest.absentVariableIsSilentlyWrittenAsZero`,
+  `MapToArrayTest.emptyMapProducesAnAllZeroGradient`.
+
+### MAP-2 — `VERIFIED` [`legacy-observed`] — gradient coordinate order is the source map's iteration order
+* **Where:** `MapToArray` stores `new ArrayList<>(inputMap.keySet())`; `getMap` returns a plain `HashMap`.
+* **Legacy:** a `LinkedHashMap` source yields reproducible insertion order, but a `HashMap` source
+  silently fixes hash order as the semantics of the gradient coordinates. The return direction
+  (`getMap`) re-introduces arbitrary order.
+* **Expected:** one explicit immutable parameter ordering, independent of the container the caller
+  happened to pass. This is the precondition the target architecture states for a meaningful
+  gradient: a vector is meaningless without a deterministic coordinate mapping.
+* **Evidence:** `MapToArrayTest.coordinateOrderIsHashOrderForAHashMapSource`,
+  `MapToArrayTest.getMapDoesNotPreserveCoordinateOrder`.
+
+### DIFF-3 — `READ` [`modernization-change`] — the differentiable SUE was decoupled from the commercial CPLEX solver in order to compile
+* `ODDifferentiableSUEModel` imported `optimizer.ODAdditionOptimizer` solely to call the debug printer
+  `printAdditionMap(0, "ODMatch2/", …)` at two sites (in `perFormSUEByDemandMap` and the equivalent
+  demand-map entry point). `ODAdditionOptimizer` and `ODAdditionOptimizerMultipleTime` are the only
+  classes in the package importing `ilog.cplex` / `ilog.concert`, which come from IBM CPLEX.
+* **ODEstimation never declared that dependency:** the POM declares only `ojalgo-cplex` and carries
+  Windows path *properties* (`C:/Program Files/IBM/ILOG/…`) that are never wired into a dependency.
+  No CPLEX jar exists on this machine. The class was therefore uncompilable, and with it the whole
+  differentiable model.
+* **Change (mathematically inert):** the two debug calls were removed in the vendored copy. They were
+  printers, and their only other effect was to write into a relative `"ODMatch2/"` directory during
+  assignment — removing that is also a determinism gain, since the harness forbids uncontrolled
+  relative-path writes.
+* **Also:** `dynamicTransitRouter.fareCalculators.FareCalculator` and `transitFareAndHandler.FareLink`
+  were redirected to the classes already vendored into `MetaModelCalibration`'s `transit.fare`
+  package, the same treatment previously applied to PRAISEHK. One vendored copy now serves both.
+* **Not changed:** no equation, no loop bound, no accumulation order.
+
+### ARCH-1 — `READ` [`modernization-change`] — the differentiation module depends on `MetaModelCalibration`, preserving the legacy inversion
+* ODEstimation's sources compile against `ust.hk.praisehk.metamodelcalibration.*`
+  (`AnalyticalModel*`, `CNL*`, `measurements`, `calibrator.ObjectiveCalculator`,
+  `matamodels.MetaModel`, `matsimIntegration.SignalFlowReductionGenerator`), so the new module
+  declares `MetaModelCalibration` as a dependency.
+* This reproduces the historical relationship rather than fixing it: ODEstimation was built on top of
+  PRAISEHK, and neither repository was the clean owner of the static-assignment engine. See
+  `PRAISE_ODE_RELATIONSHIP.md`.
+* **Do not invert this yet.** The target architecture removes the inversion by extracting one shared
+  static-assignment engine that both the plain and the differentiable evaluator consume. Doing that
+  before the derivative leaves are characterised would be an architectural change with no tests.
+
 ## Cross-cutting
 
 ### CC-1 — `VERIFIED` [`legacy-observed`] — the pre-existing test suite was not CI-viable
@@ -1017,5 +1102,6 @@ class.
   `ODUtils.calcMetamodelODObjectiveGradient` weights by `1/(1+SD²)`, and PRAISEHK's
   `ObjectiveCalculator` uses `1/(1+SD²)`. Additionally the `fareLinkVolumeCluster` branch of
   `calcODObjectiveGradient` looks up the singular `FareLinkAttributeName` instead of `fl.toString()`.
-  Full evidence in `PRAISE_ODE_RELATIONSHIP.md` §6. Not testable until ODEstimation is buildable in a
-  reactor.
+  Full evidence in `PRAISE_ODE_RELATIONSHIP.md` §6. The `differentiation` module now makes this
+  **testable** — the objective-gradient leaf (`ODUtils.calcODObjectiveGradient`) is in the reactor and
+  reaches `FareLink`, so a finite-difference oracle test can be added without further dependency work.

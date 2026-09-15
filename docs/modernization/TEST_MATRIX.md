@@ -13,14 +13,17 @@ The C/O distinction is load-bearing for the next phase: oracle-backed semantics 
 by a redesign, whereas characterized defects are free to be fixed deliberately (with a migration
 decision). A row must not be marked `O` merely because a test exists.
 
-Snapshot: **192 tests (1 skipped), 0 failures, ~9 s**, runnable offline
-(`mvn -o test` in `MetaModelCalibration`), enforced in CI on every PR into the trunk.
+Snapshot: **208 tests (3 skipped), 0 failures**, runnable offline (`mvn -o test` at the repository
+root), enforced in CI on every PR into the trunk. The reactor now has two modules:
+`MetaModelCalibration` (**192**, 1 skipped — the MODEL-5 oracle) and `differentiation`
+(**16**, 2 skipped — the DIFF-1/DIFF-2 finite-difference diagnostics).
 
 How the count is composed: **158** on the trunk after the meta-model oracle merged, **+14** from the
 trust-region state machine (one `@Disabled` by design, see MODEL-5), **+9** from the clone/CSV
-characterization gaps, **+11** from the `CNLSUEModel` MSA core (SUE-1..SUE-6). This snapshot line and
-the two counts in `ARCHITECTURE.md` are the only
-hand-maintained numbers; a deliberate change to any of them must be visible in the same PR.
+characterization gaps, **+11** from the `CNLSUEModel` MSA core (SUE-1..SUE-6), **+16** from the
+`differentiation` module (finite-difference oracle, `MapToArray` ordering, BPR derivative leaf). This
+snapshot line and the two counts in `ARCHITECTURE.md` are the only hand-maintained numbers; a
+deliberate change to any of them must be visible in the same PR.
 
 ---
 
@@ -193,22 +196,38 @@ declaration). `FareLink`'s grammar is a serialization contract for `MeasurementT
 | acceptance when `rho` is NaN/Inf/negative | — | — | P | — | — | **CAL-3**; `rho` depends on the fitted meta-model prediction and cannot be set from outside |
 | `parallelStream` determinism, `createMetaModel` null gradients | — | — | P | — | — | **CAL-4**, **CAL-7** |
 
-## 5. Differentiation (ODEstimation) — blocked
+## 5. Differentiation (ODEstimation) — module landed, leaves in progress
+
+The `differentiation` module now carries the legacy ODEstimation differentiability sources as an
+independent reference implementation, and it compiles inside the reactor. Three things had to be true
+for that, and only one of them was a dependency decision: the two HK-fork imports were redirected to
+the classes already vendored into `MetaModelCalibration`'s `transit.fare` package, and two CPLEX-bound
+debug printers were removed. Both changes are mathematically inert and are recorded in
+`REVIEW_REQUIRED.md` as **DIFF-3**.
 
 | Component / derivative | C | O | B | I | Tests | Notes |
 |---|---|---|---|---|---|---|
-| `GradientUtils.getLinkTravelTimeGrad` = `t0αβv^(β−1)/c^β · dv/dθ` | — | P | — | — | — | P; **blocked**: ODEstimation cannot build (undeclared PRAISEHK dep) |
+| finite-difference oracle harness (h ∈ 1e-4, 1e-5, 1e-6 relative) | — | ✔ | ✔ | — | `BprDerivativeTest.oracleRecoversTheClosedFormDerivative` | `differentiation/CentralDifferenceOracle` — reusable, reports parameter/output/step/abs+rel error and does **not** assert; validation is a separate test |
+| `MapToArray` variable ordering determinism | ✔ | — | ✔ | — | `MapToArrayTest` (10 tests): source-order coupling, name→index→coordinate, reconstruction, absent variable, extra variables, value round trip | **MAP-1** (absent variable silently zero), **MAP-2** (hash-order becomes coordinate semantics). The §5 hard precondition is now *characterized* but **not satisfied**: the class still inherits whatever container the caller passes |
+| `GradientUtils.getLinkTravelTimeGrad` = `t0αβv^(β−1)/c^β · dv/dθ` | ✔ | — | ✔ | — | `BprDerivativeTest.implementedSensitivityMatchesTheTranscribedExpression`, `sensitivityIsLinearInTheSeed`, `implementedPartialIsSmallerByAFactorOf3600` | linearity in the seed confirms this is a Jacobian-vector product (forward mode). **DIFF-1**: measured 3600× too small |
+| BPR derivative vs central difference of the paired `CNLLink.getLinkTravelTime` | — | ✔ | — | — | `BprDerivativeTest.implementedSensitivityAgreesWithThePairedTravelTimeFunction` (`@Disabled`) | **DIFF-1** — the FD is identical at h = 1e-1, 1e-2, 1e-3, so this is a derivative error and not a precision artefact |
+| BPR derivative with transit volume and capacity multiplier | — | ✔ | — | — | `BprDerivativeTest.implementedSensitivityAccountsForTheCapacityMultiplierOnTransitVolume` (`@Disabled`) | **DIFF-2**: measured 8533× — DIFF-1 compounded by evaluating at the wrong flow |
 | `GradientUtils.getTransitLinkTravelTimeGrad` (Eq. 64–66) | — | P | — | — | — | P |
-| `GradientUtils.getLinkFlowGrad` (MSA-consistent, Eq. 52) | — | P | — | — | — | P |
+| `GradientUtils.getLinkFlowGrad` (MSA-consistent, Eq. 52) | — | P | — | — | — | P — next leaf; the oracle applies directly, and the MSA weight `1/β` is the interesting part |
 | `GradientUtils.getTrLinkVolumeGrad` (Eq. 53–54) | — | P | — | — | — | P |
-| logit route-probability derivative `P(δ−ΣP)` | — | P | — | — | — | P |
+| seeded gradient fire test (fixed seed, several coordinates) | — | P | — | — | — | P — no uncontrolled randomness; must be CI-usable |
+| logit route-probability derivative `P(δ−ΣP)` | — | P | — | — | — | P — needs a route-choice fixture |
 | mode-choice derivative conservation `∂ΣP_mode/∂θ = 0` | — | P | — | — | — | P |
 | route-flow product rule | — | P | — | — | — | P |
 | link-flow aggregation `v_a = Σ δ_ar f_r` | — | P | — | — | — | P |
-| finite-difference oracle harness (h ∈ 1e-4,1e-5,1e-6) | — | — | — | — | — | P (phase 0 of the ODE PR) |
-| seeded gradient fire test | — | — | — | — | — | P |
-| `MapToArray` variable ordering determinism | — | — | — | — | — | P — **HARD PRECONDITION**: no derivative result is trustworthy until this is deterministic *and* exact key-set equality is asserted (`PRAISE_ODE_RELATIONSHIP.md` §4) |
 | `gradMultiplier` / `Clip` effect on the model derivative | — | — | — | — | — | P — must be characterized as **optimizer transformation**, separately from the model derivative (see §8) |
+
+**`Clip` is inside the derivative layer.** `GradientUtils` applies `timeClip(−3600, 3600)` and
+`flowClip(−9999, 9999)` to the *propagated* vector from within `getLinkTravelTimeGrad` and
+`getTrLinkVolumeGrad`. That is an optimizer stabiliser sitting inside the model-derivative layer,
+which is exactly the separation §8.1 forbids. It is not yet characterized; it is called out here so
+that no later reader mistakes it for part of the mathematics.
+
 
 ## 6. Build / harness
 
@@ -225,7 +244,9 @@ declaration). `FareLink`'s grammar is a serialization contract for `MeasurementT
 
 ## 7. CI quality gate (planned)
 
-* `mvn -o -B test` (deterministic, offline) — the primary gate, run in `MetaModelCalibration`.
+* `mvn -o -B test` (deterministic, offline) — the primary gate, run at the **repository root** so that
+  every module in the reactor is exercised (a `differentiation` module added later would have been
+  invisible to a `MetaModelCalibration`-scoped gate).
 * Do **not** gate on code-coverage percentage.
 * Add `mvn dependency:analyze` once the pom is cleaned, to catch undeclared/load-bearing deps.
 * Static checks only after the build is reproducibly green.

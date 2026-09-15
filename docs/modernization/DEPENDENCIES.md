@@ -90,3 +90,48 @@ current `null` behavior is not relied upon.
   because the build already required it, and the MATSim-HK build dependency was **eliminated** in
   favour of two vendored source classes.
 * `javax.inject` / Guice / Log4j were left untouched even though they are dated.
+
+## F. The `differentiation` module (ODEstimation reference implementation)
+
+This module was added to bring the legacy ODEstimation differentiability code into the reactor as an
+independent reference implementation, so its derivative leaves can be characterised before anything is
+refactored. Its dependency situation is different from `MetaModelCalibration`'s and needs recording
+separately.
+
+**What ODEstimation declares (and why it never built).** Before this module existed, ODEstimation's
+POM declared:
+
+| Declared | Reality |
+|---|---|
+| `MATSim-HK:MATSim-HK:11.0` | The Hong Kong MATSim fork. Not published to any public repository; it existed only as an untracked local JAR. This is the same fork PRAISEHK needed and that trunk has already removed. |
+| `org.ojalgo:ojalgo`, `org.ojalgo:ojalgo-cplex` | Resolvable, but `ojalgo-cplex` is a *wrapper*. The `ilog.cplex` / `ilog.concert` classes the OD-addition optimizer imports come from IBM's `cplex.jar`, referenced only as Windows path *properties* (`C:/Program Files/IBM/ILOG/CPLEX_Studio201/cplex`) that are never wired into a dependency. |
+| `org.geotools:gt-shapefile`, `gt-swing` at `24-SNAPSHOT` | A **snapshot** version, for the population-generation path only. |
+| `org.matsim:matsim` | Commented out; arrived transitively through MATSim-HK. |
+
+So the POM described a build that could not work on any machine without a Windows CPLEX install and
+an unpublished JAR.
+
+**What the `differentiation` module actually depends on.** Only the differentiability subset was
+brought in (`analyticalModel`, `core`, `optimizer` minus the OD-addition optimizers; see
+`REVIEW_REQUIRED.md` DIFF-3 and ARCH-1):
+
+| Dependency | Why | Note |
+|---|---|---|
+| `ust.hk.praisehk:MetaModelCalibration` | The legacy sources compile against `ust.hk.praisehk.metamodelcalibration.*` | Reproduces the legacy directional inversion deliberately — see ARCH-1. This is the dependency the target architecture removes, not one to celebrate. |
+| `org.matsim:matsim` (`15.0-SNAPSHOT`) | Same mutable-snapshot risk as section C | Unchanged; pinning is the same planned, isolated change. |
+| `org.apache.commons.math3:commons-math3` (`3.6.1`) | `RealVector` / `MatrixUtils`, used directly by the sensitivity code | Declared explicitly rather than relied on transitively through MATSim. |
+| `org.junit.jupiter:junit-jupiter` | Test scope | Same version as the other module. |
+
+**Deliberately NOT declared:** CPLEX / `ojalgo-cplex` / IBM `cplex.jar`, `ojalgo`,
+`MATSim-HK`, geotools. None of them is reachable from the code that was brought in, precisely because
+the OD-addition optimizers were excluded.
+
+**Consequence for the file layout.** The HK classes are *not* re-vendored here: this module resolves
+`FareCalculator` / `FareLink` from `MetaModelCalibration`'s existing `transit.fare` package. One
+vendored copy serves both modules, which is the point of vendoring them once.
+
+**Open item.** `differentiation` resolves `MetaModelCalibration` as a reactor dependency, so it builds
+from the repository root (`mvn -pl differentiation -am test`) or as part of a full reactor run. A bare
+`cd differentiation && mvn test` requires `MetaModelCalibration` to have been installed first. That is
+acceptable while both modules ship together, and it disappears when the shared assignment engine is
+extracted.
