@@ -223,9 +223,11 @@ published number exactly. **But that is not the only reading** — see PUB-1: a 
 links with a constant **+5 on link 2** also reproduces the `q = 10` rows exactly (and the `q = 100`
 row to 0.06%), and it honours the prose's capacity of 70. The tables exclude the *literal* prose
 (which fails every row — `5.000` against `9.933`, and `4.167` against `10.000`) but do not single out
-one parameterisation. The choice between them is the author's, and the fixture must not silently
-decide it. This is the concrete reason the rule at the top of this section is written as
-reproduce-the-numbers rather than trust-the-text. Published equilibrium values (Table 1, SUE):
+one parameterisation. The choice between them was the author's, and **the author has confirmed free
+flow (10, 15) with capacities (50, 75) as intended** (PUB-1, Decision), so the fixture uses those
+values as an explicitly recorded decision rather than a silent one. This is the concrete reason the
+rule at the top of this section is written as reproduce-the-numbers rather than trust-the-text.
+Published equilibrium values (Table 1, SUE):
 
 | q | link 1 flow | link 2 flow | P(link 1) | P(link 2) | t₁ | t₂ |
 |---|---|---|---|---|---|---|

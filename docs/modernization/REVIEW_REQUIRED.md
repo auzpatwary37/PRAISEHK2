@@ -1047,7 +1047,19 @@ class.
   So the tables exclude the **literal** prose, but they do **not** single out one parameterisation, and
   my earlier claim that free flow (10, 15) with capacity (50, 75) is the **only** one consistent with
   the published numbers was **too strong** — it follows only if no constant term is allowed. Which
-  reading is intended is the author's call, not an inference from three printed numbers.
+  reading was intended was the author's call, not an inference from three printed numbers - and that
+  call has since been made; see the Decision bullet below.
+
+* **Decision (author, 2026-09-15):** the free-flow **(10, 15)** / capacity **(50, 75)** reading is the
+  intended parameterisation, and it is what the fixture uses. Table 1 confirms it digit-exactly: at
+  `q = 100`, `t2 = 15(1 + 0.15(34.371/75)^4) = 15.0992` reproduces the printed **15.099**; inverting a
+  capacity from that printed value returns **75.05**; and `1/(1+e^-5) = 0.99331` reproduces the printed
+  **0.9933**. The prose's 70 yields `15.1308` there and is treated as a typo.
+* **What the decision does and does not change:** it settles the choice the second reading left open; it
+  does **not** reinstate the withdrawn claim that three printed numbers single out one parameterisation.
+  The selection rests on the author's confirmation of *intent*, which is precisely the authority the
+  working rule in `PRAISE_ODE_RELATIONSHIP.md` section 3 reserves for intent as against observed
+  behaviour.
 
 * **Why this is recorded rather than quietly fixed:** it is the evidence for the working rule in
   `PRAISE_ODE_RELATIONSHIP.md` section 3 — reproduce published **numbers**, do not adopt published
