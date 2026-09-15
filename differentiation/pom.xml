@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+
+	<!--
+		Forward-sensitivity (differentiable static assignment) module.
+
+		This module holds the LEGACY ODEstimation differentiability sources as an
+		independent reference implementation, kept behaviourally unchanged so it can
+		be characterised before anything is refactored. See
+		docs/modernization/PRAISE_ODE_RELATIONSHIP.md for the class-by-class mapping
+		to MetaModelCalibration and the evidence for the differentiation method.
+
+		The dependency direction below (differentiation -> MetaModelCalibration) is
+		NOT a design choice: it reproduces the legacy reality that ODEstimation
+		compiled against `ust.hk.praisehk.metamodelcalibration.*`. It is the
+		circular relationship the target architecture removes by extracting a shared
+		static-assignment engine; recorded in REVIEW_REQUIRED.md.
+	-->
+
+	<groupId>ust.hk.praisehk</groupId>
+	<artifactId>differentiation</artifactId>
+	<version>0.0.1-SNAPSHOT</version>
+	<packaging>jar</packaging>
+
+	<name>differentiation</name>
+	<description>Legacy ODEstimation forward-sensitivity reference implementation</description>
+
+	<properties>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+
+		<matsim.version>15.0-SNAPSHOT</matsim.version>
+		<commons.math3.version>3.6.1</commons.math3.version>
+
+		<maven.compiler.source>13</maven.compiler.source>
+		<maven.compiler.target>13</maven.compiler.target>
+
+		<junit.jupiter.version>5.10.2</junit.jupiter.version>
+	</properties>
+
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<version>3.8.0</version>
+				<configuration>
+					<release>13</release>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<version>3.2.5</version>
+				<configuration>
+					<!--
+					     Same determinism wiring as MetaModelCalibration, for the same
+					     reasons: the working directory is pinned explicitly, and the
+					     local-DTD property keeps MATSim's config parser off the network
+					     (see that module's pom for the full explanation of why the
+					     invalid-proxy settings are defence in depth only).
+					-->
+					<workingDirectory>${project.basedir}</workingDirectory>
+					<argLine>-Dmatsim.preferLocalDtds=true -Dhttp.proxyHost=127.0.0.1 -Dhttp.proxyPort=1 -Dhttps.proxyHost=127.0.0.1 -Dhttps.proxyPort=1</argLine>
+				</configuration>
+			</plugin>
+		</plugins>
+	</build>
+
+	<dependencies>
+		<dependency>
+			<groupId>ust.hk.praisehk</groupId>
+			<artifactId>MetaModelCalibration</artifactId>
+			<version>0.0.1-SNAPSHOT</version>
+		</dependency>
+		<dependency>
+			<groupId>org.matsim</groupId>
+			<artifactId>matsim</artifactId>
+			<version>${matsim.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.commons</groupId>
+			<artifactId>commons-math3</artifactId>
+			<version>${commons.math3.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.junit.jupiter</groupId>
+			<artifactId>junit-jupiter</artifactId>
+			<version>${junit.jupiter.version}</version>
+			<scope>test</scope>
+		</dependency>
+	</dependencies>
+
+	<repositories>
+		<repository>
+			<id>matsim</id>
+			<name>MATSim Maven repository</name>
+			<url>https://repo.matsim.org/repository/matsim/</url>
+		</repository>
+	</repositories>
+
+</project>
