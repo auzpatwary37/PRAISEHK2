@@ -138,15 +138,24 @@ avoid is *ODDifferentiableSUEModel duplicating the SUE iteration* that `CNLSUEMo
 
 ### Published specification (authoritative)
 
-The implementation is a realisation of the authors' published method, so the papers — not the code —
-are the authority for what the equations are *intended* to be. The working rule agreed for this
-project: **treat the code as correct unless it is inconsistent with these equations, or internally
-inconsistent.**
+The implementation is a realisation of the authors' published method, so the papers are the authority
+for what the equations are *intended* to be, and the working rule agreed for this project is **treat the
+code as correct unless it is inconsistent with these equations, or internally inconsistent.**
+
+**That rule needs a caveat, because a published paper has now been found to contradict its own
+numbers.** The two-link validation in the 2023 paper states one set of parameters in prose and
+publishes a table reproducible only with a different set (documented below). So the operative rule is
+narrower than "the papers are the authority":
+
+* the **code** is canonical for *observed behaviour* — what the program actually computes;
+* the **papers** are authoritative for *intent* — what the equations were meant to be;
+* published **numbers** are the strongest oracle, because a solved equilibrium is internally
+  constrained; published **prose** about parameters is not, and must be reproduced before use.
 
 | Reference | Scope | Key equations |
 |---|---|---|
 | A.U.Z. Patwary, S. Wang, H.K. Lo (2023), *Iterative Backpropagation Method for Efficient Gradient Estimation in Bilevel Network Equilibrium Optimization Problems*, Transportation Science 57(5):1134–1159, doi:10.1287/trsc.2021.0110 | The gradient method itself: the IB recursion, BPR and logit derivatives, the objective and its gradient, the small-network validation | (3) chain rule; (6) MSA flow update; (7), (13), (16) gradient update; (8)–(9) cost/choice gradients; (10)–(11) link-flow aggregation; (14) BPR function and its derivative; (15) logit derivative; (17) finite-difference reference; (18) objective; (19) objective gradient; (27)–(30) route and mode utilities |
-| A.U.Z. Patwary et al. (2021), *Metamodel-based calibration of large-scale multimodal microscopic traffic simulation*, Transportation Research Part C (S0968090X20307592) | The calibration framework: trust-region metamodel calibration, the objective PRAISEHK actually uses, the multimodal SUE formulation | **not yet extracted** — paywalled; see open item below |
+| A.U.Z. Patwary et al. (2021), *Metamodel-based calibration of large-scale multimodal microscopic traffic simulation*, Transportation Research Part C 124:102859, doi:10.1016/j.trc.2020.102859 | The calibration framework: trust-region metamodel calibration, the objective PRAISEHK actually uses, the multimodal SUE formulation | **extracted** (author-supplied PDF). Table 1 default parameters; **Table 2 trust-region parameters**; (45) linear metamodel; (46) quadratic; (36)–(37) GD-I; (40) GD-II; GD-III; (48) RMSE; (49) GEH |
 
 Two facts from (2023) that constrain this repository directly:
 
@@ -154,14 +163,28 @@ Two facts from (2023) that constrain this repository directly:
   (MSA: `α = 1/ia`). `GradientUtils.getLinkFlowGrad` applies `1/beta` to the sensitivity update and
   `CNLSUEModel` applies its counter to the flow update; whether the *same* `ia` reaches both is
   testable and is the first thing to check on that leaf.
-* **Eq (14)'s printed BPR derivative carries no `/3600` factor.** The canonical `/3600` in these
-  papers sits in the route *utility* (Eq (27): `v_{r,t} = (1/3600)κ₇T_{r,t} + …`), and
-  `CNLRoute.calcRouteUtility` already applies it separately there. That is independent support for
-  **DIFF-1**, beyond the finite-difference disagreement.
+* **Withdrawn: "Eq (14)'s printed BPR derivative carries no `/3600`" as support for DIFF-1.** Two
+  reasons. Eq (14) reaches this document through a garbled OCR rendering; and decisively, **DIFF-1 was
+  a false positive** — the `/3600` is a unit convention. The producer returns hours per flow unit and
+  the consumer (`getCarRouteGrads`:1828) multiplies by the *raw* `ΔMU`, while the level utility
+  (`CNLRoute.calcRouteUtility`:101/119) multiplies seconds by `MU/3600`; the factors cancel exactly.
+  See REVIEW_REQUIRED DIFF-1, now `RETRACTED`.
 
-**Open item:** the 2021 Part C paper is the authority for the trust-region policy and for the
-objective weighting (the `1/(1+SD)` vs `1/(1+SD²)` question in CC-4). Its equations should be
-extracted before the objective in step 8 of the work order is called canonical.
+**Open item — now closed: the 2021 Part C paper has been extracted** (author-supplied copy). Two
+results land on the work order.
+
+* Its **Table 2** specifies the trust-region policy and constants, and the legacy constants **differ**:
+  `η = 0.001` against the code's `0.01`; `μ_dec = 0.75` against `0.9`; `Δ0 = 10` and `Δmax = 25`
+  against `25` and `2.5×Δ0 = 62.5`; "maximum consecutive rejection 5" against `4`. Recorded as
+  **CAL-12**. The *control flow* is faithful — its Step 4 is exactly the three branches in
+  `CalibratorImpl.generateNewParam`:349–365.
+* On the CC-4 weighting question it gives partial evidence: §3.1 states "the default weighting factors
+  [of the] three measurement types are taken as 1", so the paper's own experiments use the
+  **unweighted** objective. That does not by itself settle `1/(1+SD)` versus `1/(1+SD²)` for the Hong
+  Kong application, but it removes the assumption that SD weighting is the paper's default.
+* Its §2.8.2 lists exactly six metamodel schemes — quadratic; analytical linear with and without
+  traffic-model improvement (Eq (30)); and GD-I/II/III — which is the legacy `MetaModel` taxonomy, so
+  the scheme names in the code are the paper's names.
 
 A third fact, which lands directly on CC-4 and on step 8 of the work order:
 
@@ -180,9 +203,25 @@ A third fact, which lands directly on CC-4 and on step 8 of the work order:
 
 #### Published oracle: the two-link network (2023, §3, Tables 1–2)
 
-The paper's small-network validation is directly reproducible as a fixture: two links `O→D`, both
-free-flow time 10, capacities **50** and **70**, BPR with `α = 0.15`, `β = 4`, logit route choice,
-demands `q = 10` and `q = 100`. Published equilibrium values (Table 1, SUE):
+The paper's small-network validation is directly reproducible as a fixture: two links `O→D`, BPR with
+`α = 0.15`, `β = 4`, logit route choice, demands `q = 10` and `q = 100`.
+
+**Parameters — the paper's prose contradicts its own table, and the table wins.** §3.2 says "Both L1
+and L2 have a free flow travel time of 10 … their capacities are different, 50 and 70, respectively."
+No parameterisation of the logit reproduces the published Table 1 from those values:
+
+* free-flow 10 and 10 makes the links near-symmetric at `q = 10` (the BPR terms differ by ~6e-4 in
+  travel time), so `P(link 1) ≈ 0.5`, not the published **0.9933**;
+* a single logit scale `θ` fits the `q = 100` row at `θ ≈ 1`, and that same `θ = 1` forces `≈ 0.5`
+  at `q = 10` — **no `θ` fits both rows** under the prose values;
+* with free flow **(10, 15)** and capacities **(50, 75)**, `θ = 1` reproduces **every published
+  value in both rows**: `P(link 1) = 1/(1+e^{−5}) = 0.9933` and `t₂ = 15.000` at `q = 10`; at
+  `q = 100`, `t₁ = 10(1+0.15(65.629/50)⁴) = 14.455` and `c₂ = 34.371/(0.044)^{1/4} = 75.0`.
+
+The fixture therefore uses free flow **(10, 15)** and capacities **(50, 75)** — the only
+parameterisation consistent with the published numbers. The prose values are treated as a typo and
+recorded as **PUB-1**. This is the concrete reason the rule at the top of this section is written as
+reproduce-the-numbers rather than trust-the-text. Published equilibrium values (Table 1, SUE):
 
 | q | link 1 flow | link 2 flow | P(link 1) | P(link 2) | t₁ | t₂ |
 |---|---|---|---|---|---|---|

@@ -793,6 +793,36 @@ class.
   changes the interpretation of the whole trust-region mechanism, so it is recorded as its own item -
   the reviewer's point, confirmed by test rather than by inspection.
 
+### CAL-12 — `VERIFIED` [`paper-contradiction`] — the trust-region constants deviate from the paper's Table 2
+* **Authority:** Patwary et al. (2021), Transportation Research Part C 124:102859, **Table 2 "Trust
+  region parameters"**. The paper's mechanism — Step 4 — is three combinations of (accepted?, `rho > eta`?):
+  accepted and `rho > eta` -> increase; rejected and `rho <= eta` -> decrease; otherwise keep.
+  `CalibratorImpl.generateNewParam`:349-365 implements exactly those three branches, so the control
+  flow is faithful. The constants are not:
+
+  | Parameter | Paper (Table 2) | Legacy | where |
+  |---|---|---|---|
+  | Initial trust region radius | 10 | **25** | `CalibratorImpl.java:66` |
+  | Maximum trust region radius | 25 | **62.5** | `:70`, derived as `2.5 x TrRadius` |
+  | Minimum trust region radius | 0.001 | 0.001 | `:71` — **matches** |
+  | Threshold error ratio `eta` | 0.001 | **0.01** (10x) | `:75` |
+  | Increment multiplier | 1.25 | 1.25 | `:77` — **matches** |
+  | Decrement multiplier | 0.75 | **0.9** | `:78` |
+  | Minimum metamodel parameter change | 0.08 | see MODEL-6 | |
+  | Maximum consecutive rejection | 5 | **4** | `:73` |
+
+* **Why this matters:** the state-machine tests pin the *legacy* numbers — `25 -> 22.5` on rejection is
+  `mu_dec = 0.9`, and the acceptance threshold is `eta = 0.01`. If the divergence is drift rather than a
+  deliberate Hong Kong-specific retune, the calibrated results are not the published ones. Both
+  readings remain live.
+* **Adjacent, and the reason CAL-1 is reachable at all:** the maximum radius is *derived*
+  (`2.5 x initial`) rather than independent, so a caller passing a large initial radius gets
+  `initial > maximum` — the state in which the "increase" branch computes
+  `min(max, 1.25 x initial) < initial` and an accepted, improving step **shrinks** the radius. The
+  paper's `10 < 25` cannot reach that state.
+* **Do not change:** behaviour is pinned as observed. Resolve deliberately — this is a values question,
+  not a code question, and it is the calibration owner's to answer.
+
 ### CAL-3 — `READ` [`legacy-observed`] — `rho` has no guard for a zero predicted reduction
 * `double rouk = SimObjectiveChange / MetaObjectiveChange;` — with
   `MetaObjectiveChange == 0` this yields `±Infinity` or `NaN` (0/0). Downstream comparisons
@@ -988,34 +1018,70 @@ class.
   Tests must capture stdout rather than assume it is clean —
   `CalibratorImplStateMachineTest` does exactly that.
 
+## Publication discrepancies
+
+### PUB-1 — `VERIFIED` [`paper-contradiction`] — the 2023 paper's two-link prose parameters cannot reproduce its own Table 1
+* **Where:** Patwary, Wang & Lo (2023), *Transportation Science* 57(5):1134-1159, section 3.2 and
+  Table 1. Section 3.2 states "Both L1 and L2 have a free flow travel time of 10 ... their capacities
+  are different, 50 and 70, respectively."
+* **The contradiction:** those values cannot produce the published equilibrium. At `q = 10` the two
+  links are near-symmetric (their BPR terms differ by about 6e-4 in travel time), so `P(link 1)` is
+  about 0.5 against a published **0.9933**. A single logit scale near 1 fits the `q = 100` row, and
+  that same scale forces about 0.5 at `q = 10`, so **no scale fits both rows**. With free flow
+  **(10, 15)** and capacities **(50, 75)** a scale of 1 reproduces every published number in both rows:
+  `1/(1+e^-5) = 0.9933`, `t2 = 15.000`, and at `q = 100` `t1 = 14.455`, `c2 = 75.0`.
+* **Consequence for the oracle:** the fixture must use free flow **(10, 15)** and capacities
+  **(50, 75)**. Table 1 and Table 2 are a solved equilibrium and remain a valid external oracle; the
+  prose parameter sentence is treated as a typo.
+* **Why this is recorded rather than quietly fixed:** it is the evidence for the working rule in
+  `PRAISE_ODE_RELATIONSHIP.md` section 3 — reproduce published **numbers**, do not adopt published
+  **prose**. It also removed a false confidence: DIFF-1 was originally argued partly from a printed
+  equation in the same paper and turned out to be wrong in the opposite direction (DIFF-1, RETRACTED).
+
 ## `differentiation` (ODEstimation forward sensitivity, brought in as a module)
 
-### DIFF-1 — `VERIFIED` [`legacy-observed`] — the BPR sensitivity is 3600× smaller than the derivative of the travel-time function it differentiates
-* **Where:** `GradientUtils.getLinkTravelTimeGrad` — the local partial is
-  `α·β·t₀/cap^β · flow^(β−1) / 3600`.
-* **Legacy:** measured on a synthetic link: length 1000 m, free speed 20 m/s (so `t₀ = 50 s`),
-  capacity 2000 veh/h, car volume 1000, transit volume 0, capacity multiplier 1, `BPRalpha=0.15`,
-  `BPRbeta=4`, one-hour time bean. The central difference of the paired
-  `CNLLink.getLinkTravelTime` is **1.875e-3**, identical at `h = 1e-1, 1e-2, 1e-3` — the agreement
-  across three decades of step size is what rules out a precision artefact and makes this a genuine
-  derivative error. The returned sensitivity is **5.208e-7**. The ratio is **exactly 3600**.
-* **Expected:** the `/3600` has no counterpart in the paired travel-time function, whose derivative
-  with respect to flow is `t₀·α·β·v^(β−1)/cap^β`. Either the factor is spurious, or travel time is
-  meant to be expressed per second while the function returns seconds.
-* **Evidence:** `BprDerivativeTest.implementedSensitivityAgreesWithThePairedTravelTimeFunction`
-  (`@Disabled`, carries the measured sweep) and `implementedPartialIsSmallerByAFactorOf3600`
-  (enabled, pins the 3600 ratio as the observed behaviour).
-* **Do not change:** any calibration output produced with this derivative was produced under it.
-  Resolve deliberately, with the finite-difference harness already in place.
+### DIFF-1 — `RETRACTED` [`legacy-observed`] — the `/3600` is a unit convention, not a derivative error
+* **Original claim:** the local partial `α·β·t₀/cap^β · flow^(β−1) / 3600` is 3600× smaller than the
+  central difference of `CNLLink.getLinkTravelTime`, therefore the derivative was wrong.
+* **Why the claim was wrong — the missing counterpart is in the consumer, not in the function:**
+  * `GradientUtils.getLinkTravelTimeGrad` returns `∂t/∂θ` with `t` in **seconds**, divided by 3600 —
+    i.e. **hours** per flow unit;
+  * `ODDifferentiableSUEModel.getCarRouteGrads` (line 1828) multiplies that by the **raw**
+    `MarginalUtilityofTravelCar − MarginalUtilityofPerform`, with no `/3600`;
+  * the *level* route utility (`CNLRoute.calcRouteUtility`, lines 101 and 119) multiplies the
+    seconds-valued `getTravelTime` by `MUTravelTime = MU_travel/3600 − MU_perform/3600`.
+  * Both chains are therefore `(∂t/∂θ)·ΔMU/3600`. The factor cancels **exactly**.
+  * The check that should have been run differentiates the **utility**, not the travel time.
+* **The finite difference in the original evidence differentiated the wrong quantity.** It measured
+  the central difference of the travel-time *level* in seconds and compared it against a sensitivity
+  expressed in the utility's hour-scaled units. The three-decade agreement across step sizes was real
+  but irrelevant: it ruled out a precision artefact in a quantity that was not the right one.
+* **Refiled as a real but different finding — a convention split across two sites (DIFF-1b).** The
+  `/3600` lives in the producer while the consumer's sibling idiom (`MUTravelTime`) carries its own
+  `/3600`. Correctness therefore depends on every consumer of `linkTTGradient` multiplying by **raw**
+  `ΔMU`; a consumer that follows the level function's idiom and multiplies by `MUTravelTime` would be
+  wrong by exactly 3600. Before the modern API is frozen one convention must be chosen and the other
+  removed: either the producer returns `∂t/∂θ` in seconds and consumers apply `MU/3600`, or the
+  producer returns utility-scaled sensitivity and consumers apply raw `MU`.
+* **Nothing to fix in the derivative itself.** The author's `if (cons > 3600) logger.debug("timeGradient is too high")`
+  guard and the `//should be in sec` note on `t_0` are the traces of tracking this same magnitude.
+* **Lesson for the remaining leaves:** a sensitivity must be finite-differenced against the quantity
+  whose units it is expressed in. Comparing against the nearest-looking level function produced a
+  confident false positive here.
 
 ### DIFF-2 — `VERIFIED` [`legacy-observed`] — the BPR sensitivity differentiates a different flow than the travel-time function uses
 * **Where:** `GradientUtils.getLinkTravelTimeGrad` uses `flow = getLinkCarVolume() + getLinkTransitVolume()`
   (raw transit volume, no residual), whereas `CNLLink.getLinkTravelTime` uses
   `car + transit·CapacityMultiplier + residual`.
-* **Legacy:** with transit volume 500 and capacity multiplier 2, the central difference is
-  **9.375e-4** against a returned sensitivity of **1.0986e-7** — a factor of **8533**, i.e. the 3600
-  of DIFF-1 compounded by evaluating the partial at flow 1500 instead of the 2000 the function uses.
-  The two defects are therefore separable but compose.
+* **Legacy, restated now that the DIFF-1 unit factor is removed:** with transit volume 500 and
+  capacity multiplier 2, the central difference is **9.375e-4** against a returned sensitivity of
+  **1.0986e-7**. Putting the finite difference into the sensitivity's units divides it by 3600:
+  **2.604e-7** against **1.0986e-7**. The genuine ratio is therefore **2.370** — exactly
+  `(2000/1500)^(β−1) = (4/3)³`, the signature of evaluating the partial at flow 1500 instead of the
+  2000 the level function uses. The originally reported **8533** was this factor multiplied by the
+  DIFF-1 unit convention (`8533 / 3600 = 2.370`); it was never a defect magnitude. The flow-argument
+  mismatch in this finding is real and independent of DIFF-1, and this is the one that composes with
+  nothing else.
 * **Expected:** the partial must be evaluated at the same flow the function differentiates, including
   the multiplier applied to transit volume.
 * **Evidence:** `BprDerivativeTest.implementedSensitivityAccountsForTheCapacityMultiplierOnTransitVolume`
