@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+
+	<!--
+		PRAISEHK reactor.
+
+		This is a pure AGGREGATOR - it declares no parent, no dependencies and no
+		plugin configuration, so `MetaModelCalibration` keeps its own coordinates and
+		build exactly as before. Its only jobs are:
+
+		  1. let Maven be run from the repository root
+		         mvn test            # instead of  cd MetaModelCalibration && mvn test
+		     Before this file existed there was no POM at the root, so `mvn test` from
+		     the top level failed with
+		         "The goal you specified requires a project to execute but there is no
+		          POM in this directory"
+		     - a regression introduced when the MATSim-HK module was dropped and the
+		     earlier aggregator was deleted with it.
+
+		  2. give the modernized system a place to grow. The target architecture is
+		     explicitly multi-module (calibration-core, assignment-static-sue,
+		     differentiation, od-estimation, matsim-adapter); each becomes a <module>
+		     here rather than another repository to wire up by hand.
+
+		The single module builds identically whether invoked from here or from its own
+		directory, and both invocations were verified to run the full suite with 0 skipped
+		(a root-level reactor run still executes each module with ${project.basedir} as
+		the working directory, so the CWD-dependent assertions in the module are covered).
+
+		CI currently runs inside `MetaModelCalibration` rather than from here. That is
+		TEMPORARY legacy scope, not a technical requirement of the test working directory:
+		the required check should move to the reactor root before a second module is added,
+		so it cannot silently stop seeing new modules. See the workflow header and
+		docs/modernization/ARCHITECTURE.md section 5.
+	-->
+	<groupId>ust.hk.praisehk</groupId>
+	<artifactId>praisehk-reactor</artifactId>
+	<version>0.0.1-SNAPSHOT</version>
+	<packaging>pom</packaging>
+
+	<name>PRAISEHK</name>
+	<description>PRAISEHK analytical SUE, measurements, calibration and meta-model toolkit</description>
+
+	<properties>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+	</properties>
+
+	<modules>
+		<module>MetaModelCalibration</module>
+	</modules>
+
+</project>

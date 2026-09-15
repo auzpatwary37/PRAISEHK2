@@ -1,5 +1,5 @@
 package ust.hk.praisehk.metamodelcalibration.measurements;
-
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -214,4 +214,137 @@ class MeasurementsTest {
 		org.junit.jupiter.api.Assertions.assertThrows(RuntimeException.class,
 				() -> read.updateMeasurementsFromFile(csv.toString()));
 	}
+
+	@Test
+	@DisplayName("REVIEW_REQUIRED MEAS-18: Measurements.clone() ALIASES the container time-bean map")
+	void cloneAliasesTheContainerTimeBeanMap() {
+		Measurements original = Measurements.createMeasurements(TimeBeans.singleHour());
+		Measurements clone = original.clone();
+
+		assertSame(original.getTimeBean(), clone.getTimeBean(),
+				"the clone is constructed with the same map instance, not a copy");
+
+		java.util.Map<String, org.matsim.core.utils.collections.Tuple<Double, Double>> extra =
+				new java.util.HashMap<>();
+		extra.put(TB1, new org.matsim.core.utils.collections.Tuple<>(0., 3600.));
+		extra.put(TB2, new org.matsim.core.utils.collections.Tuple<>(3600., 7200.));
+
+		clone.addRedundantTimeBean(extra);
+
+		assertTrue(original.getTimeBean().containsKey(TB2),
+				"mutating the clone's time beans mutates the original container");
+	}
+
+	@Test
+	@DisplayName("REVIEW_REQUIRED MEAS-18: the cloned container therefore DIVERGES from its own children, "
+			+ "because each cloned Measurement holds a private copy")
+	void clonedContainerDivergesFromItsChildren() {
+		Measurements original = Measurements.createMeasurements(TimeBeans.singleHour());
+		original.createAnadAddMeasurement("m1", MeasurementType.linkVolume).putVolume(TB1, 1.);
+		Measurements clone = original.clone();
+
+		java.util.Map<String, org.matsim.core.utils.collections.Tuple<Double, Double>> extra =
+				new java.util.HashMap<>();
+		extra.put(TB1, new org.matsim.core.utils.collections.Tuple<>(0., 3600.));
+		extra.put(TB2, new org.matsim.core.utils.collections.Tuple<>(3600., 7200.));
+		clone.addRedundantTimeBean(extra);
+
+		Measurement clonedChild = clone.getMeasurements().get(Id.create("m1", Measurement.class));
+
+		assertEquals(2, clone.getTimeBean().size(), "the container now declares two time beans");
+		assertEquals(1, clonedChild.getTimeBean().size(),
+				"but the cloned child still has its own single-bean copy");
+		assertFalse(clonedChild.getTimeBean().containsKey(TB2));
+
+		// consequence: a volume for the newly declared bean is silently ignored on the child
+		clonedChild.putVolume(TB2, 99.);
+		assertNull(clonedChild.getVolumes().get(TB2),
+				"the container and its children disagree about which time beans exist");
+	}
+
+	@Test
+	@DisplayName("REVIEW_REQUIRED MEAS-19: the CSV writer rewrites ',' to '__' in the measurement id and "
+			+ "the reader never restores it")
+	void csvRewritesCommaInMeasurementId(@TempDir Path dir) throws IOException {
+		Measurements m = Measurements.createMeasurements(TimeBeans.twoHours());
+		m.createAnadAddMeasurement("a,b", MeasurementType.linkVolume).putVolume(TB1, 5.);
+
+		Path csv = dir.resolve("commas.csv");
+		m.writeCSVMeasurements(csv.toString());
+		assertTrue(Files.readAllLines(csv).get(1).startsWith("a__b,"), "the id is rewritten on write");
+
+		Measurements read = Measurements.createMeasurements(TimeBeans.twoHours());
+		read.updateMeasurementsFromFile(csv.toString());
+
+		assertNotNull(read.getMeasurements().get(Id.create("a__b", Measurement.class)),
+				"it comes back under the REWRITTEN id");
+		assertNull(read.getMeasurements().get(Id.create("a,b", Measurement.class)),
+				"the original id is never restored: the identity is silently changed (MEAS-19)");
+	}
+
+	@Test
+	@DisplayName("REVIEW_REQUIRED MEAS-20: ifForValidation is written as the fifth column but ignored "
+			+ "on read")
+	void csvDropsIfForValidation(@TempDir Path dir) throws IOException {
+		Measurements m = Measurements.createMeasurements(TimeBeans.singleHour());
+		Measurement x = m.createAnadAddMeasurement("m1", MeasurementType.linkVolume);
+		x.setAttribute("ifForValidation", "true");
+		x.putVolume(TB1, 7.);
+
+		Path csv = dir.resolve("validation.csv");
+		m.writeCSVMeasurements(csv.toString());
+		assertTrue(Files.readAllLines(csv).get(1).endsWith(",true"), "the flag IS written");
+
+		Measurements read = Measurements.createMeasurements(TimeBeans.singleHour());
+		read.updateMeasurementsFromFile(csv.toString());
+		assertNull(read.getMeasurements().get(Id.create("m1", Measurement.class))
+				.getAttribute("ifForValidation"), "but it is never read back (MEAS-20)");
+	}
+
+	@Test
+	@DisplayName("CHARACTERIZATION: the CSV type column is honoured for a NEW measurement, but an "
+			+ "EXISTING measurement keeps its original type")
+	void csvTypeHandling(@TempDir Path dir) throws IOException {
+		Measurements m = Measurements.createMeasurements(TimeBeans.singleHour());
+		m.createAnadAddMeasurement("tt1", MeasurementType.linkTravelTime).putVolume(TB1, 3.);
+
+		Path csv = dir.resolve("type.csv");
+		m.writeCSVMeasurements(csv.toString());
+
+		Measurements fresh = Measurements.createMeasurements(TimeBeans.singleHour());
+		fresh.updateMeasurementsFromFile(csv.toString());
+		assertEquals(MeasurementType.linkTravelTime,
+				fresh.getMeasurements().get(Id.create("tt1", Measurement.class)).getMeasurementType(),
+				"a new measurement takes the type from the file");
+
+		Measurements existing = Measurements.createMeasurements(TimeBeans.singleHour());
+		existing.createAnadAddMeasurement("tt1", MeasurementType.linkVolume);
+		existing.updateMeasurementsFromFile(csv.toString());
+		assertEquals(MeasurementType.linkVolume,
+				existing.getMeasurements().get(Id.create("tt1", Measurement.class)).getMeasurementType(),
+				"an existing measurement keeps its own type: the file does not override it");
+	}
+
+	@Test
+	@DisplayName("CHARACTERIZATION: a multi-time-bean CSV round trip preserves id, times, volumes and type")
+	void csvRoundTripAllColumns(@TempDir Path dir) throws IOException {
+		Measurements m = Measurements.createMeasurements(TimeBeans.twoHours());
+		Measurement x = m.createAnadAddMeasurement("m1", MeasurementType.linkVolume);
+		x.putVolume(TB1, 11.);
+		x.putVolume(TB2, 22.);
+
+		Path csv = dir.resolve("multi.csv");
+		m.writeCSVMeasurements(csv.toString());
+		assertEquals(3, Files.readAllLines(csv).size(), "header + one row per time bean");
+
+		Measurements read = Measurements.createMeasurements(TimeBeans.twoHours());
+		read.updateMeasurementsFromFile(csv.toString());
+
+		Measurement r = read.getMeasurements().get(Id.create("m1", Measurement.class));
+		assertNotNull(r);
+		assertEquals(MeasurementType.linkVolume, r.getMeasurementType());
+		assertEquals(11., r.getVolume(TB1), 0.);
+		assertEquals(22., r.getVolume(TB2), 0.);
+	}
+
 }

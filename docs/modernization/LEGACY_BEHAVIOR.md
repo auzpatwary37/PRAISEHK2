@@ -167,6 +167,19 @@ explicit deliverable of roadmap phase 8. Do not refactor it or merge it with `CN
 | `MTRLinkVolumeInfo` `[V]` | `lineId`, `routeId`, `linkId` triple for MTR physical-link-volume measurements; `toString`/parse via the `___`-style grammar. |
 | `MeasurementsUtils` | `[U]` helper. |
 
+**Clone semantics, pinned in full (MEAS-1, MEAS-2, MEAS-17, MEAS-18):** `Measurement.clone()`
+deep-copies volumes and SD, copies the declared time-bean map into a **private** `HashMap`, copies
+attributes **shallowly** (the link list is shared) and silently **drops `coord`**. `Measurements.clone()`
+deep-copies the child measurements but constructs the container with `new Measurements(this.timeBean)` —
+the **same** map instance — so `addRedundantTimeBean` on the clone mutates the original, and the cloned
+container can declare a time bean that its own cloned children do not know about. A "copy" is therefore
+neither independent nor internally consistent.
+
+**CSV persistence, pinned (MEAS-19, MEAS-20):** `writeCSVMeasurements` writes five columns, rewriting
+`,` to `__` in the measurement id; `updateMeasurementsFromFile` reads only columns 0–3, so a comma in an
+id is **not** restored (the identity changes) and `ifForValidation` is silently dropped. The type column
+is honoured for a *new* measurement, while an existing measurement keeps its own type.
+
 ## 8. `calibrator/ObjectiveCalculator` `[V]` `[T]`
 
 Static utility computing four objective families, each with `TypeAADT` and
@@ -218,10 +231,24 @@ zero-denominator and accumulation policies are inconsistent.
   ```
   Acceptance depends only on the **simulation** objective improving; `rho` controls only whether the
   radius grows. `rouk` is unguarded against `MetaObjectiveChange == 0` (CAL-3).
-* Bookkeeping defects: `updateAnalyticalMeasurement` only updates when sizes **differ** (CAL-5);
+* **Acceptance policy, now driven by tests** (`CalibratorImplStateMachineTest`): iteration 0 performs no
+  acceptance test; an improved simulation objective is accepted (`successiveRejection` stays 0 and the
+  radius is not shrunk); a worsened one is rejected (`TrRadius * 0.9`, rejection count +1); the radius is
+  floored at `minTrRadius`; and reaching `maxSuccesiveRejection` invokes the analytical model's
+  `calibrateInternalParams` and resets the counter. Because the three outcomes each move `TrRadius`
+  differently, the otherwise-internal `accepted` flag is observable from outside.
+* Bookkeeping defects: `updateAnalyticalMeasurement` only updates when sizes **differ**, and even then it
+  iterates the *existing* keys — so a fresh call is a no-op, equal sizes short-circuit everything, new
+  iterations are never added, and a missing existing key throws (CAL-5, four tests);
   `createMetaModel` cannot actually reject null gradients (CAL-4); `parallelStream` + plain `HashMap`
   in the static meta-model factory (CAL-7); `calcAverageMetaParamsChange` divides by a possibly-zero
-  `k` (CAL-8); `drawRandomPoint` uses `Math.random()` (CAL-6).
+  `k`, yielding `NaN` that **silently disables** the random-restart guard rather than triggering it, and
+  throws `NullPointerException` when `oldMetaModel` lacks a key (CAL-8); `drawRandomPoint` uses
+  `Math.random()` (CAL-6). `maxTrRadius` is computed from the field default 25 before the constructor
+  assigns the configured radius, so a configured radius above 62.5 leaves a region that can only shrink
+  (CAL-1). `AnalyticalModelOptimizerImpl` starts from a **partially initialised** vector because of a
+  double increment in its init loop (CAL-10), and prints `iprint=3` COBYLA output plus one line per
+  variable on every call, so tests must capture stdout.
 * `OptimizerName` defaults to `AnalyticalModelOptimizer.TROptimizerName`.
 
 ## 10. `calibrator/ParamReader` `[V]` `[T]`

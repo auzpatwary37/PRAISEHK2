@@ -356,6 +356,64 @@ No formula, tolerance, optimizer constant or weighting was modified in this PR.
 
 ---
 
+### MEAS-17 — `VERIFIED` — `Measurement.clone()` silently drops the coordinate
+* **Where:** `Measurement.clone()` copies `volumes`, `sd` and `attributes`, and never touches `coord`.
+* **Legacy:** `getCoord()` is public observable state (set by `MeasurementsReader` from a `<Coord>`
+  element), and a clone loses it: the original reports a coordinate, the clone reports `null`.
+* **Expected:** a clone should reproduce the observable object graph — `coord` is part of it, and the
+  objective-purity plan's acceptance criterion is exactly deep structural equivalence.
+* **Evidence:** `MeasurementTest.cloneDropsCoord`.
+* **Contrast (also pinned):** `Measurement.clone()` *does* give the child its own copy of the declared
+  time-bean map (`MeasurementTest.cloneCopiesTheTimeBeanMap`), which is what makes MEAS-18 possible.
+
+### MEAS-18 — `VERIFIED` — `Measurements.clone()` ALIASES the container time-bean map, and the clone can
+diverge from its own children
+* **Where:** `Measurements.clone()` constructs `new Measurements(this.timeBean)` — the **same map
+  instance**, not a copy — while each child `Measurement.clone()` builds `new HashMap<>(timeBean)`.
+* **Legacy, two consequences:**
+  1. `addRedundantTimeBean(...)` on the clone mutates the **original** container's time-bean map, because
+     both refer to the same object (`assertSame` holds on `getTimeBean()`);
+  2. the cloned container and its cloned children then **disagree**: the container declares two time
+     beans while the child still holds a single-bean copy, so a volume for the newly declared bean is
+     silently ignored by the child (logged and dropped).
+* **Expected:** cloning a container should produce an independent object graph, or the sharing should be
+  explicit and documented. Today a "copy" is neither independent nor faithfully consistent.
+* **Evidence:** `MeasurementsTest.cloneAliasesTheContainerTimeBeanMap`,
+  `MeasurementsTest.clonedContainerDivergesFromItsChildren`.
+* **Why it matters:** the purity plan's defensive-copy strategy is unsound while this holds — this is the
+  container-level counterpart of MEAS-1 (shared attribute objects) and MEAS-2 (dropped attributes).
+
+### MEAS-19 — `VERIFIED` — the CSV writer rewrites `,` to `__` in the measurement id and the reader never
+restores it
+* **Where:** `Measurements.writeCSVMeasurements` writes `m.getId().toString().replace(",", "__")`; the
+  `ifForValidation` column is written but `updateMeasurementsFromFile` reads only columns 0–3.
+* **Legacy:** a measurement whose id contains a comma is written as `a__b` and read back as `a__b`, so
+  the **identity is silently changed**; the original id is unrecoverable from the file.
+* **Expected:** an escaping scheme that round trips, or an explicit error.
+* **Evidence:** `MeasurementsTest.csvRewritesCommaInMeasurementId`.
+
+### MEAS-20 — `VERIFIED` — `ifForValidation` is written but ignored on read
+* **Where:** as above — the fifth CSV column is dropped by `updateMeasurementsFromFile`.
+* **Legacy:** the flag appears in the file (`...,true`) and is absent after a read, so the persistence
+  layer loses a validation-partition marker.
+* **Evidence:** `MeasurementsTest.csvDropsIfForValidation`.
+
+### MEAS-21 — `VERIFIED` — the empty-volume path of BOTH fare-link types throws before the MaaS fallback
+* **Where:** `fareLinkVolume` and `fareLinkVolumeCluster` run
+  `if (m.getVolumes().size() == 0) { for (tb) if (modelOut.getFareLinkVolume().containsKey(tb)) ... }`
+  **before** the fallback map is built.
+* **Legacy:** with an empty volume map and a `null` `FareLinkVolume`, the method throws
+  `NullPointerException` **before reaching the fallback** — so MEAS-4's finding that the cluster fallback
+  "works" is **conditional on the measurement already having a volume entry**. The earlier tests used a
+  populated volume map and therefore missed this.
+* **Expected:** the fallback should be resolved before any container is read, or the null case handled.
+* **Evidence:** `MeasurementTypeTest.fareLinkEmptyVolumePathThrowsBeforeTheFallback` (both types).
+* **Also pinned:** the CSV type column IS honoured for a new measurement but an **existing** measurement
+  keeps its own type (`MeasurementsTest.csvTypeHandling`), and a multi-time-bean round trip preserves id,
+  times, volumes and type (`csvRoundTripAllColumns`).
+
+---
+
 ## CNLLink (`analyticalModelImpl/CNLLink.java`)
 
 ### LINK-1 — `VERIFIED` — the `train` branch uses a different, flow-independent formula with a
@@ -517,7 +575,7 @@ matters for every reading of this class.
 
 ## CalibratorImpl (`calibrator/CalibratorImpl.java`) — trust region
 
-### CAL-1 — `READ` — `maxTrRadius` ignores the configured initial radius
+### CAL-1 — `VERIFIED` — `maxTrRadius` ignores the configured initial radius
 * Field initialisers run before the constructor body:
   ```java
   protected double TrRadius = 25;
@@ -528,9 +586,10 @@ matters for every reading of this class.
   The constructor assigns `TrRadius` **after** `maxTrRadius` was computed, and never recomputes
   `maxTrRadius`. With a non-default `initialTRRadius` (e.g. 100) the effective maximum stays
   **62.5** < initial radius, so the trust region can only shrink.
-  A test with a non-default initial radius must pin this before any change.
+* **Evidence:** `CalibratorImplStateMachineTest.Construction.maxTrRadiusIgnoresTheConfiguredInitialRadius`
+  — with `initialTRRadius = 100` the getters report `TrRadius = 100` and `maxTrRadius = 62.5`.
 
-### CAL-2 — `READ` — an improved simulation objective is accepted even when `rho < thresholdErrorRatio`
+### CAL-2 — `VERIFIED` — an improved simulation objective is accepted even when `rho < thresholdErrorRatio`
 * ```java
   if (SimObjectiveChange > 0 && rouk >= thresholdErrorRatio) { accept; grow; }
   else if (SimObjectiveChange > 0 && rouk < thresholdErrorRatio) { accept; /* no growth */ }
@@ -539,6 +598,28 @@ matters for every reading of this class.
   So acceptance depends only on `SimObjectiveChange > 0`; `rho` controls only whether the radius
   grows. Standard trust-region logic would reject a step with `rho` below the threshold. This is
   the policy the brief explicitly asks to preserve until it is compared with the publication.
+
+### CAL-11 — `VERIFIED` — the internal recalibration is invoked and its RESULT IS DISCARDED
+* **Where:** `CalibratorImpl.generateNewParam`:
+  ```java
+  Map<Integer,Measurements> newAnaMeasurements = this.sueAssignment.calibrateInternalParams(
+          this.simMeasurements, scaledParam, …);      // recalibrated measurements
+  this.updateAnalyticalMeasurement(newAnaMeasurements);
+  this.successiveRejection = 0;                       // reset regardless
+  ```
+* **Legacy:** `this.simMeasurements` and `this.anaMeasurements` hold the same iteration keys, so the two
+  maps have **equal sizes**. `updateAnalyticalMeasurement` short-circuits entirely on equal sizes
+  (CAL-5), so the recalibrated measurements **never reach the calibrator's state**, while the rejection
+  counter is reset anyway. The recovery mechanism therefore *appears* to run and recovers nothing: the
+  model keeps its old analytical measurements and the trigger can fire again later with the same effect.
+* **Evidence:** `CalibratorImplStateMachineTest.StateMachine.internalCalibrationResultIsDiscarded` — the
+  stub returns the same iteration keys with volume `777`, and all three recorded iterations still hold
+  `100` after the call, with `successiveRejection` reset to 0. Also
+  `counterRestartsAfterTheTrigger`, which proves the counter genuinely restarts (so the trigger is not
+  immediately re-entered) and that the radius is *not* reset by the trigger.
+* **Combined with CAL-5**, this makes the successive-rejection recovery path effectively inert. That
+  changes the interpretation of the whole trust-region mechanism, so it is recorded as its own item -
+  the reviewer's point, confirmed by test rather than by inspection.
 
 ### CAL-3 — `READ` — `rho` has no guard for a zero predicted reduction
 * `double rouk = SimObjectiveChange / MetaObjectiveChange;` — with
@@ -555,7 +636,7 @@ matters for every reading of this class.
   `simGradient.get(m.getId())` → NPE. The intent ("switching to AnalyticalLinear") is not realised.
   The `catch` also swallows the message into `System.out` rather than logging.
 
-### CAL-5 — `READ` — `updateAnalyticalMeasurement` gate is inverted
+### CAL-5 — `VERIFIED` — `updateAnalyticalMeasurement` gate is inverted
 * ```java
   if (this.anaMeasurements.size() != measurements.size()) {
       logger.error("Measurements size must match. Aborting update");
@@ -566,10 +647,22 @@ matters for every reading of this class.
   The update loop runs **only when the sizes differ**, and it iterates the *existing* keys (so a
   new iteration's measurement is never added). When the sizes *match* — the normal case — no update
   happens at all. The "same size / new contents" case is a no-op.
+* **Verified in four parts:** a fresh calibrator's update is a complete no-op (the loop iterates the
+  empty existing key set); with equal sizes the method short-circuits and even key 0 stays stale; with
+  different sizes only the existing keys are refreshed and the extra iteration is still not added; and
+  an existing iteration missing from the new map throws `IllegalArgumentException`.
+* **Evidence:** `CalibratorImplStateMachineTest.UpdateAnalyticalMeasurement.*` (four tests).
 
-### CAL-6 — `READ` — `drawRandomPoint` uses `Math.random()`
+### CAL-6 — `VERIFIED` — `drawRandomPoint` uses `Math.random()`
 * Non-seedable; makes random restarts and any test that reaches them nondeterministic. The modern
   target must inject a seeded RNG.
+* **Evidence:** `CalibratorImplStateMachineTest.DrawRandomPoint.boundsRespectedAndKeyedByCode` — the
+  point respects the bounds and is keyed by the CSV **Code** column. The test deliberately does **not**
+  assert that two draws differ: that would make a "deterministic" suite depend on `Math.random()` and
+  could fail by chance. Non-seedability is **source-established** — the production path calls
+  `Math.random()` and offers no seed or RNG parameter — rather than proven by comparing draws. This
+  distinction is the same one the C/`O` legend insists on: a test that exists is not a test that
+  proves the property in its name.
 
 ### CAL-7 — `READ` — `parallelStream()` over measurements while mutating maps
 * `createMetaModel` (instance method) does
@@ -580,11 +673,18 @@ matters for every reading of this class.
   between the two is unspecified. Correctness before parallelism: replace with a sequential
   reduction, then benchmark.
 
-### CAL-8 — `READ` — `calcAverageMetaParamsChange` divides by `k` without checking `k == 0`
+### CAL-8 — `VERIFIED` — `calcAverageMetaParamsChange` divides by `k` without checking `k == 0`
 * `z = z / k;` with `k` incremented per (measurement, time bean) when meta-model types match. If
   `metaModels` is empty, or types differ (the `break outerloop` path sets `comparable=false` but
   still divides), `k` can be 0 → `NaN`. Also `this.oldMetaModel.get(m)` is dereferenced assuming
   the previous iteration populated every key → NPE on the first comparison.
+* **Consequential effect, now pinned:** with no meta-models the mean is `NaN`, and the caller's guard
+  is `change < minMetaParamChange` — which is **false** for `NaN`, so the random-restart branch can
+  never fire. The empty-meta-model case therefore silently disables the restart mechanism instead of
+  triggering it.
+* **Evidence:** `CalibratorImplStateMachineTest.AverageMetaParamsChange.noMetaModelsYieldsNaN`
+  (`0/0` and the downstream comparison) and `missingOldMetaModelThrows` (NPE with `metaModels`
+  populated, because `oldMetaModel` is private and starts empty).
 
 ### CAL-9 — `READ` — logging is nondeterministic
 * `interLogger` writes `LocalDateTime.now()` into `iterLogger.csv`, and the header is written based
@@ -691,6 +791,30 @@ matters for every reading of this class.
   (MEAS-14/15) also affects meta-model reproducibility. Recorded for the redesign; no separate test.
 
 ---
+
+### CAL-10 — `READ` — the trust-region optimizer starts from a PARTIALLY initialised vector
+* **Where:** `AnalyticalModelOptimizerImpl.performOptimization`:
+  ```java
+  double[] x=new double[noOfVariables];
+  for (int j=0;j<x.length;j++) {
+      x[j]=1;
+      j++;            // <-- double increment
+  }
+  ```
+  The loop increments `j` twice per pass, so only the **even** indices are set to `1`; the odd indices
+  keep the array default `0`. For two variables the start point is `[1, 0]`, not `[1, 1]`.
+* **Legacy:** `ScaleUp(x)` maps a coordinate to `(1 + x[j]/100) * currentParam`, so a `0` coordinate
+  means "leave this parameter exactly as it is". The optimizer therefore begins at the *current*
+  parameter for every odd-index variable rather than at a perturbed point — a silent asymmetry in the
+  starting simplex.
+* **Expected:** all coordinates initialised consistently.
+* **Status:** `READ` — not pinned by a test, because the initial vector is not exposed and the returned
+  point is the output of a COBYLA run, so the start cannot be observed in isolation without first
+  extracting the optimizer's setup. Recorded here so the redesign does not reproduce it.
+* Also recorded: this path prints `iprint=3` COBYLA output plus one `System.out.println` per variable on
+  every call, and `CalibratorImpl.writeMeasurementComparison` writes `Comparison<N>.csv` per iteration.
+  Tests must capture stdout rather than assume it is clean —
+  `CalibratorImplStateMachineTest` does exactly that.
 
 ## Cross-cutting
 

@@ -1,5 +1,5 @@
 package ust.hk.praisehk.metamodelcalibration.measurements;
-
+import org.matsim.api.core.v01.Coord;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
@@ -127,4 +127,32 @@ class MeasurementTest {
 				.add(Id.createLinkId("L2"));
 		assertEquals(2, ((List<?>) m.getAttribute(Measurement.linkListAttributeName)).size());
 	}
+
+	@Test
+	@DisplayName("REVIEW_REQUIRED MEAS-17: Measurement.clone() does NOT copy the coordinate")
+	void cloneDropsCoord() {
+		Measurement m = container().createAnadAddMeasurement("m1", MeasurementType.linkVolume);
+		m.setCoord(new Coord(1234.5, 6789.0));
+
+		Measurement c = m.clone();
+
+		assertNotNull(m.getCoord(), "precondition: the original has a coordinate");
+		assertNull(c.getCoord(),
+				"coord is observable state, and clone() silently drops it (MEAS-17)");
+	}
+
+	@Test
+	@DisplayName("CHARACTERIZATION: Measurement.clone() DOES copy the declared time-bean map")
+	void cloneCopiesTheTimeBeanMap() {
+		Measurement m = container().createAnadAddMeasurement("m1", MeasurementType.linkVolume);
+		m.putVolume(TB1, 5.);
+
+		Measurement c = m.clone();
+
+		assertNotSame(m.getTimeBean(), c.getTimeBean(), "the child gets its own copy");
+		assertEquals(m.getTimeBean().size(), c.getTimeBean().size());
+		assertEquals(m.getTimeBean().keySet(), c.getTimeBean().keySet());
+		assertTrue(c.getTimeBean().containsKey(TB1));
+	}
+
 }

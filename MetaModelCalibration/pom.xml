@@ -109,6 +109,39 @@
 					     REVIEW_REQUIRED.md (PARAM-1).
 					-->
 					<workingDirectory>${project.basedir}</workingDirectory>
+					<!--
+					     Tests must not require network access.
+
+					     ParamReader.SetParamToConfig writes a MATSim Config to disk and reloads it via
+					     ConfigUtils.loadConfig, whose XML parser resolves the DTD declared in the file -
+					     http://www.matsim.org/files/dtd/config_v2.dtd - REMOTELY by default. That made the
+					     SetParamToConfig characterization tests depend on reaching www.matsim.org: they
+					     passed locally (networked / already cached) and FAILED on a CI runner, which is
+					     how the latent flake was found.
+
+					     The DTD ships inside the MATSim jar as dtd/config_v2.dtd. This property makes the
+					     parser take it from the classpath instead of the network.
+
+					     TWO SEPARATE THINGS are set below; they must not be conflated.
+
+					       1. -Dmatsim.preferLocalDtds=true  is the ACTUAL FIX. It makes the parser read
+					          dtd/config_v2.dtd from the classpath - the MATSim jar ships it - instead of
+					          fetching it from the network. Verified: the parser logs
+					          "Using local DTD from classpath:dtd/config_v2.dtd", and nothing in the run
+					          requests www.matsim.org.
+
+					       2. The invalid proxy 127.0.0.1:1 is DEFENCE IN DEPTH, NOT A GUARANTEE. It makes
+					          HTTP clients that honour the JVM proxy system properties fail fast, which is
+					          how the flake above would be caught again. It is NOT a process-level network
+					          sandbox: a client using a raw socket, an explicit Proxy.NO_PROXY, or its own
+					          proxy configuration can still reach the network. Do not cite it as proof of
+					          network isolation.
+
+					     Hard network isolation, if the project requires it, has to be enforced OUTSIDE
+					     this JVM - a network namespace, a firewall rule, or a container with no egress.
+					     That is not done here; the residual is recorded in docs/modernization/TEST_MATRIX.md.
+					-->
+					<argLine>-Dmatsim.preferLocalDtds=true -Dhttp.proxyHost=127.0.0.1 -Dhttp.proxyPort=1 -Dhttps.proxyHost=127.0.0.1 -Dhttps.proxyPort=1</argLine>
 					<excludes>
 						<exclude>**/AnalyticLinearMetaModelTest.java</exclude>
 						<exclude>**/MeasurementCreator.java</exclude>

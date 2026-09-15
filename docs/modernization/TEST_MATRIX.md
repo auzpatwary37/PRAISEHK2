@@ -13,8 +13,13 @@ The C/O distinction is load-bearing for the next phase: oracle-backed semantics 
 by a redesign, whereas characterized defects are free to be fixed deliberately (with a migration
 decision). A row must not be marked `O` merely because a test exists.
 
-Snapshot: **157 deterministic tests, 0 failures, ~9 s**, runnable offline
+Snapshot: **181 tests (1 skipped), 0 failures, ~9 s**, runnable offline
 (`mvn -o test` in `MetaModelCalibration`), enforced in CI on every PR into the trunk.
+
+How the count is composed: **158** on the trunk after the meta-model oracle merged, **+14** from the
+trust-region state machine (one `@Disabled` by design, see MODEL-5), **+9** from the clone/CSV
+characterization gaps. This snapshot line and the two counts in `ARCHITECTURE.md` are the only
+hand-maintained numbers; a deliberate change to any of them must be visible in the same PR.
 
 ---
 
@@ -115,6 +120,18 @@ Snapshot: **157 deterministic tests, 0 failures, ~9 s**, runnable offline
 | `fareLinkVolume` / `fareLinkVolumeCluster` round trip | ✔ | — | ✔ | ✔ | `FareLinkSerializationTests.fareLinkVolumeRoundTrip`, `fareLinkVolumeClusterRoundTrip` | cluster pins the bracket/space clean-up |
 | `MaaSPacakgeUsage` round trip | ✔ | — | ✔ | — | `FareLinkSerializationTests.maasPackageNameCannotRoundTrip` | **MEAS-8b** (cannot round trip) |
 
+| `Measurements.clone()` container time-bean aliasing | ✔ | — | ✔ | — | `MeasurementsTest.cloneAliasesTheContainerTimeBeanMap`, `clonedContainerDivergesFromItsChildren` | **MEAS-18**; the clone shares the map and can diverge from its own children |
+| `Measurement.clone()` coordinate + time-bean copy | ✔ | — | ✔ | — | `MeasurementTest.cloneDropsCoord`, `cloneCopiesTheTimeBeanMap` | **MEAS-17**; `coord` is dropped, the child's time-bean map *is* copied |
+| CSV measurement-id escaping | ✔ | — | ✔ | — | `MeasurementsTest.csvRewritesCommaInMeasurementId` | **MEAS-19**; `,` -> `__` and never restored |
+| CSV `ifForValidation` column | ✔ | — | ✔ | — | `MeasurementsTest.csvDropsIfForValidation` | **MEAS-20**; written, never read |
+| CSV type column (new vs existing measurement) and multi-bean round trip | ✔ | — | ✔ | ✔ | `MeasurementsTest.csvTypeHandling`, `csvRoundTripAllColumns` | the file's type is used for a new measurement only |
+| fare-link EMPTY-volume path | ✔ | — | ✔ | — | `MeasurementTypeTest.fareLinkEmptyVolumePathThrowsBeforeTheFallback` | **MEAS-21**; throws before the MaaS fallback is reached, so MEAS-4's "cluster works" is conditional |
+
+**CSV "round trip" scope, stated precisely:** the round trip preserves id (except commas), time bean,
+volume and — for a *new* measurement — type. It does **not** preserve `ifForValidation`, does not restore
+a comma in an id, and does not carry the other measurement attributes. Earlier wording in this matrix
+("CSV round trip") referred only to the volume path and was narrower than it sounded.
+
 ## 3b. Vendored transit fare contract (`transit.fare`)
 
 `FareCalculator` and `FareLink` were vendored from the HK MATSim fork (verbatim except the package
@@ -160,16 +177,18 @@ declaration). `FareLink`'s grammar is a serialization contract for `MeasurementT
 | scaling fields inert in the live path | ✔ | ✔ | — | — | `scalingFieldsAreIdentity` | **MODEL-4** |
 | constructor requires iteration key 0 | ✔ | — | ✔ | — | `constructorRequiresIterationZero` | **MODEL-1** |
 | static `errorT` | — | — | — | — | — | **MODEL-3**, record-only (unobservable: no getter) |
-| `LinearMetaModel`, `QuadraticMetaModel`, `AnalyticalQuadraticMetaModel` | — | P | — | — | — | P |
-| `GradientBasedMetaModel` (I/II/III), `SimAndAnalyticalGradientCalculator` | — | P | — | — | — | P; the gradient calculator must be distinguished from analytic derivatives |
-| `CalibratorImpl` trust ratio / accept / reject | — | P | — | — | — | P (phase 7) |
-| `CalibratorImpl` `maxTrRadius` init bug | — | — | P | — | — | P (**CAL-1**) |
-| `CalibratorImpl` NaN / Inf / zero predicted reduction | — | — | P | — | — | P (**CAL-3**) |
-| `createMetaModel` null gradient handling | — | — | P | — | — | P (**CAL-4**) |
-| `updateAnalyticalMeasurement` gate | — | — | P | — | — | P (**CAL-5**) |
-| `drawRandomPoint` seeded RNG | — | — | P | — | — | P (**CAL-6**) |
-| `parallelStream` determinism | — | — | P | — | — | P (**CAL-7**) |
-| `calcAverageMetaParamsChange` k=0 | — | — | P | — | — | P (**CAL-8**) |
+| other meta-model families: `LinearMetaModel`, `QuadraticMetaModel`, `AnalyticalQuadraticMetaModel`, `GradientBasedMetaModel` (I/II/III), `SimAndAnalyticalGradientCalculator` | — | P | — | — | — | not yet characterized. The gradient calculator must be kept distinct from analytic derivatives, and `SimAndAnalyticalGradientCalculator` is not the same object as the analytic derivative used by the ODEstimation work |
+| `CalibratorImpl` constructor / tunables | ✔ | — | — | — | `CalibratorImplStateMachineTest.Construction.tunablesArePinned`, `maxTrRadiusIgnoresTheConfiguredInitialRadius` | **CAL-1** |
+| `CalibratorImpl` iteration 0 (no acceptance test) | ✔ | — | — | ✔ | `StateMachine.iterationZeroHasNoAcceptanceTest` | also asserts the legacy `0th Objective Value` stdout report |
+| acceptance policy: accept vs reject | ✔ | — | ✔ | ✔ | `StateMachine.improvedObjectiveIsAccepted` (asserts only "not shrunk"), `worsenedObjectiveIsRejected` (`25 -> 22.5`) | **CAL-2**; the two ACCEPTED sub-branches (grow on `rho >= 0.01` vs hold below it) are **not** distinguished - `rho` is not settable from outside. **CAL-3** pending |
+| trust-radius floor (`minTrRadius`) | ✔ | ✔ | ✔ | — | `StateMachine.radiusIsFlooredAtMinTrRadius` | `O` for the clamp: `max(minTrRadius, TrRadius * 0.9)` computed against a raised floor, so the shrink is not applied below the bound |
+| internal-recalibration result application | ✔ | — | ✔ | ✔ | `StateMachine.internalCalibrationResultIsDiscarded`, `counterRestartsAfterTheTrigger` | **CAL-11**: the callback fires and the counter resets, but the recalibrated measurements are **discarded** |
+| `updateAnalyticalMeasurement` gate | ✔ | — | ✔ | — | `UpdateAnalyticalMeasurement.*` (4 tests) | **CAL-5** |
+| `drawRandomPoint` bounds + keying | ✔ | — | ✔ | — | `DrawRandomPoint.boundsRespectedAndKeyedByCode` | **CAL-6**; asserts bounds and the CSV-`Code` key set only. Non-seedability is a **source-established** property (`Math.random()`, no seed parameter), deliberately **not** asserted by comparing random draws |
+| `calcAverageMetaParamsChange` k=0 / missing old fit | ✔ | ✔ | ✔ | — | `AverageMetaParamsChange.noMetaModelsYieldsNaN`, `missingOldMetaModelThrows` | **CAL-8**; NaN silently disables the restart |
+| optimizer start vector partially initialised | — | — | — | — | — | **CAL-10**, record-only (start vector not observable) |
+| acceptance when `rho` is NaN/Inf/negative | — | — | P | — | — | **CAL-3**; `rho` depends on the fitted meta-model prediction and cannot be set from outside |
+| `parallelStream` determinism, `createMetaModel` null gradients | — | — | P | — | — | **CAL-4**, **CAL-7** |
 
 ## 5. Differentiation (ODEstimation) — blocked
 
@@ -196,7 +215,7 @@ declaration). `FareLink`'s grammar is a serialization contract for `MeasurementT
 | No Hong Kong production data required | ✔ | all fixtures in-memory; only `paramReaderTrial1.csv` values copied as literals |
 | No absolute filesystem paths in tests | ✔ | `@TempDir` used; legacy absolute-path helper excluded |
 | No MATLAB required | ✔ | MATLAB jars unused; `MatlabOptimizer` returns null |
-| No network required | ✔ | offline run verified |
+| No network required | ✔ | The observed failure is **fixed deterministically**: `ParamReader.SetParamToConfig` round trips through `ConfigUtils.loadConfig`, which resolved the MATSim DTD **remotely** (`www.matsim.org`) - a latent flake, green locally and red on a CI runner - until `-Dmatsim.preferLocalDtds=true` made it read `dtd/config_v2.dtd` from the MATSim jar. Surefire also sets an invalid proxy as **defence in depth** for HTTP clients that honour JVM proxy properties. **That guard is not a process-level network sandbox**, so residual egress remains possible for a client using a raw socket, `Proxy.NO_PROXY`, or its own proxy settings. Hard isolation would need network-namespace/firewall enforcement in CI, which is **not** in place - recorded as an open item |
 | No `Math.random()` in tests | ✔ | new tests deterministic; legacy nondeterministic test excluded |
 | No `HashMap` iteration-order dependence | ✔ | CSV assertions are order-independent |
 | Legacy nondeterministic/hanging test quarantined | ✔ | surefire `<excludes>` in `MetaModelCalibration/pom.xml` |
