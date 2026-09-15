@@ -587,16 +587,39 @@ if (error.get(timeBeanId).get(counter-1) < error.get(timeBeanId).get(counter-2))
 * **Evidence:** `nanErrorIsSilentlyReportedAsConverged` (asserts the throw for `+Inf` and the silent
   `true` for `Inf - Inf`).
 
-### SUE-5 — `READ` [`legacy-observed`] — recorded, not tested
-* `tolleranceLink` and the `linkSum` counter in `UpdateLinkVolume` are computed for every link and then
-  **discarded**: neither is returned nor used. The per-link relative-change diagnostic is dead.
-* The transit loop's guard is `error == Double.NaN || error == Double.NEGATIVE_INFINITY` — it tests NaN
-  (dead) where the car loop tests `+Infinity`, so a transit link can carry `+Infinity` error without
-  throwing. Not tested: it would need a `TransitLink` stub, and no test can distinguish it from the
-  car path today.
-* `UpdateLinkVolume` takes `(…, int counter, String timeBeanId)` while `CheckConvergence` takes
-  `(…, String timeBeanId, int counter)` — the argument order is transposed between the two halves of
-  the same loop.
+### SUE-5 — `VERIFIED` [`legacy-observed`, `suspected-defect`] — the transit half of the loop has NO reachable non-finite guard, and can report an infinite residual as CONVERGED
+* **Where:** `CheckConvergence` runs one loop for car links and one for transit links, and they disagree
+  on non-finite handling. The car loop guards with
+  `error == POSITIVE_INFINITY || error == NEGATIVE_INFINITY` **inside** the loaded branch and throws;
+  the transit loop guards with `error == Double.NaN || error == Double.NEGATIVE_INFINITY` **outside**
+  the branch. `NaN == NaN` is always false, and a square is never `NEGATIVE_INFINITY`, so **neither
+  transit guard can ever fire**.
+* **Legacy — three distinct outcomes, none of which is an error:**
+  | transit state | residual | verdict |
+  |---|---|---|
+  | finite current, loaded `+Inf` | `+Inf` | **CONVERGED** — the middle test is `error/newVolume*100 = Inf/Inf = NaN`, so `sum` never increments and the `sum == 0` disjunct fires |
+  | `+Inf` current, finite loaded | `+Inf` | not converged — the residual merely breaches the tolerance; nothing throws |
+  | `+Inf` current, `+Inf` loaded | `NaN` | **CONVERGED** — the dead-guard shape of SUE-4, on the transit path |
+  For the **same** first state on a car link the loop throws `IllegalArgumentException("Error is
+  infinity!!!")`. The two halves of one loop therefore disagree on whether an infinite residual is an
+  error at all, and the transit half can read it as *success*.
+* **Also discarded, in both halves:** `tolleranceLink` and the `linkSum` counter in `UpdateLinkVolume`
+  are accumulated for every link and then **never returned or read**. `UpdateLinkVolume` consults only
+  the settable `tollerance` field, so the per-link relative-change diagnostic has no effect on any
+  verdict.
+* **Code-shape note (not behaviour):** `UpdateLinkVolume` takes `(…, int counter, String timeBeanId)`
+  while `CheckConvergence` takes `(…, String timeBeanId, int counter)` — the argument order is
+  transposed between the two halves of the same loop.
+* **Expected:** one non-finite policy for the whole loop. `+Inf` should throw wherever it is produced,
+  as the car half already does, and `NaN` should never be readable as convergence.
+* **Evidence:** `CNLSUEModelTransitLoopTest.infiniteErrorThrowsForCarAndIsAbsorbedForTransit` (the
+  asymmetry, asserted against the car throw),
+  `infiniteTransitErrorAgainstAFiniteTargetIsNotConverged`,
+  `infiniteTransitErrorAgainstAnInfiniteTargetIsReportedAsConverged`, `nanTransitErrorIsReportedAsConverged`,
+  `transitUpdateAppliesTheMsaStepWeight`, `transitUpdateOnALaterIterationUsesTheGrownBeta`,
+  `emptyTransitMapLeavesTheCarPathAlone`. Driven through `fixtures/StubTransitLink`, a two-member
+  `TransitLink` double (passenger count in, accumulated passenger delta out) that avoids the
+  `TransitSchedule` the real subclasses require.
 
 ### SUE-6 — `VERIFIED` [`legacy-observed`, `suspected-defect`] — the middle stopping criterion is `(delta² / new) * 100`, which is NOT a relative error
 * `CheckConvergence` computes `error = Math.pow(currentVolume - newVolume, 2)` and then compares
@@ -616,6 +639,31 @@ if (error.get(timeBeanId).get(counter-1) < error.get(timeBeanId).get(counter-2))
   (133.33 vs 1333.33), and that a single tolerance (500) produces opposite verdicts. The verdict
   difference is the observable part: the first disjunct is a hardcoded `squareSum <= 1` and neither
   state is pointwise-converged, so the middle disjunct alone decides.
+
+### SUE-7 — `VERIFIED` [`legacy-observed`, `suspected-defect`] — the forward model is NOT self-contained: the constructor installs containers but not the network, and the check/update pair is counter-coupled
+* **Where:** `new CNLSUEModel(timeBeans)` registers per-time-bean containers only (`Demand`,
+  `carDemand`, `transitLinks`, `beta`, `error`, `error1` and the output maps). The `networks` map is
+  populated **only** by `generateRoutesAndOD` (line 303), which also replaces `transitLinks` (306),
+  seeds `consecutiveSUEErrorIncrease` (314) and fills the demands (315+). There is no single call that
+  makes the model runnable.
+* **Legacy — four observable consequences:**
+  | fact | consequence |
+  |---|---|
+  | `networks` is empty after construction | `CheckConvergence` throws `NullPointerException` as soon as any car link is loaded, so a car assignment cannot run without `generateRoutesAndOD` |
+  | an unloaded model reports **CONVERGED** | with no links `squareSum` is 0 and the `sum == 0` disjunct fires — an un-run assignment is, from the outside, indistinguishable from a solved one |
+  | `transitLinks` **exists but is empty** after construction | the transit loop is inert rather than null, so the transit half needs no `generateRoutesAndOD` to be *safe*, only to be non-empty |
+  | `UpdateLinkVolume` reads `error.get(counter-1)` and `error.get(counter-2)` | it is **not standalone**: it must run *after* `CheckConvergence` for the same counter or it throws `IndexOutOfBoundsException` |
+* **The residual history is reset, not appended, at counter 1:** `CheckConvergence` clears `error` when
+  `counter == 1`, so its length is exactly the number of counters driven — driving counter 1 twice
+  leaves one entry, and a following counter-2 update still overruns.
+* **Where this lands:** the concrete input to the Stage-3 "explicit, self-contained lifecycle" item. It
+  is recorded as a contract rather than fixed here, because making the model self-contained changes
+  which call sequences are legal.
+* **Evidence:** `CNLSUEModelLifecycleTest.constructorDoesNotEstablishTheNetwork`,
+  `emptyModelReportsConverged`, `transitContainerExistsButIsEmpty`,
+  `updateReadsTheResidualHistoryTheCheckAppends`. Everything is pinned through observable behaviour
+  (a thrown exception, the returned verdict, a public getter) because `beta`, `error` and `error1` have
+  no accessors.
 
 ## ParamReader (`calibrator/ParamReader.java`)
 
