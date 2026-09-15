@@ -640,6 +640,31 @@ if (error.get(timeBeanId).get(counter-1) < error.get(timeBeanId).get(counter-2))
   difference is the observable part: the first disjunct is a hardcoded `squareSum <= 1` and neither
   state is pointwise-converged, so the middle disjunct alone decides.
 
+### SUE-7 — `VERIFIED` [`legacy-observed`, `suspected-defect`] — the forward model is NOT self-contained: the constructor installs containers but not the network, and the check/update pair is counter-coupled
+* **Where:** `new CNLSUEModel(timeBeans)` registers per-time-bean containers only (`Demand`,
+  `carDemand`, `transitLinks`, `beta`, `error`, `error1` and the output maps). The `networks` map is
+  populated **only** by `generateRoutesAndOD` (line 303), which also replaces `transitLinks` (306),
+  seeds `consecutiveSUEErrorIncrease` (314) and fills the demands (315+). There is no single call that
+  makes the model runnable.
+* **Legacy — four observable consequences:**
+  | fact | consequence |
+  |---|---|
+  | `networks` is empty after construction | `CheckConvergence` throws `NullPointerException` as soon as any car link is loaded, so a car assignment cannot run without `generateRoutesAndOD` |
+  | an unloaded model reports **CONVERGED** | with no links `squareSum` is 0 and the `sum == 0` disjunct fires — an un-run assignment is, from the outside, indistinguishable from a solved one |
+  | `transitLinks` **exists but is empty** after construction | the transit loop is inert rather than null, so the transit half needs no `generateRoutesAndOD` to be *safe*, only to be non-empty |
+  | `UpdateLinkVolume` reads `error.get(counter-1)` and `error.get(counter-2)` | it is **not standalone**: it must run *after* `CheckConvergence` for the same counter or it throws `IndexOutOfBoundsException` |
+* **The residual history is reset, not appended, at counter 1:** `CheckConvergence` clears `error` when
+  `counter == 1`, so its length is exactly the number of counters driven — driving counter 1 twice
+  leaves one entry, and a following counter-2 update still overruns.
+* **Where this lands:** the concrete input to the Stage-3 "explicit, self-contained lifecycle" item. It
+  is recorded as a contract rather than fixed here, because making the model self-contained changes
+  which call sequences are legal.
+* **Evidence:** `CNLSUEModelLifecycleTest.constructorDoesNotEstablishTheNetwork`,
+  `emptyModelReportsConverged`, `transitContainerExistsButIsEmpty`,
+  `updateReadsTheResidualHistoryTheCheckAppends`. Everything is pinned through observable behaviour
+  (a thrown exception, the returned verdict, a public getter) because `beta`, `error` and `error1` have
+  no accessors.
+
 ## ParamReader (`calibrator/ParamReader.java`)
 
 All six items below are now `VERIFIED` by `ParamReaderTest` (23 tests). The internal maps are keyed by

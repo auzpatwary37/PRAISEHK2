@@ -13,13 +13,13 @@ The C/O distinction is load-bearing for the next phase: oracle-backed semantics 
 by a redesign, whereas characterized defects are free to be fixed deliberately (with a migration
 decision). A row must not be marked `O` merely because a test exists.
 
-Snapshot: **199 tests (1 skipped), 0 failures, ~9 s**, runnable offline
+Snapshot: **203 tests (1 skipped), 0 failures, ~9 s**, runnable offline
 (`mvn -o test` in `MetaModelCalibration`), enforced in CI on every PR into the trunk.
 
 How the count is composed: **158** on the trunk after the meta-model oracle merged, **+14** from the
 trust-region state machine (one `@Disabled` by design, see MODEL-5), **+9** from the clone/CSV
 characterization gaps, **+11** from the `CNLSUEModel` MSA core (SUE-1..SUE-6), **+7** from the transit
-half of the same loop (SUE-5). This snapshot line and
+half of the same loop (SUE-5), **+4** from the lifecycle contract (SUE-7). This snapshot line and
 the two counts in `ARCHITECTURE.md` are the only
 hand-maintained numbers; a deliberate change to any of them must be visible in the same PR.
 
@@ -48,6 +48,7 @@ hand-maintained numbers; a deliberate change to any of them must be visible in t
 | `CNLSUEModel` MSA counter init / lifecycle coupling | ✔ | — | ✔ | — | `nonDecreasingErrorThrowsWhenTheCounterWasNeverSeeded`, `nonDecreasingErrorGrowsBetaByAlphaOnceTheCounterIsSeeded` | **SUE-1**: the α branch reads state that only `generateRoutesAndOD` seeds. Constructor-path failure only - not a production-reachability claim |
 | `CNLSUEModel` stopping-rule numerical robustness (**car / no-transit**) | ✔ | — | ✔ | — | `nanErrorIsSilentlyReportedAsConverged` | **SUE-4**: the `== Double.NaN` guards are dead, and NaN reports converged |
 | `CNLSUEModel` MSA loop, TRANSIT half (**car map empty**) | ✔ | ✔ | ✔ | — | `CNLSUEModelTransitLoopTest.infiniteErrorThrowsForCarAndIsAbsorbedForTransit`, `infiniteTransitErrorAgainstAFiniteTargetIsNotConverged`, `infiniteTransitErrorAgainstAnInfiniteTargetIsReportedAsConverged`, `nanTransitErrorIsReportedAsConverged`, `transitUpdateAppliesTheMsaStepWeight`, `transitUpdateOnALaterIterationUsesTheGrownBeta`, `emptyTransitMapLeavesTheCarPathAlone` | **SUE-5**: the transit guard tests `NaN`/`-Inf` *outside* the branch, so it is unreachable — a transit link carries `+Inf` where a car link throws, and `Inf/Inf = NaN` lets the `sum == 0` disjunct report an infinite residual as converged. Driven by `fixtures/StubTransitLink` |
+| `CNLSUEModel` lifecycle / self-containment | ✔ | ✔ | ✔ | — | `CNLSUEModelLifecycleTest.constructorDoesNotEstablishTheNetwork`, `emptyModelReportsConverged`, `transitContainerExistsButIsEmpty`, `updateReadsTheResidualHistoryTheCheckAppends` | **SUE-7**: the constructor installs containers but not the network (a loaded car link throws), an unloaded model reports converged, the transit container exists but is empty, and `UpdateLinkVolume` must follow `CheckConvergence` for the same counter. Pinned through observable behaviour only — `beta`/`error`/`error1` have no accessors |
 | `CNLSUEModel` logit route split | — | P | — | — | — | P |
 | `CNLSUEModel` OD demand conservation | — | P | — | — | — | P |
 | `CNLSUEModel` link-flow aggregation | — | P | — | — | — | P |
