@@ -3,6 +3,14 @@
 This document records what each important legacy class **is responsible for** and what it actually
 computes, so that behaviour can be protected before it is changed.
 
+**Everything described here is Ashraf's pre-existing implementation.** The modernization series has not
+rewritten it: against the frozen legacy baseline (`ODEstimationMatsim`, merge-base `77f93f25`) the whole
+production change is 15 files / +229/-20 lines, and every one of those lines is an import redirect to the
+vendored `FareCalculator`/`FareLink` or a dead-import removal. No equation, constant, tolerance or
+weighting was modified. What this series adds is tests, fixtures, CI and this documentation. Findings
+below and in `REVIEW_REQUIRED.md` are therefore **observations about existing behaviour**, not reports of
+modernization regressions.
+
 **Confidence markers** — used deliberately, because a wrong claim here is worse than an absent one:
 
 * `[V]` **verified** — established by reading the code and, where noted, reproduced by a passing test.
@@ -126,12 +134,42 @@ See `PRAISE_MATSIMHK_RELATIONSHIP.md` §4.
   `setDefaultParameters(params)` seeds them.
 * Entry points: `perFormSUE(params, originalMeasurements)` and
   `perFormSUE(params, anaParams, originalMeasurements)`.
-* **Weighted MSA**: `beta` is a `Map<String /*timeBeanId*/, ArrayList<Double>>` explicitly commented
-  "related to weighted MSA of the SUE". The sequence is seeded with `1.0` and extended by adding
-  `gammaMSA` or `alphaMSA` depending on the branch; the update weight used when averaging new flows
-  is `1/beta(counter-1)`. Tunables: `setMSAAlpha`, `setMSAGamma`, `setTollerance`. **The exact branch
-  condition, the initial values of alpha/gamma, and the stopping rule are `[U]` and are the subject
-  of roadmap phase 8.**
+* **Primary source — Ashraf's own comments, verbatim.** The algorithm identifies itself as a weighted MSA
+  and its two constants as MSA step-size parameters:
+  ```java
+  * TODO:Fixing the alpha and beta will require special thinking.
+  private double alphaMSA=1.9;//parameter for decreasing MSA step size
+  private double gammaMSA=.1;//parameter for decreasing MSA step size
+  private Map<String,ArrayList<Double>> beta=...; //This is related to weighted MSA of the SUE
+  ```
+  Public setters `setMSAAlpha`/`setMSAGamma` exist, so the constants are meant to be tunable. The labels
+  used below (`beta`, step weight, lifecycle coupling) are **analysis layered on top of** this vocabulary,
+  not a replacement history for it.
+* **Sibling implementations — one hand-written family, not copies.** `SUEModelContTime`,
+  `CNLSUEModelSubPop` and `SUEModelContTimeSubPop` are variants of the same algorithm. `SUEModelContTime`
+  carries the *same* `alphaMSA`/`gammaMSA` constants and the *same* TODO comment, but keeps the counter as
+  a single field (`protected int consecutiveSUEErrorIncrease = 0;`) where `CNLSUEModel` uses a
+  per-time-bean `Map<String,Double>`. Related-but-unequal formulas across these classes are therefore read
+  as a hand-written family diverging over time, **not** automatically as inconsistency or defect, and
+  cross-class comparison precedes any redesign decision.
+* **Weighted MSA `[V]`** (car / no-transit path; transit half untested, see REVIEW_REQUIRED SUE-5).
+  `beta` is a per-time-bean `ArrayList<Double>` seeded to `1.0` at `counter == 1` - so the first step
+  takes the full loaded volume - and thereafter grown by `+gammaMSA = 0.1` on a strictly decreasing
+  residual, or `+alphaMSA = 1.9` otherwise. Every link and transit link moves by
+  `(1 / beta[counter-1]) * (loaded - current)`: an **adaptive `1/beta`**. Along an all-decreasing run
+  the weight is `1/(1 + 0.1(k-1))`; a harmonic `1/counter` variant exists in the source but is commented
+  out. Derivation in REVIEW_REQUIRED.
+* The step norm is `sqrt(sum of squared moves)` and is compared against the **field** `tollerance`
+  (default `1`), not against a parameter - `UpdateLinkVolume` takes none.
+* The α branch reads `consecutiveSUEErrorIncrease`, which only `generateRoutesAndOD` seeds (line 314).
+  The intended production lifecycle therefore reaches the α branch normally, but `UpdateLinkVolume`
+  itself does not establish the state it reads - see SUE-1.
+* **Stopping rule - now `[V]`.** `CheckConvergence` appends the residual norm to `error` and returns
+  true if **any** of: the squared-error norm is `<= 1` (hardcoded); no link breaches the `tollerance`
+  **parameter**; or every link is below a squared error of 1. The three criteria are of different kinds
+  and interact (SUE-2, SUE-3), the middle one is not actually a relative error and is scale dependent
+  (SUE-6), and the `== Double.NaN` guards are dead so a NaN residual reports convergence (SUE-4). Full
+  statements in REVIEW_REQUIRED.
 * **Logit/mode split**: route and mode probabilities use a numerically stabilised logit — the
   accumulation is written `totalUtility += Math.exp(d - u)`, i.e. a max-shifted (log-sum-exp)
   denominator. The shift variable `d` and the dispersion parameters (`LinkMiu`, `ModeMiu`) are `[U]`

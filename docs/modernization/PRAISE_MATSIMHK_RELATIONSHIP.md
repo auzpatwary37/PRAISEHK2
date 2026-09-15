@@ -37,8 +37,7 @@ difference between them matters:
 | **Import + same-package (implicit) references** — the correct analysis | **39 files / 11,024 LOC**, reaching `createBus/BusDataExtractor` (jackcess), `running/RunUtils`, `networkFromSaturn/CreateNetworkUtils`, `createPTGTFS/FareCalculatorPTGTFS` (gson), `withinDay/EquivalentStopForFare` |
 
 A same-package reference (`dynamicTransitRouter.RouteHelper` using `TransitLineRoute` with no import)
-is invisible to import-only analysis — an early under-count of "8 files" was wrong for exactly this
-reason and is recorded here so the mistake is not repeated.
+is invisible to import-only analysis, which is why the import-only measurement above under-counts.
 
 ### The pivot edge
 
