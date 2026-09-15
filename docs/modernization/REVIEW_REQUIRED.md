@@ -11,14 +11,59 @@ changed. Each item below records:
 * **Proposed resolution**
 * **Status** — `VERIFIED` = behaviour reproduced by a passing test; `READ` = established by reading
   the code, test still to be written.
+* **Provenance** — `legacy-observed`, `modernization-change`, `suspected-defect` or
+  `oracle-contradiction` (legend below). Every item carries one.
 
 No formula, tolerance, optimizer constant or weighting was modified in this PR.
+
+## Provenance and severity
+
+**This file characterizes a pre-existing hand-written algorithm. It does not report defects introduced by
+the modernization.** The evidence is the diff against the frozen legacy baseline (`ODEstimationMatsim`,
+merge-base `77f93f25`):
+
+```
+47 files changed, 7995 insertions(+), 23 deletions(-)
+```
+
+The **entire** change to production code is 15 files, +229/-20 lines — and every one of those lines is
+either an import redirect to the vendored `FareCalculator`/`FareLink` or a dead-import removal.
+`CNLSUEModel.java`, the class the MSA findings below describe, differs by **two lines**: its two fare
+imports. No equation, constant, tolerance or weighting was touched. The remaining ~7,700 inserted lines
+are tests, fixtures, CI and docs. `CalibratorImpl`, `ObjectiveCalculator`, `ParamReader` and the
+meta-model implementations are **not rewrites** — they are Ashraf's code with tests around it.
+
+| Tag | Meaning | Count |
+|---|---|---|
+| `legacy-observed` | Behaviour already present in `ODEstimationMatsim`. | 74 |
+| `modernization-change` | Behaviour changed *by* the modernization branch. | 1 (`FARE-3`, a dead-code deletion) |
+| `suspected-defect` | Legacy behaviour that *appears* domain-wrong but has no external oracle. **Requires an algorithmic decision by the domain owner.** | 1 (`SUE-6`) |
+| `oracle-contradiction` | Demonstrably violates an independent equation or specification. | 0 |
+
+`modernization-regression` is absent because there are none.
+
+**On severity language.** `VERIFIED` means the behaviour is pinned by a passing test. It does **not** mean
+the behaviour is wrong, and it does not establish intent. A characterization test proves behaviour; it
+cannot by itself prove the behaviour was unintended. Findings that look mathematically wrong are
+therefore described as *suspected* and left for a decision, not called bugs — no external oracle (paper,
+thesis, or older known-good implementation) establishes the intended formula. Candidates that need the
+domain owner's call are listed below rather than asserted here.
+
+### Candidates needing a domain decision (not asserted by this document)
+
+| Item | Why it is a candidate | What would settle it |
+|---|---|---|
+| `SUE-6` | The middle convergence criterion is dimensional, so convergence depends on demand scale. | Decide relative (scale-invariant) vs absolute convergence, and state it. |
+| `OBJ-4` | The "GEH" objective sums GEH², not GEH. | The published GEH definition, or the objective spec. |
+| `MEAS-3` | `linkVolume` gradient handling looks unsound. | The intended gradient contract for the measurement. |
+| `SUE-3` | The pointwise disjunct cannot fire while any link is unloaded. | Whether an unloaded link *should* count as converged (this may be intended). |
+| `SUE-4` | A NaN residual is reported as converged (the guard is dead). | Whether this occurs in practice, or is a bug to fix. |
 
 ---
 
 ## `transit.fare` (vendored from the HK MATSim fork)
 
-### FARE-1 — `VERIFIED` — `FareLink(String)` throws a raw `ArrayIndexOutOfBoundsException` on a truncated description
+### FARE-1 — `VERIFIED` [`legacy-observed`] — `FareLink(String)` throws a raw `ArrayIndexOutOfBoundsException` on a truncated description
 * **Where:** `FareLink(String fareLinkDescription)` splits on `"___"` and indexes `part[1..3]` or
   `part[1..5]` with no length check.
 * **Legacy:** `new FareLink("NetworkWideFare___STOP_A")` and
@@ -34,7 +79,7 @@ No formula, tolerance, optimizer constant or weighting was modified in this PR.
   after the fare-measurement pipeline has characterization tests, because the grammar is also a
   serialization contract for `MeasurementsReader`/`Writer`.
 
-### FARE-2 — `VERIFIED` — the `___` separator is neither escaped nor validated
+### FARE-2 — `VERIFIED` [`legacy-observed`] — the `___` separator is neither escaped nor validated
 * **Where:** `FareLink.seperator = "___"`; parsing and `toString()` both use it raw.
 * **Legacy:** an id containing `"___"` produces extra tokens; the parser silently reads the first
   fields and **discards the tail**. Example: `NetworkWideFare___A___B___STOP___X___bus` parses with
@@ -43,7 +88,7 @@ No formula, tolerance, optimizer constant or weighting was modified in this PR.
 * **Evidence:** `FareLinkTest.separatorIsNotEscaped`.
 * **Proposed resolution:** add an exact token-count check so silent truncation becomes a failure.
 
-### FARE-3 — `READ` — dead fare code and dead imports removed with the fork
+### FARE-3 — `READ` [`modernization-change`] — dead fare code and dead imports removed with the fork
 * `MTRFareCalculator`, `ZonalFareCalculator`, `TransitStop`, `TransitFareHandler`,
   `TransferDiscountCalculator`, `RouteHelper` had **zero** active references in PRAISEHK; the imports
   of four of them were removed. The three usages of `MTRFareCalculator` in `CNLTransitRoute`
@@ -58,7 +103,7 @@ No formula, tolerance, optimizer constant or weighting was modified in this PR.
 
 ## ObjectiveCalculator (`calibrator/ObjectiveCalculator.java`)
 
-### OBJ-1 — `VERIFIED` — AADT objective accumulates station counts *across* measurements
+### OBJ-1 — `VERIFIED` [`legacy-observed`] — AADT objective accumulates station counts *across* measurements
 * **Where:** `calcObjective(..., TypeAADT)`; also `calcSDWeightedObjective`, `calcGEHObjective`,
   `calcSDWeightedGEHObjective` (AADT branches).
 * **Legacy:** `stationCountReal` and `stationCountAnaOrSim` are declared **outside** the
@@ -76,7 +121,7 @@ No formula, tolerance, optimizer constant or weighting was modified in this PR.
 * **Proposed resolution:** decide which is intended (published algorithm), add an oracle test, then
   make all AADT branches consistent. Do **not** pick one silently.
 
-### OBJ-2 — `VERIFIED` — AADT logs a missing measurement/time bean and then dereferences it
+### OBJ-2 — `VERIFIED` [`legacy-observed`] — AADT logs a missing measurement/time bean and then dereferences it
 * **Where:** AADT branches; the missing-data checks only `logger.error(...)` with **no `continue`**,
   unlike the `TypeMeasurementAndTimeSpecific` branches which do `continue`.
 * **Legacy:** `calcObjective(..., AADT)` throws `NullPointerException` if the simulated container
@@ -86,7 +131,7 @@ No formula, tolerance, optimizer constant or weighting was modified in this PR.
   `...missingTimeBeanDiffersByType`.
 * **Proposed resolution:** make missing-data policy an explicit, tested contract.
 
-### OBJ-3 — `VERIFIED` — `calcSDWeightedObjective` mutates its input
+### OBJ-3 — `VERIFIED` [`legacy-observed`] — `calcSDWeightedObjective` mutates its input
 * **Where:** TS branch: `if(m.getSD().get(timeBeanId)==null) m.putSD(timeBeanId, 0);`
 * **Legacy:** inserts `SD = 0` into the **observed** measurement object, mutating caller state.
 * **Expected:** objective evaluation should be a pure function of its inputs.
@@ -97,7 +142,7 @@ No formula, tolerance, optimizer constant or weighting was modified in this PR.
   itself does with `m.getVolumes().put(...)`).
 * **Proposed resolution:** eventual calm: make objective evaluation pure (no writes to inputs).
 
-### OBJ-4 — `VERIFIED` — the "GEH" objective sums GEH², not GEH
+### OBJ-4 — `VERIFIED` [`legacy-observed`] — the "GEH" objective sums GEH², not GEH
 * **Where:** `calcGEHObjective` (both branches) and `calcSDWeightedGEHObjective`.
 * **Legacy:** adds `2·(v−w)²/(v+w)`. Since `GEH = sqrt(2(v−w)²/(v+w))`, the accumulated quantity is
   `GEH²`.
@@ -109,7 +154,7 @@ No formula, tolerance, optimizer constant or weighting was modified in this PR.
 * **Proposed resolution:** confirm against the publication, then either rename to
   `calcSquaredGehObjective` or take the square root — with an oracle test.
 
-### OBJ-5 — `VERIFIED` — zero-denominator behaviour is inconsistent
+### OBJ-5 — `VERIFIED` [`legacy-observed`] — zero-denominator behaviour is inconsistent
 * **Where:** `calcGEHObjective` TS branch has `if(v+w==0) continue;`. The AADT branch, and both
   branches of `calcSDWeightedGEHObjective`, have **no** guard.
 * **Legacy:** observation 0 / modelled 0 gives
@@ -123,7 +168,7 @@ No formula, tolerance, optimizer constant or weighting was modified in this PR.
 * **Proposed resolution:** NaN in an objective silently poisons COBYLA/trust-region iteration; make
   it explicit and tested.
 
-### OBJ-6 — `VERIFIED` — the multi-objective entry points dereference missing measurements
+### OBJ-6 — `VERIFIED` [`legacy-observed`] — the multi-objective entry points dereference missing measurements
 * **Where:** `calcMultiObjective(..., Type)` (TS and AADT branches) and
   `calcObjective(..., Type, Set<MeasurementType>)`.
 * **Legacy:** they log the mismatch but do **not** `continue`, then dereference the missing
@@ -135,7 +180,7 @@ No formula, tolerance, optimizer constant or weighting was modified in this PR.
   every bucket, but `removeMeasurementsByType` (and `removeMeasurement`, when it empties a bucket)
   **removes the key**, making `.get(type)` `null` → NPE.
 
-### OBJ-8 — `VERIFIED` — SD weighting is `1/(1+SD²)`, and AADT sums SD *variances* across time beans
+### OBJ-8 — `VERIFIED` [`legacy-observed`] — SD weighting is `1/(1+SD²)`, and AADT sums SD *variances* across time beans
 * **Where:** `calcSDWeightedObjective`.
 * **Legacy:** TS: `1/(1+SD²)`. AADT: `1/(1+Σ_tb SD²)`.
 * **Expected:** a statistical weighting would normally be `1/SD²` (inverse variance). The legacy
@@ -146,7 +191,7 @@ No formula, tolerance, optimizer constant or weighting was modified in this PR.
 * **Proposed resolution:** document the intent; if inverse-variance is wanted, it needs a guard for
   `SD = 0` and an oracle test.
 
-### OBJ-9 — `VERIFIED` — SD-weighted AADT mixes accumulation scopes
+### OBJ-9 — `VERIFIED` [`legacy-observed`] — SD-weighted AADT mixes accumulation scopes
 * **Where:** `calcSDWeightedObjective` AADT branch.
 * **Legacy:** `sigma` is declared **inside** the measurement loop (per-measurement), while the
   station counts are **cumulative** (OBJ-1). The numerator and the weight therefore refer to
@@ -159,7 +204,7 @@ No formula, tolerance, optimizer constant or weighting was modified in this PR.
 
 ## Measurement / Measurements
 
-### MEAS-1 — `VERIFIED` — `Measurement.clone()` copies attributes shallowly
+### MEAS-1 — `VERIFIED` [`legacy-observed`] — `Measurement.clone()` copies attributes shallowly
 * **Where:** `Measurement.clone()` — `m.setAttribute(s, this.attributes.get(s))`.
 * **Legacy:** the link-list `ArrayList` is **shared** between original and clone; mutating one
   mutates the other. Volumes and SD *are* deep-copied.
@@ -168,14 +213,14 @@ No formula, tolerance, optimizer constant or weighting was modified in this PR.
 * **Risk:** the mission explicitly requires no test to depend on shared mutable state; production
   code that mutates a cloned measurement's link list would corrupt the original.
 
-### MEAS-2 — `VERIFIED` — `Measurements.clone()` drops container-level attributes
+### MEAS-2 — `VERIFIED` [`legacy-observed`] — `Measurements.clone()` drops container-level attributes
 * **Where:** `Measurements.clone()` does not copy `this.attributes`.
 * **Legacy:** `Variables` (and any other container attribute) is **not** present on the clone.
 * **Evidence:** `MeasurementsTest.cloneDoesNotCopyContainerAttributes`.
 * **Proposed resolution:** decide whether the clone should carry `Variables`; the calibration code
   clones measurement containers heavily (`CalibratorImpl.CalcMetaModelPrediction`).
 
-### MEAS-3 — `VERIFIED` — `MeasurementType.linkVolume` gradient handling is unsound
+### MEAS-3 — `VERIFIED` [`legacy-observed`] — `MeasurementType.linkVolume` gradient handling is unsound
 * **Where:** `MeasurementType.linkVolume.updateMeasurement`, final lines of the time-bean loop:
   ```java
   if(linkVolumeGradient.get(s).get(linkId)==null) {
@@ -198,20 +243,20 @@ No formula, tolerance, optimizer constant or weighting was modified in this PR.
 * **Proposed resolution:** make gradient absence a first-class, explicit outcome; add oracle tests
   comparing the aggregated gradient against a hand-computed sum.
 
-### MEAS-4 — `VERIFIED` — `fareLinkVolume` fallback is dead code; `fareLinkVolumeCluster` is not
+### MEAS-4 — `VERIFIED` [`legacy-observed`] — `fareLinkVolume` fallback is dead code; `fareLinkVolumeCluster` is not
 * **Where:** `MeasurementType.fareLinkVolume.updateMeasurement`.
 * **Legacy:** when `modelOut.getFareLinkVolume() == null` the method builds a fallback map from
   `getMaaSSpecificFareLinkFlow()` into a **local** variable, but the accumulation then reads
   `modelOut.getFareLinkVolume().get(s).get(key)` — which is still `null`. The `NullPointerException`
   is swallowed by the surrounding `catch`, so the measurement silently becomes `0`.
 * **Contrast:** `fareLinkVolumeCluster` calls `modelOut.setFareLinkVolume(fareLinkVolume)` in the
-  same situation, so it **works**. The asymmetry is the defect.
+  same situation, so it **works**. The asymmetry is the finding.
 * **Evidence:** `MeasurementTypeTest.fareLinkVolumeFallbackIsIneffective` (MaaS value 500 → volume 0),
   `fareLinkVolumeClusterInstallsFallback` (500 → volume 500).
 * **Proposed resolution:** make both read the same resolved container. Note `fareLinkVolumeCluster`
   has a side effect on its input `SUEModelOutput` — that is also undesirable (purity).
 
-### MEAS-5 — `VERIFIED` — the `Variables` attribute cannot be serialized at all
+### MEAS-5 — `VERIFIED` [`legacy-observed`] — the `Variables` attribute cannot be serialized at all
 * **Where:** `MeasurementsWriter.write`:
   `variables.setAttribute(Integer.toString(i), var.get(i))`.
 * **Legacy:** XML attribute names `"0"`, `"1"`, … are not valid XML `Name`s. The resulting
@@ -226,7 +271,7 @@ No formula, tolerance, optimizer constant or weighting was modified in this PR.
   (`src/main/resources/Measurements*.xml`) contains a `Variables` element, which is why this was
   never noticed.
 
-### MEAS-6 — `VERIFIED` — the writer swallows every exception
+### MEAS-6 — `VERIFIED` [`legacy-observed`] — the writer swallows every exception
 * **Where:** `MeasurementsWriter.write` ends with `catch(Exception e) { }` (empty body).
 * **Legacy:** a failed write produces no error, no log, and no file. Callers cannot detect it.
 * **Evidence:** `MeasurementsXmlRoundTripTest.writerSwallowsExceptionsSilently`;
@@ -234,13 +279,13 @@ No formula, tolerance, optimizer constant or weighting was modified in this PR.
 * **Proposed resolution:** propagate or log. This is the single change that would have surfaced
   MEAS-5 immediately.
 
-### MEAS-7 — `VERIFIED` — the reader returns `null` on failure
+### MEAS-7 — `VERIFIED` [`legacy-observed`] — the reader returns `null` on failure
 * **Where:** `MeasurementsReader.readMeasurements` catches `SAXException`/`IOException` and
   `printStackTrace()`s, then returns the (null) field.
 * **Legacy:** callers receive `null` instead of an actionable failure.
 * **Evidence:** `MeasurementsXmlRoundTripTest.variablesAttributeCannotBeSerialized` (read == null).
 
-### MEAS-8 — `VERIFIED` — `MaaSPacakgeUsage` writes to the literal key `"All"`
+### MEAS-8 — `VERIFIED` [`legacy-observed`] — `MaaSPacakgeUsage` writes to the literal key `"All"`
 * **Where:** `m.getVolumes().put("All", modelOut.getMaaSPackageUsage().get(attr))`.
 * **Legacy:** bypasses `putVolume` (so no `timeBean` validation) and leaves `SD` unset for `"All"`
   (later `applyFactor` would NPE on `getSD().get("All")`). `"All"` is not a declared time bean.
@@ -253,7 +298,7 @@ No formula, tolerance, optimizer constant or weighting was modified in this PR.
   back: the reader throws `IllegalArgumentException`, so the type cannot round trip at all.
   Evidence: `MeasurementTypeTransitAndFareTest.MaasPackageNameCannotRoundTrip`.
 
-### MEAS-9 — `VERIFIED` — `averagePTOccumpancy` dereferences without a guard
+### MEAS-9 — `VERIFIED` [`legacy-observed`] — `averagePTOccumpancy` dereferences without a guard
 * **Where:** `modelOut.getAveragePtOccupancyOnLink().get(s).get(linkId)`.
 * **Legacy:** NPE when the occupancy map is absent.
 * **Evidence:** `MeasurementTypeTest.averagePtOccupancyThrowsWhenAbsent`.
@@ -262,7 +307,7 @@ No formula, tolerance, optimizer constant or weighting was modified in this PR.
   `m.getVolumes().entrySet().forEach(v -> v.setValue(...))` — unguarded and a mutation during
   iteration of a `ConcurrentHashMap` (safe for the map, but the inner map may be absent).
 
-### MEAS-10 — `VERIFIED` — `TransitPhysicalLinkVolume` is not idempotent: it ADDS to the existing volume
+### MEAS-10 — `VERIFIED` [`legacy-observed`] — `TransitPhysicalLinkVolume` is not idempotent: it ADDS to the existing volume
 * **Where:** `MeasurementType.TransitPhysicalLinkVolume.updateMeasurement`:
   `v.setValue(v.getValue() + modelOut.getTrainCount()...)`.
 * **Legacy:** the extractor accumulates into `m.getVolumes()` instead of replacing it. Calling it
@@ -278,7 +323,7 @@ No formula, tolerance, optimizer constant or weighting was modified in this PR.
   evidence `missingAttributeThrows`, `missingTrainCountThrows`. A line/route absent from the model
   output, by contrast, contributes nothing silently (`unknownLineRouteContributesNothing`).
 
-### MTR-1 — `VERIFIED` — `MTRLinkVolumeInfo(String)` throws a raw `ArrayIndexOutOfBoundsException`
+### MTR-1 — `VERIFIED` [`legacy-observed`] — `MTRLinkVolumeInfo(String)` throws a raw `ArrayIndexOutOfBoundsException`
 * **Where:** `MTRLinkVolumeInfo(String s)` splits on `"___"` and indexes `part[0..3]` with no length
   check.
 * **Legacy:** `new MTRLinkVolumeInfo("LINE_1___ROUTE_1")` throws `ArrayIndexOutOfBoundsException`.
@@ -289,7 +334,7 @@ No formula, tolerance, optimizer constant or weighting was modified in this PR.
   emits comma-joined records in exactly this format and `parseAttribute` re-parses them, so a
   malformed record aborts measurement deserialization.
 
-### MEAS-11 — `VERIFIED` — `maasSpecificFareLinkVolume` reads the correct container (contrast with MEAS-4)
+### MEAS-11 — `VERIFIED` [`legacy-observed`] — `maasSpecificFareLinkVolume` reads the correct container (contrast with MEAS-4)
 * **Where:** `MeasurementType.maasSpecificFareLinkVolume.updateMeasurement`.
 * **Legacy:** unlike `fareLinkVolume` (MEAS-4, whose MaaS fallback is dead code), this variant reads
   `getMaaSSpecificFareLinkFlow()` directly and returns the true value; an unknown MaaS package or
@@ -301,7 +346,7 @@ No formula, tolerance, optimizer constant or weighting was modified in this PR.
   `getFareLinkVolume()` during initialisation, so a null `FareLinkVolume` throws
   (`emptyVolumesThrowsWhenFareLinkVolumeIsNull`).
 
-### MEAS-12 — `VERIFIED` — `smartCardEntry` and `smartCardEntryAndExit` extraction is a NO-OP
+### MEAS-12 — `VERIFIED` [`legacy-observed`] — `smartCardEntry` and `smartCardEntryAndExit` extraction is a NO-OP
 * **Where:** both `updateMeasurement` bodies are empty.
 * **Legacy:** calling `updateMeasurement` leaves any pre-existing volume untouched; these types are
   produce-side only (populated by the MATSim event handlers), not model-output-derived.
@@ -311,7 +356,7 @@ No formula, tolerance, optimizer constant or weighting was modified in this PR.
   but it means `Measurements.updateMeasurements` silently skips them. Confirm intent and document it
   in the type's contract rather than leaving an empty method.
 
-### MEAS-14 — `VERIFIED` — `MeasurementsWriter`'s generic attribute loop is DEAD CODE
+### MEAS-14 — `VERIFIED` [`legacy-observed`] — `MeasurementsWriter`'s generic attribute loop is DEAD CODE
 * **Where:** `MeasurementsWriter.write`:
   ```java
   for(String s:mm.getAttributes().keySet()) {
@@ -330,7 +375,6 @@ No formula, tolerance, optimizer constant or weighting was modified in this PR.
   so that the attribute copy actually runs — or the loop should be deleted if the copy is not wanted.
 * **Evidence:** `MeasurementTypeTransitAndFareTest.SmartCardTests.smartCardEntryValidationFlagDoesNotRoundTrip`
   asserts both that `ifForValidation` is absent from the written XML and that it is `null` after reading.
-  (This test was originally written expecting a round trip; the failure is what exposed the defect.)
 * **Scope note:** this does **not** affect attributes written by each type's `writeAttribute`, which is
   why `LineId`/`RouteId`/`BoardingStop`, `FareLink`, the fare-link cluster and the MTR info list all do
   round trip. It affects only the *generic* fallback path.
@@ -338,14 +382,14 @@ No formula, tolerance, optimizer constant or weighting was modified in this PR.
   generic path carries — `ifForValidation` is exactly such a case. Check callers first: if nothing ever
   relied on the generic path, deleting the loop is the honest alternative.
 
-### MEAS-15 — `VERIFIED` — measurement-level attribute serialization is inconsistent by type
+### MEAS-15 — `VERIFIED` [`legacy-observed`] — measurement-level attribute serialization is inconsistent by type
 * **Where:** `MeasurementType` — `parseAttribute` for `smartCardEntry`, `smartCardEntryAndExit`,
   `fareLinkVolume`, `fareLinkVolumeCluster` and `maasSpecificFareLinkVolume` all read an optional
   `ifForValidation` attribute, but only via that type's own `parseAttribute`; the writer can only supply
   it through the dead generic path (MEAS-14). So the flag is readable-but-never-writable.
 * **Evidence:** `MeasurementTypeTransitAndFareTest` (round trips for the five types above).
 
-### MEAS-16 — `VERIFIED` — serialization coverage is now complete for the types that have an attribute contract
+### MEAS-16 — `VERIFIED` [`legacy-observed`] — serialization coverage is now complete for the types that have an attribute contract
 * Added in PR 2's revision: round trips for `smartCardEntry`, `fareLinkVolume`, `fareLinkVolumeCluster`
   and `TransitPhysicalLinkVolume`, alongside the existing `linkVolume`, `smartCardEntryAndExit` and
   `maasSpecificFareLinkVolume` round trips.
@@ -356,7 +400,7 @@ No formula, tolerance, optimizer constant or weighting was modified in this PR.
 
 ---
 
-### MEAS-17 — `VERIFIED` — `Measurement.clone()` silently drops the coordinate
+### MEAS-17 — `VERIFIED` [`legacy-observed`] — `Measurement.clone()` silently drops the coordinate
 * **Where:** `Measurement.clone()` copies `volumes`, `sd` and `attributes`, and never touches `coord`.
 * **Legacy:** `getCoord()` is public observable state (set by `MeasurementsReader` from a `<Coord>`
   element), and a clone loses it: the original reports a coordinate, the clone reports `null`.
@@ -366,7 +410,7 @@ No formula, tolerance, optimizer constant or weighting was modified in this PR.
 * **Contrast (also pinned):** `Measurement.clone()` *does* give the child its own copy of the declared
   time-bean map (`MeasurementTest.cloneCopiesTheTimeBeanMap`), which is what makes MEAS-18 possible.
 
-### MEAS-18 — `VERIFIED` — `Measurements.clone()` ALIASES the container time-bean map, and the clone can
+### MEAS-18 — `VERIFIED` [`legacy-observed`] — `Measurements.clone()` ALIASES the container time-bean map, and the clone can
 diverge from its own children
 * **Where:** `Measurements.clone()` constructs `new Measurements(this.timeBean)` — the **same map
   instance**, not a copy — while each child `Measurement.clone()` builds `new HashMap<>(timeBean)`.
@@ -383,7 +427,7 @@ diverge from its own children
 * **Why it matters:** the purity plan's defensive-copy strategy is unsound while this holds — this is the
   container-level counterpart of MEAS-1 (shared attribute objects) and MEAS-2 (dropped attributes).
 
-### MEAS-19 — `VERIFIED` — the CSV writer rewrites `,` to `__` in the measurement id and the reader never
+### MEAS-19 — `VERIFIED` [`legacy-observed`] — the CSV writer rewrites `,` to `__` in the measurement id and the reader never
 restores it
 * **Where:** `Measurements.writeCSVMeasurements` writes `m.getId().toString().replace(",", "__")`; the
   `ifForValidation` column is written but `updateMeasurementsFromFile` reads only columns 0–3.
@@ -392,13 +436,13 @@ restores it
 * **Expected:** an escaping scheme that round trips, or an explicit error.
 * **Evidence:** `MeasurementsTest.csvRewritesCommaInMeasurementId`.
 
-### MEAS-20 — `VERIFIED` — `ifForValidation` is written but ignored on read
+### MEAS-20 — `VERIFIED` [`legacy-observed`] — `ifForValidation` is written but ignored on read
 * **Where:** as above — the fifth CSV column is dropped by `updateMeasurementsFromFile`.
 * **Legacy:** the flag appears in the file (`...,true`) and is absent after a read, so the persistence
   layer loses a validation-partition marker.
 * **Evidence:** `MeasurementsTest.csvDropsIfForValidation`.
 
-### MEAS-21 — `VERIFIED` — the empty-volume path of BOTH fare-link types throws before the MaaS fallback
+### MEAS-21 — `VERIFIED` [`legacy-observed`] — the empty-volume path of BOTH fare-link types throws before the MaaS fallback
 * **Where:** `fareLinkVolume` and `fareLinkVolumeCluster` run
   `if (m.getVolumes().size() == 0) { for (tb) if (modelOut.getFareLinkVolume().containsKey(tb)) ... }`
   **before** the fallback map is built.
@@ -416,7 +460,7 @@ restores it
 
 ## CNLLink (`analyticalModelImpl/CNLLink.java`)
 
-### LINK-1 — `VERIFIED` — the `train` branch uses a different, flow-independent formula with a
+### LINK-1 — `VERIFIED` [`legacy-observed`] — the `train` branch uses a different, flow-independent formula with a
 3.6× unit discontinuity
 * **Where:** `getLinkTravelTime`: `if(!this.link.getAllowedModes().contains("train")) { BPR } else {
   linkTravelTime = length / (freespeed*1000/3600); }`
@@ -432,12 +476,12 @@ restores it
   definition, then unify units. This changes travel times materially, so it must not be "fixed"
   without review.
 
-### LINK-2 — `READ` — `AnalyticalModelLink.getCapacityPeriod()` returns a hard-coded `0`
+### LINK-2 — `READ` [`legacy-observed`] — `AnalyticalModelLink.getCapacityPeriod()` returns a hard-coded `0`
 * **Where:** `CNLLink.getCapacityPeriod()` → `return 0;` (with a `// TODO Auto-generated method
   stub`).
 * Any consumer dividing by the capacity period would produce `Infinity`/`NaN`. Test to be written.
 
-### LINK-3 — `READ` — `ifScalePt` is hard-coded `true`
+### LINK-3 — `READ` [`legacy-observed`] — `ifScalePt` is hard-coded `true`
 * **Where:** `CNLLink.ifScalePt = true` with no setter. Consequently the transit PCU volume is always
   multiplied by `CapacityMultiplier`, **and** capacity is also multiplied by `CapacityMultiplier`.
   Both effects are intentional-looking but are untested and undocumented; a characterization test
@@ -464,7 +508,7 @@ Along an all-decreasing run that is `beta_k = 1 + 0.1(k-1)`, i.e. a weight of **
 1, 1/1.1, 1/1.2, … A harmonic `1/counter` update exists in the source but is **commented out**
 (line 1226).
 
-### SUE-1 — `VERIFIED` — the α branch is coupled to state that only `generateRoutesAndOD` initialises
+### SUE-1 — `VERIFIED` [`legacy-observed`] — the α branch is coupled to state that only `generateRoutesAndOD` initialises
 * `consecutiveSUEErrorIncrease` **is** seeded per time bean by `generateRoutesAndOD`
   (line 314, `put(timeBeanId, 0.)`). It is seeded by neither the constructor (lines 140–163, which do
   initialise `beta`, `error` and `error1`) nor `perFormSUE`.
@@ -475,7 +519,7 @@ Along an all-decreasing run that is `beta_k = 1 + 0.1(k-1)`, i.e. a weight of **
   invariant — the class exposes its mutable network map through `getNetworks()`, so a caller that
   populates `networks` by hand does reach the α branch with the counter unset.
 
-* The defect is coupling, not an outage: `UpdateLinkVolume`'s α branch reads state that neither the
+* The finding is coupling, not an outage: `UpdateLinkVolume`'s α branch reads state that neither the
   constructor nor `perFormSUE` establishes, so the MSA core is **not self-contained**. Driving the loop
   on a constructor-built model — injecting a network by hand, as the unit harness does — throws
   `NullPointerException` at `null + 1` before any volume moves.
@@ -499,7 +543,7 @@ if (error.get(timeBeanId).get(counter-1) < error.get(timeBeanId).get(counter-2))
   `nonDecreasingErrorGrowsBetaByAlphaOnceTheCounterIsSeeded` proves the branch itself is correct by
   seeding the map by hand and recovering `beta = 2.9` from the volume change.
 
-### SUE-2 — `VERIFIED` — the stopping rule ORs three criteria of different kinds, and the tolerance argument can force convergence
+### SUE-2 — `VERIFIED` [`legacy-observed`] — the stopping rule ORs three criteria of different kinds, and the tolerance argument can force convergence
 * `CheckConvergence` returns true when **any** of:
   ```java
   squareSum <= 1                                        // absolute: norm of SQUARED errors, hardcoded 1
@@ -519,7 +563,7 @@ if (error.get(timeBeanId).get(counter-1) < error.get(timeBeanId).get(counter-2))
   the argument was raised to 1000), `convergenceBoundaryIsTheUnitSquaredErrorNorm` (passes at exactly
   `|diff| = 1`, fails at `|diff| = 2`), `theMiddleCriterionIsScaleDependent`.
 
-### SUE-3 — `VERIFIED` — an UNLOADED link is excluded from `linkBelow1`, making the pointwise disjunct unreachable
+### SUE-3 — `VERIFIED` [`legacy-observed`] — an UNLOADED link is excluded from `linkBelow1`, making the pointwise disjunct unreachable
 * The `if (error < 1) { linkBelow1++; }` increment sits **inside** the `else` branch of
   `if (linkVolume.get(linkid) == 0)`. A link with zero loaded volume therefore contributes `0` to
   `squareSum` (helping the norm test) but **never** counts toward `linkBelow1`.
@@ -531,7 +575,7 @@ if (error.get(timeBeanId).get(counter-1) < error.get(timeBeanId).get(counter-2))
   errors of 0.81 each converge via the pointwise disjunct, yet unloading just one of them flips the same
   state to NOT converged.
 
-### SUE-4 — `VERIFIED` — the `error == Double.NaN` guards are DEAD, and a NaN residual reports CONVERGED
+### SUE-4 — `VERIFIED` [`legacy-observed`] — the `error == Double.NaN` guards are DEAD, and a NaN residual reports CONVERGED
 * `CheckConvergence` guards with `error == Double.NaN` and `squareSum == Double.NaN`. `NaN == NaN` is
   always false, so neither guard can ever fire (the same dead-comparison shape as MEAS-14's
   `== null` writer guard).
@@ -543,7 +587,7 @@ if (error.get(timeBeanId).get(counter-1) < error.get(timeBeanId).get(counter-2))
 * **Evidence:** `nanErrorIsSilentlyReportedAsConverged` (asserts the throw for `+Inf` and the silent
   `true` for `Inf - Inf`).
 
-### SUE-5 — `READ` — recorded, not tested
+### SUE-5 — `READ` [`legacy-observed`] — recorded, not tested
 * `tolleranceLink` and the `linkSum` counter in `UpdateLinkVolume` are computed for every link and then
   **discarded**: neither is returned nor used. The per-link relative-change diagnostic is dead.
 * The transit loop's guard is `error == Double.NaN || error == Double.NEGATIVE_INFINITY` — it tests NaN
@@ -554,7 +598,7 @@ if (error.get(timeBeanId).get(counter-1) < error.get(timeBeanId).get(counter-2))
   `(…, String timeBeanId, int counter)` — the argument order is transposed between the two halves of
   the same loop.
 
-### SUE-6 — `VERIFIED` — the middle stopping criterion is `(delta² / new) * 100`, which is NOT a relative error
+### SUE-6 — `VERIFIED` [`legacy-observed`, `suspected-defect`] — the middle stopping criterion is `(delta² / new) * 100`, which is NOT a relative error
 * `CheckConvergence` computes `error = Math.pow(currentVolume - newVolume, 2)` and then compares
   `error / newVolume * 100` against `tollerance`. A percentage-relative test would be
   `abs(current - new) / new * 100`; **squaring the delta** makes the expression carry units of volume
@@ -562,10 +606,11 @@ if (error.get(timeBeanId).get(counter-1) < error.get(timeBeanId).get(counter-2))
 * Consequence: the same *fractional* mismatch is judged differently at different demand scales. At one
   tolerance a 40% mismatch converges at volume ≈ 5 and fails at volume ≈ 50, purely because the volume
   is ten times larger. Equivalently, the effective tolerance is `tollerance / scale`.
-* This is a likely mathematical bug in the legacy stopping rule rather than a presentation issue: the
-  criterion is not dimensionless, so it is not comparable to a fixed tolerance across time beans or
-  scenarios with different demand levels. The redesign must decide whether convergence is tested on a
-  *relative* change (scale invariant) or an *absolute* one, and state the choice.
+* **Suspected mathematical defect, upstream** — this is Ashraf's original hand-written criterion, not a
+  change made by the modernization (see the provenance legend). Because it is dimensional it is not
+  comparable to a fixed tolerance across time beans or scenarios with different demand levels. The
+  redesign must decide whether convergence is tested on a *relative* change (scale invariant) or an
+  *absolute* one, and state the choice.
 * **Evidence:** `CNLSUEModelMSATest.theMiddleCriterionIsScaleDependent` — asserts that the fractional
   mismatch is identical (40%) at both scales, that the criterion differs by exactly ×10
   (133.33 vs 1333.33), and that a single tolerance (500) produces opposite verdicts. The verdict
@@ -578,12 +623,12 @@ All six items below are now `VERIFIED` by `ParamReaderTest` (23 tests). The inte
 the CSV **Code** column and the `id` column is ignored entirely, which matters for every reading of this
 class.
 
-### PARAM-1 — `VERIFIED` — silent fallback to a **relative** default path
+### PARAM-1 — `VERIFIED` [`legacy-observed`] — silent fallback to a **relative** default path
 * `new ParamReader(fileLoc)`: if `fileLoc` does not exist, `this.paramFile = new File("src/main/resources/paramReaderTrial1.csv")` with **no warning and no exception**. The path is relative to the process CWD, so the same call loads the bundled sample parameters or silently yields **empty maps**, depending on where the JVM was launched. A missing *requested* file therefore produces the wrong parameter set rather than an error.
 * **Evidence:** `ParamReaderTest.MissingFile.missingFileSilentlyFallsBack` — asserting `getDefaultFileLoc()` is the relative path, then (guarded by an assumption so the test is honest off the module dir) that the bundled file's codes `1` and `14` are loaded.
 * **Note:** `paramReaderTrial1.csv` leaves the SubPopulation column empty on every row, so the fallback also yields an **empty** sub-population list.
 
-### PARAM-2 — `VERIFIED` — raw `split(",")` parsing, and the `id` column is discarded
+### PARAM-2 — `VERIFIED` [`legacy-observed`] — raw `split(",")` parsing, and the `id` column is discarded
 * `line.split(",")` removes trailing empty fields, so a row ending in an empty column makes
   `part[7]` throw `ArrayIndexOutOfBoundsException`; a short row fails earlier at `part[5]`. No
   header validation, no quoted-field handling, and no use of the declared-but-unused `commons-csv`.
@@ -595,12 +640,12 @@ class.
   `bf.readLine()` to skip a header with no validation, so a headerless file silently loses its first
   data row. Evidence: `Malformed.firstLineIsAlwaysDiscarded`.
 
-### PARAM-3 — `VERIFIED` — `SetParamToConfig` writes to disk and reloads
+### PARAM-3 — `VERIFIED` [`legacy-observed`] — `SetParamToConfig` writes to disk and reloads
 * `new ConfigWriter(config).write("config_Intermediate.xml"); Config configOut = ConfigUtils.loadConfig("config_Intermediate.xml");` — a **CWD-relative** path, a filesystem round trip and a parse dependency inside what should be a pure transformation. The Config does reach the caller with the values applied.
 * **Evidence:** `SetParamToConfigTests.writesConfigToCwdAndAppliesValues` asserts the file appears in the CWD, that `qsim().getFlowCapFactor()` equals the CSV's `CapacityMultiplier`, and deletes the file afterwards so the working tree is left clean.
 * Minor: `System.out.println(config.isLocked())` prints on every call.
 
-### PARAM-4 — `VERIFIED` — a duplicated code is inconsistent between the general and initial maps
+### PARAM-4 — `VERIFIED` [`legacy-observed`] — a duplicated code is inconsistent between the general and initial maps
 * `DefaultParam`, `paramLimit`, `initialParam` and `initialParamLimit` are keyed by the **Code**
   column (not `paramName`/`paramId`). On a duplicate code the values and bounds are **last-wins**, but
   `initialParam` is only *written* when `IncludeIninitialParam` is true — it is never removed — so a
@@ -612,7 +657,7 @@ class.
 * **Evidence:** `Parsing.duplicateCodeInconsistency` (value/bounds 150/(100,200) from the last row vs
   initial value/bounds 5/(0,10) from the first), `duplicateCodeLaterRowIncluded`.
 
-### PARAM-5 — `VERIFIED` — `ScaleDown` can emit a `null` key; `generateSubPopSpecificParam` can throw
+### PARAM-5 — `VERIFIED` [`legacy-observed`] — `ScaleDown` can emit a `null` key; `generateSubPopSpecificParam` can throw
 * `ScaleDown` returns the input unchanged when **no** key overlaps `ParamNoCode`, but otherwise maps
   **every** key through `paramNoCode.get(s)`, so a partially-overlapping input yields an entry with a
   **`null` key**. Downstream `ScaleUp`/`ScaleUpLimit` then iterate `ParamNoCode`, so the null-keyed
@@ -623,7 +668,7 @@ class.
 * **Evidence:** `Scaling.scaleDownNoOverlapReturnsInput`, `scaleDownPartialOverlapEmitsNullKey`,
   `SubPopExtraction.matchingKeyWithoutSpaceThrows`, `extractsMatchingEntries`.
 
-### PARAM-6 — `VERIFIED` — `ScaleUp` dispatch on `containsAll`, and the unknown-parameter switch
+### PARAM-6 — `VERIFIED` [`legacy-observed`] — `ScaleUp` dispatch on `containsAll`, and the unknown-parameter switch
 * `if ((this.ParamNoCode.values()).containsAll(trialParam.keySet())) { }` has an **empty body**, so the
   "all keys are codes" case falls through to the loop; the `else if` handles "already scaled" and
   returns the input; the `else` throws unless `allowUnkownParamaeterWhileScalingUp` is true, in which
@@ -634,7 +679,7 @@ class.
   `scaleUpUnknownInput`, `scaleUpLimit`, `scaleUpLimitAlreadyScaledIsIdentity`,
   `scaleUpLimitMixedKeysThrow`, `scaleUpLimitOmitsAbsentCodes`.
 
-### PARAM-7 — `VERIFIED` — conflicting scoped values COLLAPSE onto one code, and the survivor is order-dependent
+### PARAM-7 — `VERIFIED` [`legacy-observed`] — conflicting scoped values COLLAPSE onto one code, and the survivor is order-dependent
 * **Where:** `ScaleDown` maps every input key through `ParamNoCode.get(s)` into a single
   `LinkedHashMap` keyed by code.
 * **Legacy:** a code shared by several sub-populations is a many-to-one relation, so
@@ -650,7 +695,7 @@ class.
   `ParameterDefinition`/`ParameterSpace` chooses, it must decide this deliberately rather than
   inherit an iteration-order accident.
 
-### PARAM-7b — `INTENTIONAL, MUST BE PRESERVED` — one code deliberately GROUPS several scoped ids
+### PARAM-7b — `INTENTIONAL, MUST BE PRESERVED` [`legacy-observed`] — one code deliberately GROUPS several scoped ids
 * The class javadoc states the intent: *"The code will be used to identify the parameters... same code
   parameters will be treated as one parameter."* The behaviour is therefore **documented alias/group
   semantics**, not an accident:
@@ -665,7 +710,7 @@ class.
 * **Evidence:** `SharedCodes.oneCodeGroupsScopedParameterIds`, `scaleUpFansOutOneCodeToManyNames`,
   `SetParamToConfigTests.sharedCodeFeedsEverySubPopulationConfig`.
 
-### PARAM-4 (extended) — shared codes across real sub-populations
+### PARAM-4 (extended) [`legacy-observed`] — shared codes across real sub-populations
 * The reviewer's point was correct: the original tests used unscoped rows sharing a code, which
   exercised only the degenerate case. With **two real sub-populations** sharing code `3`, the value
   and bounds are last-wins (`1.2`, `(0.9, 1.5)`) while the initial maps retain the first *included*
@@ -673,7 +718,7 @@ class.
   map**. When both rows are included, the initial maps follow last-wins like the general maps.
 * **Evidence:** `SharedCodes.sharedCodeValueAndBoundsAreLastWins`, `sharedCodeIncludedByBothIsLastWins`.
 
-### PARAM-8 — `VERIFIED` — the GV sub-population branch silently omits the PT-family parameters
+### PARAM-8 — `VERIFIED` [`legacy-observed`] — the GV sub-population branch silently omits the PT-family parameters
 * **Where:** `SetParamToConfig`, `if (!subPop.contains("GV")) { … } else { … }`. GV names are matched
   by **substring** (`contains("GV")`), not equality.
 * **Legacy:** the non-GV branch writes car travel/distance, money, car money cost, PT travel,
@@ -688,7 +733,7 @@ class.
   *and* that the PT fields equal a fresh sub-population's defaults and differ from the CSV values),
   `nonGvSubPopulationIsFullyMapped`.
 
-### PARAM-9 — `VERIFIED` — `setDefaultParams(Config, String)` is a second, separate application path
+### PARAM-9 — `VERIFIED` [`legacy-observed`] — `setDefaultParams(Config, String)` is a second, separate application path
 * **Where:** `ParamReader.setDefaultParams(Config, String)`.
 * **Legacy:** reads its values from `ScaleUp(this.DefaultParam)` — i.e. the **bare** parameter names
   regardless of the `subPop` argument — and writes them into
@@ -702,7 +747,7 @@ class.
 
 ## CalibratorImpl (`calibrator/CalibratorImpl.java`) — trust region
 
-### CAL-1 — `VERIFIED` — `maxTrRadius` ignores the configured initial radius
+### CAL-1 — `VERIFIED` [`legacy-observed`] — `maxTrRadius` ignores the configured initial radius
 * Field initialisers run before the constructor body:
   ```java
   protected double TrRadius = 25;
@@ -716,7 +761,7 @@ class.
 * **Evidence:** `CalibratorImplStateMachineTest.Construction.maxTrRadiusIgnoresTheConfiguredInitialRadius`
   — with `initialTRRadius = 100` the getters report `TrRadius = 100` and `maxTrRadius = 62.5`.
 
-### CAL-2 — `VERIFIED` — an improved simulation objective is accepted even when `rho < thresholdErrorRatio`
+### CAL-2 — `VERIFIED` [`legacy-observed`] — an improved simulation objective is accepted even when `rho < thresholdErrorRatio`
 * ```java
   if (SimObjectiveChange > 0 && rouk >= thresholdErrorRatio) { accept; grow; }
   else if (SimObjectiveChange > 0 && rouk < thresholdErrorRatio) { accept; /* no growth */ }
@@ -726,7 +771,7 @@ class.
   grows. Standard trust-region logic would reject a step with `rho` below the threshold. This is
   the policy the brief explicitly asks to preserve until it is compared with the publication.
 
-### CAL-11 — `VERIFIED` — the internal recalibration is invoked and its RESULT IS DISCARDED
+### CAL-11 — `VERIFIED` [`legacy-observed`] — the internal recalibration is invoked and its RESULT IS DISCARDED
 * **Where:** `CalibratorImpl.generateNewParam`:
   ```java
   Map<Integer,Measurements> newAnaMeasurements = this.sueAssignment.calibrateInternalParams(
@@ -748,14 +793,14 @@ class.
   changes the interpretation of the whole trust-region mechanism, so it is recorded as its own item -
   the reviewer's point, confirmed by test rather than by inspection.
 
-### CAL-3 — `READ` — `rho` has no guard for a zero predicted reduction
+### CAL-3 — `READ` [`legacy-observed`] — `rho` has no guard for a zero predicted reduction
 * `double rouk = SimObjectiveChange / MetaObjectiveChange;` — with
   `MetaObjectiveChange == 0` this yields `±Infinity` or `NaN` (0/0). Downstream comparisons
   (`rouk >= thresholdErrorRatio`) are then silently false for `NaN`, so the step is accepted via
   the second branch. Behaviour to be pinned by tests (the brief lists NaN/Infinity/zero predicted
   improvement as required cases).
 
-### CAL-4 — `READ` — gradient-based meta-models are requested with null gradients
+### CAL-4 — `READ` [`legacy-observed`] — gradient-based meta-models are requested with null gradients
 * `createMetaModel(...)` wraps the null-gradient check in `try { ... throw ... } catch(Exception e) {
   System.out.print(e); }`, and then uses the **method parameter** `metaModelType` (not the field
   `this.metaModelType`) in the `switch`. The guard therefore never prevents construction: the
@@ -763,7 +808,7 @@ class.
   `simGradient.get(m.getId())` → NPE. The intent ("switching to AnalyticalLinear") is not realised.
   The `catch` also swallows the message into `System.out` rather than logging.
 
-### CAL-5 — `VERIFIED` — `updateAnalyticalMeasurement` gate is inverted
+### CAL-5 — `VERIFIED` [`legacy-observed`] — `updateAnalyticalMeasurement` gate is inverted
 * ```java
   if (this.anaMeasurements.size() != measurements.size()) {
       logger.error("Measurements size must match. Aborting update");
@@ -780,7 +825,7 @@ class.
   an existing iteration missing from the new map throws `IllegalArgumentException`.
 * **Evidence:** `CalibratorImplStateMachineTest.UpdateAnalyticalMeasurement.*` (four tests).
 
-### CAL-6 — `VERIFIED` — `drawRandomPoint` uses `Math.random()`
+### CAL-6 — `VERIFIED` [`legacy-observed`] — `drawRandomPoint` uses `Math.random()`
 * Non-seedable; makes random restarts and any test that reaches them nondeterministic. The modern
   target must inject a seeded RNG.
 * **Evidence:** `CalibratorImplStateMachineTest.DrawRandomPoint.boundsRespectedAndKeyedByCode` — the
@@ -791,7 +836,7 @@ class.
   distinction is the same one the C/`O` legend insists on: a test that exists is not a test that
   proves the property in its name.
 
-### CAL-7 — `READ` — `parallelStream()` over measurements while mutating maps
+### CAL-7 — `READ` [`legacy-observed`] — `parallelStream()` over measurements while mutating maps
 * `createMetaModel` (instance method) does
   `calibrationMeasurements.getMeasurements().values().parallelStream().forEach(m -> { this.metaModels.put(m.getId(), new HashMap<>()); … })`.
   `metaModels` is a `ConcurrentHashMap` (safe), but the static overload uses a plain `HashMap`
@@ -800,7 +845,7 @@ class.
   between the two is unspecified. Correctness before parallelism: replace with a sequential
   reduction, then benchmark.
 
-### CAL-8 — `VERIFIED` — `calcAverageMetaParamsChange` divides by `k` without checking `k == 0`
+### CAL-8 — `VERIFIED` [`legacy-observed`] — `calcAverageMetaParamsChange` divides by `k` without checking `k == 0`
 * `z = z / k;` with `k` incremented per (measurement, time bean) when meta-model types match. If
   `metaModels` is empty, or types differ (the `break outerloop` path sets `comparable=false` but
   still divides), `k` can be 0 → `NaN`. Also `this.oldMetaModel.get(m)` is dereferenced assuming
@@ -813,7 +858,7 @@ class.
   (`0/0` and the downstream comparison) and `missingOldMetaModelThrows` (NPE with `metaModels`
   populated, because `oldMetaModel` is private and starts empty).
 
-### CAL-9 — `READ` — logging is nondeterministic
+### CAL-9 — `READ` [`legacy-observed`] — logging is nondeterministic
 * `interLogger` writes `LocalDateTime.now()` into `iterLogger.csv`, and the header is written based
   on `this.iterationNo == 1`. Tests must not depend on these artifacts.
 
@@ -821,7 +866,7 @@ class.
 
 ## Meta-models (`matamodels/`)
 
-### MODEL-1 — `VERIFIED` — the constructor requires iteration key 0; the alternative fitters assume dense 0-based keys
+### MODEL-1 — `VERIFIED` [`legacy-observed`] — the constructor requires iteration key 0; the alternative fitters assume dense 0-based keys
 * `MetaModelImpl` does `this.noOfParams = params.get(0).size()`, so a parameter map without iteration
   **0** throws `NullPointerException`. Reachable in principle after a restart or the deserialisation
   constructor; latent in practice because calibration always starts at iteration 0.
@@ -832,7 +877,7 @@ class.
 * **Evidence:** `AnalyticLinearMetaModelOracleTest.constructorRequiresIterationZero`. The dense-index
   variants are unreachable (see MODEL-2), so they are recorded rather than pinned.
 
-### MODEL-2 — `VERIFIED` — four of the five fitting paths are UNREACHABLE, not merely unused
+### MODEL-2 — `VERIFIED` [`legacy-observed`] — four of the five fitting paths are UNREACHABLE, not merely unused
 * Paths: COBYLA (`calibrateMetaModel`, invoked by the constructor), analytical matrix/ND4J
   (`calibrateMetaModelAnalytically`), Apache GLS (`...WithApache`), Smile LASSO (`...WithSmile`) and
   Adam/ND4J (`...WithAdam`).
@@ -846,13 +891,13 @@ class.
   **only** to support these four unreachable paths. This is the evidence `DEPENDENCIES.md` asked for
   before removing them; the removal itself is a separate, isolated change.
 
-### MODEL-3 — `READ` — static mutable state
+### MODEL-3 — `READ` [`legacy-observed`] — static mutable state
 * `private static double errorT = 0;` and `public static synchronized void updateErrorT(double e)`
   accumulate across **all** instances. It is only written by the (unreachable) Adam path and has no
   getter, so it is currently unobservable — which is why it is recorded rather than tested. It must not
   survive the redesign.
 
-### MODEL-4 — `VERIFIED` — the live scaling fields are inert, and diagnostics go to stdout
+### MODEL-4 — `VERIFIED` [`legacy-observed`] — the live scaling fields are inert, and diagnostics go to stdout
 * `scaleMean`/`scaleSigma` are initialised to `0`/`1` (and `scaleMeanY`/`scaleSigmaY` to `0`/`1`) and
   are only ever **populated** by the unreachable Adam path. In the live COBYLA path `calcMetaModel` is
   therefore the plain affine model `beta0 + betaA*A + beta^T x` — the scaling scaffolding is dead
@@ -862,7 +907,7 @@ class.
 * Also recorded: `calcMetaModel` prints when `out > 6000` and the Adam path prints every iteration, so a
   test must not depend on stdout being clean.
 
-### MODEL-5 — `VERIFIED` — the live fitter exhausts its evaluation budget and DISCARDS the error status
+### MODEL-5 — `VERIFIED` [`legacy-observed`] — the live fitter exhausts its evaluation budget and DISCARDS the error status
 * **Where:** `calibrateMetaModel` → `Cobyla.findMinimum(optimization, noOfMetaModelParams, 0, x, 0.5, 1e-6, 0, 1500)`.
   The returned `CobylaExitStatus` is assigned to `result` and then never inspected.
 * **Legacy:** on a dataset whose true coefficients are O(1)–O(10) and whose analytical part is
@@ -895,7 +940,7 @@ class.
   the columns (the machinery already exists but is only wired into the unreachable Adam path). Each
   step needs the closed-form oracle to stay green.
 
-### MODEL-6 — `VERIFIED` — `calcEuclDistanceBasedWeight` is asymmetric and can throw
+### MODEL-6 — `VERIFIED` [`legacy-observed`] — `calcEuclDistanceBasedWeight` is asymmetric and can throw
 * **Where:** `MetaModelImpl.calcEuclDistanceBasedWeight` iterates `param1.keySet()` (the **reference**
   point) and reads `param2.get(s)` for the compared point.
 * **Legacy:** the summation set is the reference point's key set, so:
@@ -913,13 +958,13 @@ class.
 * **Evidence:** `AnalyticLinearMetaModelOracleTest.weightFunctionMatchesItsDefinition`,
   `weightIgnoresKeysAbsentFromTheReferencePoint`.
 
-### MODEL-7 — `VERIFIED` — the fitting corpus is serialised with the `Analysis` container
+### MODEL-7 — `VERIFIED` [`legacy-observed`] — the fitting corpus is serialised with the `Analysis` container
 * `Measurements`/`Measurement` are the fitting corpus, so any measurement-serialization defect
   (MEAS-14/15) also affects meta-model reproducibility. Recorded for the redesign; no separate test.
 
 ---
 
-### CAL-10 — `READ` — the trust-region optimizer starts from a PARTIALLY initialised vector
+### CAL-10 — `READ` [`legacy-observed`] — the trust-region optimizer starts from a PARTIALLY initialised vector
 * **Where:** `AnalyticalModelOptimizerImpl.performOptimization`:
   ```java
   double[] x=new double[noOfVariables];
@@ -945,7 +990,7 @@ class.
 
 ## Cross-cutting
 
-### CC-1 — `VERIFIED` — the pre-existing test suite was not CI-viable
+### CC-1 — `VERIFIED` [`legacy-observed`] — the pre-existing test suite was not CI-viable
 * `AnalyticLinearMetaModelTest` is **nondeterministic** (1000 random OD parameters via `Math.random()`)
   and does not terminate in a reasonable time (it drives COBYLA over that 1000-dimensional problem).
   It is now **excluded** from the default surefire run (see `MetaModelCalibration/pom.xml`) and kept
@@ -955,19 +1000,19 @@ class.
   `assertEquals(m, m2)` on `Measurements`, which has no `equals` override. Excluded and documented.
 * `AppTest` is an empty JUnit 3 `assertTrue(true)`.
 
-### CC-2 — `VERIFIED` — 3 non-UTF-8 bytes in the HK fork source (external, no longer vendored)
+### CC-2 — `VERIFIED` [`legacy-observed`] — 3 non-UTF-8 bytes in the HK fork source (external, no longer vendored)
 * The fork's `createBus/BusDataExtractor.java` (lines 339: `0xA1`, `0xAF`; line 449: `0x92`) is
   unmappable as UTF-8; javac emits `[ERROR]` diagnostics while the build still succeeds.
 * **This file is no longer part of this repository** — the fork is not a build dependency, and
   `BusDataExtractor` was never used by PRAISEHK. Recorded because it will resurface if the fork is
   ever re-imported. See `PRAISE_MATSIMHK_RELATIONSHIP.md` §5.
 
-### CC-3 — `READ` — `Measurements` has no `equals`/`hashCode`
+### CC-3 — `READ` [`legacy-observed`] — `Measurements` has no `equals`/`hashCode`
 * Container and element equality is by reference only, which is why `MeasurementCreator`'s
-  `assertEquals(m, m2)` was both broken and unnoticed, and why round-trip tests must compare fields
+  `assertEquals(m, m2)` was ineffective and went unnoticed, and why round-trip tests must compare fields
   explicitly.
 
-### CC-4 — `READ` — ODEstimation's objective gradient disagrees with the objective it differentiates
+### CC-4 — `READ` [`legacy-observed`] — ODEstimation's objective gradient disagrees with the objective it differentiates
 * `ODUtils.calcODObjectiveGradient` weights by `1/(1+SD)` while
   `ODUtils.calcMetamodelODObjectiveGradient` weights by `1/(1+SD²)`, and PRAISEHK's
   `ObjectiveCalculator` uses `1/(1+SD²)`. Additionally the `fareLinkVolumeCluster` branch of

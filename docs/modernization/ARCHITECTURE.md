@@ -1,6 +1,9 @@
 # Architecture
 
-Baseline: PRAISEHK2 `ODEstimationMatsim` @ `77f93f2`. Audit only — no production behaviour changed.
+Baseline: PRAISEHK2 `ODEstimationMatsim` @ `77f93f2`. Audit only — **no production behaviour changed.**
+Against that baseline the entire production diff is 15 files / +229/-20 lines, and every one of those lines
+is an import redirect to the vendored fare classes or a dead-import removal; no equation, constant,
+tolerance or weighting moved. Everything else this series adds is tests, fixtures, CI and documentation.
 
 ## 1. Repository / build layout
 
