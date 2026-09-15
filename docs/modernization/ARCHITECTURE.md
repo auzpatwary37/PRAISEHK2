@@ -45,10 +45,9 @@ Build: `mvn -o -B clean test` from the repository root, or `cd MetaModelCalibrat
 clean test` → BUILD SUCCESS, **191 tests (1 skipped), 0 failures**, offline. Both invocations are
 verified equivalent.
 
-> **Snapshot counts on this branch are pre-consolidation.** This branch is based on the trunk *before*
-> the consolidation PR (`#16`, 181 tests). Counts of the form `167 tests` are measured on this branch as
-> it stands and are **regenerated from the rebased tree** once that PR lands — they are deliberately not
-> hand-added across branches.
+> **Counts are post-consolidation.** This branch was rebased onto the trunk *after* the consolidation
+> PR (`#16`, 181 tests), and the **191** above is measured on the rebased tree rather than added across
+> branches: 181 + 10 from the `CNLSUEModel` MSA core (SUE-1..SUE-5).
 
 The Hong Kong MATSim fork was first imported as a 153-file module, then reduced: the dependency
 closure was measured at 39 files / 11k LOC, but only **two** of those classes have any active use in
