@@ -587,16 +587,39 @@ if (error.get(timeBeanId).get(counter-1) < error.get(timeBeanId).get(counter-2))
 * **Evidence:** `nanErrorIsSilentlyReportedAsConverged` (asserts the throw for `+Inf` and the silent
   `true` for `Inf - Inf`).
 
-### SUE-5 — `READ` [`legacy-observed`] — recorded, not tested
-* `tolleranceLink` and the `linkSum` counter in `UpdateLinkVolume` are computed for every link and then
-  **discarded**: neither is returned nor used. The per-link relative-change diagnostic is dead.
-* The transit loop's guard is `error == Double.NaN || error == Double.NEGATIVE_INFINITY` — it tests NaN
-  (dead) where the car loop tests `+Infinity`, so a transit link can carry `+Infinity` error without
-  throwing. Not tested: it would need a `TransitLink` stub, and no test can distinguish it from the
-  car path today.
-* `UpdateLinkVolume` takes `(…, int counter, String timeBeanId)` while `CheckConvergence` takes
-  `(…, String timeBeanId, int counter)` — the argument order is transposed between the two halves of
-  the same loop.
+### SUE-5 — `VERIFIED` [`legacy-observed`, `suspected-defect`] — the transit half of the loop has NO reachable non-finite guard, and can report an infinite residual as CONVERGED
+* **Where:** `CheckConvergence` runs one loop for car links and one for transit links, and they disagree
+  on non-finite handling. The car loop guards with
+  `error == POSITIVE_INFINITY || error == NEGATIVE_INFINITY` **inside** the loaded branch and throws;
+  the transit loop guards with `error == Double.NaN || error == Double.NEGATIVE_INFINITY` **outside**
+  the branch. `NaN == NaN` is always false, and a square is never `NEGATIVE_INFINITY`, so **neither
+  transit guard can ever fire**.
+* **Legacy — three distinct outcomes, none of which is an error:**
+  | transit state | residual | verdict |
+  |---|---|---|
+  | finite current, loaded `+Inf` | `+Inf` | **CONVERGED** — the middle test is `error/newVolume*100 = Inf/Inf = NaN`, so `sum` never increments and the `sum == 0` disjunct fires |
+  | `+Inf` current, finite loaded | `+Inf` | not converged — the residual merely breaches the tolerance; nothing throws |
+  | `+Inf` current, `+Inf` loaded | `NaN` | **CONVERGED** — the dead-guard shape of SUE-4, on the transit path |
+  For the **same** first state on a car link the loop throws `IllegalArgumentException("Error is
+  infinity!!!")`. The two halves of one loop therefore disagree on whether an infinite residual is an
+  error at all, and the transit half can read it as *success*.
+* **Also discarded, in both halves:** `tolleranceLink` and the `linkSum` counter in `UpdateLinkVolume`
+  are accumulated for every link and then **never returned or read**. `UpdateLinkVolume` consults only
+  the settable `tollerance` field, so the per-link relative-change diagnostic has no effect on any
+  verdict.
+* **Code-shape note (not behaviour):** `UpdateLinkVolume` takes `(…, int counter, String timeBeanId)`
+  while `CheckConvergence` takes `(…, String timeBeanId, int counter)` — the argument order is
+  transposed between the two halves of the same loop.
+* **Expected:** one non-finite policy for the whole loop. `+Inf` should throw wherever it is produced,
+  as the car half already does, and `NaN` should never be readable as convergence.
+* **Evidence:** `CNLSUEModelTransitLoopTest.infiniteErrorThrowsForCarAndIsAbsorbedForTransit` (the
+  asymmetry, asserted against the car throw),
+  `infiniteTransitErrorAgainstAFiniteTargetIsNotConverged`,
+  `infiniteTransitErrorAgainstAnInfiniteTargetIsReportedAsConverged`, `nanTransitErrorIsReportedAsConverged`,
+  `transitUpdateAppliesTheMsaStepWeight`, `transitUpdateOnALaterIterationUsesTheGrownBeta`,
+  `emptyTransitMapLeavesTheCarPathAlone`. Driven through `fixtures/StubTransitLink`, a two-member
+  `TransitLink` double (passenger count in, accumulated passenger delta out) that avoids the
+  `TransitSchedule` the real subclasses require.
 
 ### SUE-6 — `VERIFIED` [`legacy-observed`, `suspected-defect`] — the middle stopping criterion is `(delta² / new) * 100`, which is NOT a relative error
 * `CheckConvergence` computes `error = Math.pow(currentVolume - newVolume, 2)` and then compares
