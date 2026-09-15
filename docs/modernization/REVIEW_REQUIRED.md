@@ -793,6 +793,36 @@ class.
   changes the interpretation of the whole trust-region mechanism, so it is recorded as its own item -
   the reviewer's point, confirmed by test rather than by inspection.
 
+### CAL-12 — `VERIFIED` [`paper-contradiction`] — the trust-region constants deviate from the paper's Table 2
+* **Authority:** Patwary et al. (2021), Transportation Research Part C 124:102859, **Table 2 "Trust
+  region parameters"**. The paper's mechanism — Step 4 — is three combinations of (accepted?, `rho > eta`?):
+  accepted and `rho > eta` -> increase; rejected and `rho <= eta` -> decrease; otherwise keep.
+  `CalibratorImpl.generateNewParam`:349-365 implements exactly those three branches, so the control
+  flow is faithful. The constants are not:
+
+  | Parameter | Paper (Table 2) | Legacy | where |
+  |---|---|---|---|
+  | Initial trust region radius | 10 | **25** | `CalibratorImpl.java:66` |
+  | Maximum trust region radius | 25 | **62.5** | `:70`, derived as `2.5 x TrRadius` |
+  | Minimum trust region radius | 0.001 | 0.001 | `:71` — **matches** |
+  | Threshold error ratio `eta` | 0.001 | **0.01** (10x) | `:75` |
+  | Increment multiplier | 1.25 | 1.25 | `:77` — **matches** |
+  | Decrement multiplier | 0.75 | **0.9** | `:78` |
+  | Minimum metamodel parameter change | 0.08 | see MODEL-6 | |
+  | Maximum consecutive rejection | 5 | **4** | `:73` |
+
+* **Why this matters:** the state-machine tests pin the *legacy* numbers — `25 -> 22.5` on rejection is
+  `mu_dec = 0.9`, and the acceptance threshold is `eta = 0.01`. If the divergence is drift rather than a
+  deliberate Hong Kong-specific retune, the calibrated results are not the published ones. Both
+  readings remain live.
+* **Adjacent, and the reason CAL-1 is reachable at all:** the maximum radius is *derived*
+  (`2.5 x initial`) rather than independent, so a caller passing a large initial radius gets
+  `initial > maximum` — the state in which the "increase" branch computes
+  `min(max, 1.25 x initial) < initial` and an accepted, improving step **shrinks** the radius. The
+  paper's `10 < 25` cannot reach that state.
+* **Do not change:** behaviour is pinned as observed. Resolve deliberately — this is a values question,
+  not a code question, and it is the calibration owner's to answer.
+
 ### CAL-3 — `READ` [`legacy-observed`] — `rho` has no guard for a zero predicted reduction
 * `double rouk = SimObjectiveChange / MetaObjectiveChange;` — with
   `MetaObjectiveChange == 0` this yields `±Infinity` or `NaN` (0/0). Downstream comparisons
@@ -988,6 +1018,155 @@ class.
   Tests must capture stdout rather than assume it is clean —
   `CalibratorImplStateMachineTest` does exactly that.
 
+## Publication discrepancies
+
+### PUB-1 — `VERIFIED` [`paper-contradiction`] — the 2023 paper's two-link prose parameters cannot reproduce its own Table 1
+* **Where:** Patwary, Wang & Lo (2023), *Transportation Science* 57(5):1134-1159, section 3.2 and
+  Table 1. Section 3.2 states "Both L1 and L2 have a free flow travel time of 10 ... their capacities
+  are different, 50 and 70, respectively."
+* **The contradiction:** those values cannot produce the published equilibrium. At `q = 10` the two
+  links are near-symmetric (their BPR terms differ by about 6e-4 in travel time), so `P(link 1)` is
+  about 0.5 against a published **0.9933**. A single logit scale near 1 fits the `q = 100` row, and
+  that same scale forces about 0.5 at `q = 10`, so **no scale fits both rows**. With free flow
+  **(10, 15)** and capacities **(50, 75)** a scale of 1 reproduces every published number in both rows:
+  `1/(1+e^-5) = 0.9933`, `t2 = 15.000`, and at `q = 100` `t1 = 14.455`, `c2 = 75.0`.
+* **Consequence for the oracle:** the fixture must use free flow **(10, 15)** and capacities
+  **(50, 75)**. Table 1 and Table 2 are a solved equilibrium and remain a valid external oracle; the
+  prose parameter sentence is treated as a typo.
+
+* **Second reading, which I initially missed and which honours the prose.** The published `t2 = 15.000`
+  at `x2 = 0.067` can equally be a free-flow time of 15 **or** a free-flow of 10 with a constant +5 on
+  link 2 (a fixed cost / distance term). Under that second reading, **free flow 10 for both and
+  capacity 70 reproduce the published rows**:
+  | parameterisation | UE q=10 | SUE q=10 | SUE q=100 | verdict |
+  |---|---|---|---|---|
+  | prose literally, no constant | (4.167, 5.833) | (5.000, 5.000) | (43.735, 56.265) | fails every row |
+  | free flow (10, 15), capacity (50, 75) | **(10.000, 0.000)** | **(9.933, 0.067)** | **(65.629, 34.371)** | exact, all three |
+  | free flow 10 both + 5 on link 2, capacity (50, 70) | **(10.000, 0.000)** | **(9.933, 0.067)** | (65.592, 34.408) | exact on q=10, 0.06% on q=100 |
+  | free flow 10 both + 5 on link 2, capacity (50, 67.79) | (10.000, 0.000) | (9.933, 0.067) | (65.629, 34.371) | exact, all three |
+  So the tables exclude the **literal** prose, but they do **not** single out one parameterisation, and
+  my earlier claim that free flow (10, 15) with capacity (50, 75) is the **only** one consistent with
+  the published numbers was **too strong** — it follows only if no constant term is allowed. Which
+  reading was intended was the author's call, not an inference from three printed numbers - and that
+  call has since been made; see the Decision bullet below.
+
+* **Decision (author, 2026-09-15):** the free-flow **(10, 15)** / capacity **(50, 75)** reading is the
+  intended parameterisation, and it is what the fixture uses. Table 1 confirms it digit-exactly: at
+  `q = 100`, `t2 = 15(1 + 0.15(34.371/75)^4) = 15.0992` reproduces the printed **15.099**; inverting a
+  capacity from that printed value returns **75.05**; and `1/(1+e^-5) = 0.99331` reproduces the printed
+  **0.9933**. The prose's 70 yields `15.1308` there and is treated as a typo.
+* **What the decision does and does not change:** it settles the choice the second reading left open; it
+  does **not** reinstate the withdrawn claim that three printed numbers single out one parameterisation.
+  The selection rests on the author's confirmation of *intent*, which is precisely the authority the
+  working rule in `PRAISE_ODE_RELATIONSHIP.md` section 3 reserves for intent as against observed
+  behaviour.
+
+* **Why this is recorded rather than quietly fixed:** it is the evidence for the working rule in
+  `PRAISE_ODE_RELATIONSHIP.md` section 3 — reproduce published **numbers**, do not adopt published
+  **prose**. It also removed a false confidence: DIFF-1 was originally argued partly from a printed
+  equation in the same paper and turned out to be wrong in the opposite direction (DIFF-1, RETRACTED).
+
+## `differentiation` (ODEstimation forward sensitivity, brought in as a module)
+
+### DIFF-1 — `RETRACTED` [`legacy-observed`] — the `/3600` is a unit convention, not a derivative error
+* **Original claim:** the local partial `α·β·t₀/cap^β · flow^(β−1) / 3600` is 3600× smaller than the
+  central difference of `CNLLink.getLinkTravelTime`, therefore the derivative was wrong.
+* **Why the claim was wrong — the missing counterpart is in the consumer, not in the function:**
+  * `GradientUtils.getLinkTravelTimeGrad` returns `∂t/∂θ` with `t` in **seconds**, divided by 3600 —
+    i.e. **hours** per flow unit;
+  * `ODDifferentiableSUEModel.getCarRouteGrads` (line 1828) multiplies that by the **raw**
+    `MarginalUtilityofTravelCar − MarginalUtilityofPerform`, with no `/3600`;
+  * the *level* route utility (`CNLRoute.calcRouteUtility`, lines 101 and 119) multiplies the
+    seconds-valued `getTravelTime` by `MUTravelTime = MU_travel/3600 − MU_perform/3600`.
+  * Both chains are therefore `(∂t/∂θ)·ΔMU/3600`. The factor cancels **exactly**.
+  * The check that should have been run differentiates the **utility**, not the travel time.
+* **The finite difference in the original evidence differentiated the wrong quantity.** It measured
+  the central difference of the travel-time *level* in seconds and compared it against a sensitivity
+  expressed in the utility's hour-scaled units. The three-decade agreement across step sizes was real
+  but irrelevant: it ruled out a precision artefact in a quantity that was not the right one.
+* **Refiled as a real but different finding — a convention split across two sites (DIFF-1b).** The
+  `/3600` lives in the producer while the consumer's sibling idiom (`MUTravelTime`) carries its own
+  `/3600`. Correctness therefore depends on every consumer of `linkTTGradient` multiplying by **raw**
+  `ΔMU`; a consumer that follows the level function's idiom and multiplies by `MUTravelTime` would be
+  wrong by exactly 3600. Before the modern API is frozen one convention must be chosen and the other
+  removed: either the producer returns `∂t/∂θ` in seconds and consumers apply `MU/3600`, or the
+  producer returns utility-scaled sensitivity and consumers apply raw `MU`.
+* **Nothing to fix in the derivative itself.** The author's `if (cons > 3600) logger.debug("timeGradient is too high")`
+  guard and the `//should be in sec` note on `t_0` are the traces of tracking this same magnitude.
+* **Lesson for the remaining leaves:** a sensitivity must be finite-differenced against the quantity
+  whose units it is expressed in. Comparing against the nearest-looking level function produced a
+  confident false positive here.
+
+### DIFF-2 — `VERIFIED` [`legacy-observed`] — the BPR sensitivity differentiates a different flow than the travel-time function uses
+* **Where:** `GradientUtils.getLinkTravelTimeGrad` uses `flow = getLinkCarVolume() + getLinkTransitVolume()`
+  (raw transit volume, no residual), whereas `CNLLink.getLinkTravelTime` uses
+  `car + transit·CapacityMultiplier + residual`.
+* **Legacy, restated now that the DIFF-1 unit factor is removed:** with transit volume 500 and
+  capacity multiplier 2, the central difference is **9.375e-4** against a returned sensitivity of
+  **1.0986e-7**. Putting the finite difference into the sensitivity's units divides it by 3600:
+  **2.604e-7** against **1.0986e-7**. The genuine ratio is therefore **2.370** — exactly
+  `(2000/1500)^(β−1) = (4/3)³`, the signature of evaluating the partial at flow 1500 instead of the
+  2000 the level function uses. The originally reported **8533** was this factor multiplied by the
+  DIFF-1 unit convention (`8533 / 3600 = 2.370`); it was never a defect magnitude. The flow-argument
+  mismatch in this finding is real and independent of DIFF-1, and this is the one that composes with
+  nothing else.
+* **Expected:** the partial must be evaluated at the same flow the function differentiates, including
+  the multiplier applied to transit volume.
+* **Evidence:** `BprDerivativeTest.implementedSensitivityAccountsForTheCapacityMultiplierOnTransitVolume`
+  (`@Disabled`, carries the measured sweep).
+
+### MAP-1 — `VERIFIED` [`legacy-observed`] — `MapToArray` silently writes `0.0` for a variable absent from the map
+* **Where:** `core.MapToArray.getMatrix`. The dimension check is present but commented out, and the
+  body assigns only `if (map.get(keySet.get(i)) != null)`.
+* **Legacy:** a variable missing from the map and a variable whose sensitivity is genuinely zero are
+  indistinguishable; an entirely empty map yields an all-zero gradient of the correct length rather
+  than an error.
+* **Risk:** during forward propagation a silently-zero seed zeroes that coordinate for the remainder
+  of the run with no diagnostic anywhere.
+* **Evidence:** `MapToArrayTest.absentVariableIsSilentlyWrittenAsZero`,
+  `MapToArrayTest.emptyMapProducesAnAllZeroGradient`.
+
+### MAP-2 — `VERIFIED` [`legacy-observed`] — gradient coordinate order is the source map's iteration order
+* **Where:** `MapToArray` stores `new ArrayList<>(inputMap.keySet())`; `getMap` returns a plain `HashMap`.
+* **Legacy:** a `LinkedHashMap` source yields reproducible insertion order, but a `HashMap` source
+  silently fixes hash order as the semantics of the gradient coordinates. The return direction
+  (`getMap`) re-introduces arbitrary order.
+* **Expected:** one explicit immutable parameter ordering, independent of the container the caller
+  happened to pass. This is the precondition the target architecture states for a meaningful
+  gradient: a vector is meaningless without a deterministic coordinate mapping.
+* **Evidence:** `MapToArrayTest.coordinateOrderIsHashOrderForAHashMapSource`,
+  `MapToArrayTest.getMapDoesNotPreserveCoordinateOrder`.
+
+### DIFF-3 — `READ` [`modernization-change`] — the differentiable SUE was decoupled from the commercial CPLEX solver in order to compile
+* `ODDifferentiableSUEModel` imported `optimizer.ODAdditionOptimizer` solely to call the debug printer
+  `printAdditionMap(0, "ODMatch2/", …)` at two sites (in `perFormSUEByDemandMap` and the equivalent
+  demand-map entry point). `ODAdditionOptimizer` and `ODAdditionOptimizerMultipleTime` are the only
+  classes in the package importing `ilog.cplex` / `ilog.concert`, which come from IBM CPLEX.
+* **ODEstimation never declared that dependency:** the POM declares only `ojalgo-cplex` and carries
+  Windows path *properties* (`C:/Program Files/IBM/ILOG/…`) that are never wired into a dependency.
+  No CPLEX jar exists on this machine. The class was therefore uncompilable, and with it the whole
+  differentiable model.
+* **Change (mathematically inert):** the two debug calls were removed in the vendored copy. They were
+  printers, and their only other effect was to write into a relative `"ODMatch2/"` directory during
+  assignment — removing that is also a determinism gain, since the harness forbids uncontrolled
+  relative-path writes.
+* **Also:** `dynamicTransitRouter.fareCalculators.FareCalculator` and `transitFareAndHandler.FareLink`
+  were redirected to the classes already vendored into `MetaModelCalibration`'s `transit.fare`
+  package, the same treatment previously applied to PRAISEHK. One vendored copy now serves both.
+* **Not changed:** no equation, no loop bound, no accumulation order.
+
+### ARCH-1 — `READ` [`modernization-change`] — the differentiation module depends on `MetaModelCalibration`, preserving the legacy inversion
+* ODEstimation's sources compile against `ust.hk.praisehk.metamodelcalibration.*`
+  (`AnalyticalModel*`, `CNL*`, `measurements`, `calibrator.ObjectiveCalculator`,
+  `matamodels.MetaModel`, `matsimIntegration.SignalFlowReductionGenerator`), so the new module
+  declares `MetaModelCalibration` as a dependency.
+* This reproduces the historical relationship rather than fixing it: ODEstimation was built on top of
+  PRAISEHK, and neither repository was the clean owner of the static-assignment engine. See
+  `PRAISE_ODE_RELATIONSHIP.md`.
+* **Do not invert this yet.** The target architecture removes the inversion by extracting one shared
+  static-assignment engine that both the plain and the differentiable evaluator consume. Doing that
+  before the derivative leaves are characterised would be an architectural change with no tests.
+
 ## Cross-cutting
 
 ### CC-1 — `VERIFIED` [`legacy-observed`] — the pre-existing test suite was not CI-viable
@@ -1017,5 +1196,6 @@ class.
   `ODUtils.calcMetamodelODObjectiveGradient` weights by `1/(1+SD²)`, and PRAISEHK's
   `ObjectiveCalculator` uses `1/(1+SD²)`. Additionally the `fareLinkVolumeCluster` branch of
   `calcODObjectiveGradient` looks up the singular `FareLinkAttributeName` instead of `fl.toString()`.
-  Full evidence in `PRAISE_ODE_RELATIONSHIP.md` §6. Not testable until ODEstimation is buildable in a
-  reactor.
+  Full evidence in `PRAISE_ODE_RELATIONSHIP.md` §6. The `differentiation` module now makes this
+  **testable** — the objective-gradient leaf (`ODUtils.calcODObjectiveGradient`) is in the reactor and
+  reaches `FareLink`, so a finite-difference oracle test can be added without further dependency work.

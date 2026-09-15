@@ -5,6 +5,15 @@
 unified architecture is designed, and identify the genuinely new mathematics that must
 be preserved.
 
+**Follow-up (this document is now actionable):** the differentiability subset has been brought into
+the reactor as the `differentiation` module, so the derivative leaves can be characterised in place.
+Two inert source changes were required — the HK-fork imports were redirected to the classes already
+vendored in `MetaModelCalibration`, and two CPLEX-bound debug printers were removed. See
+`REVIEW_REQUIRED.md` DIFF-3 (the change) and ARCH-1 (why the module depends on `MetaModelCalibration`,
+reproducing the inversion this document describes rather than fixing it). The first characterisation
+results are DIFF-1 and DIFF-2, and they are significant: the BPR sensitivity was measured at **3600×**
+too small against the travel-time function it is paired with.
+
 ## Baselines audited (evidence: `git rev-parse HEAD`)
 
 | Repository | Branch | Commit | Location |
@@ -127,9 +136,136 @@ avoid is *ODDifferentiableSUEModel duplicating the SUE iteration* that `CNLSUEMo
 
 ## 3. Differentiation method — evidence
 
-**Conclusion: forward-mode (tangent) sensitivity propagation, not reverse-mode/adjoint, and
-not finite differences.** The README's "back propagation" label is **misleading** and must not
-be carried into modern naming.
+### Published specification (authoritative)
+
+The implementation is a realisation of the authors' published method, so the papers are the authority
+for what the equations are *intended* to be, and the working rule agreed for this project is **treat the
+code as correct unless it is inconsistent with these equations, or internally inconsistent.**
+
+**That rule needs a caveat, because a published paper has now been found to contradict its own
+numbers.** The two-link validation in the 2023 paper states one set of parameters in prose and
+publishes a table reproducible only with a different set (documented below). So the operative rule is
+narrower than "the papers are the authority":
+
+* the **code** is canonical for *observed behaviour* — what the program actually computes;
+* the **papers** are authoritative for *intent* — what the equations were meant to be;
+* published **numbers** are the strongest oracle, because a solved equilibrium is internally
+  constrained; published **prose** about parameters is not, and must be reproduced before use.
+
+| Reference | Scope | Key equations |
+|---|---|---|
+| A.U.Z. Patwary, S. Wang, H.K. Lo (2023), *Iterative Backpropagation Method for Efficient Gradient Estimation in Bilevel Network Equilibrium Optimization Problems*, Transportation Science 57(5):1134–1159, doi:10.1287/trsc.2021.0110 | The gradient method itself: the IB recursion, BPR and logit derivatives, the objective and its gradient, the small-network validation | (3) chain rule; (6) MSA flow update; (7), (13), (16) gradient update; (8)–(9) cost/choice gradients; (10)–(11) link-flow aggregation; (14) BPR function and its derivative; (15) logit derivative; (17) finite-difference reference; (18) objective; (19) objective gradient; (27)–(30) route and mode utilities |
+| A.U.Z. Patwary et al. (2021), *Metamodel-based calibration of large-scale multimodal microscopic traffic simulation*, Transportation Research Part C 124:102859, doi:10.1016/j.trc.2020.102859 | The calibration framework: trust-region metamodel calibration, the objective PRAISEHK actually uses, the multimodal SUE formulation | **extracted** (author-supplied PDF). Table 1 default parameters; **Table 2 trust-region parameters**; (45) linear metamodel; (46) quadratic; (36)–(37) GD-I; (40) GD-II; GD-III; (48) RMSE; (49) GEH |
+
+Two facts from (2023) that constrain this repository directly:
+
+* **Eq (6)/(13) require the flow update and the gradient update to use the SAME learning rate** `α`
+  (MSA: `α = 1/ia`). `GradientUtils.getLinkFlowGrad` applies `1/beta` to the sensitivity update and
+  `CNLSUEModel` applies its counter to the flow update; whether the *same* `ia` reaches both is
+  testable and is the first thing to check on that leaf.
+* **Withdrawn: "Eq (14)'s printed BPR derivative carries no `/3600`" as support for DIFF-1.** Two
+  reasons. Eq (14) reaches this document through a garbled OCR rendering; and decisively, **DIFF-1 was
+  a false positive** — the `/3600` is a unit convention. The producer returns hours per flow unit and
+  the consumer (`getCarRouteGrads`:1828) multiplies by the *raw* `ΔMU`, while the level utility
+  (`CNLRoute.calcRouteUtility`:101/119) multiplies seconds by `MU/3600`; the factors cancel exactly.
+  See REVIEW_REQUIRED DIFF-1, now `RETRACTED`.
+
+**Open item — now closed: the 2021 Part C paper has been extracted** (author-supplied copy). Two
+results land on the work order.
+
+* Its **Table 2** specifies the trust-region policy and constants, and the legacy constants **differ**:
+  `η = 0.001` against the code's `0.01`; `μ_dec = 0.75` against `0.9`; `Δ0 = 10` and `Δmax = 25`
+  against `25` and `2.5×Δ0 = 62.5`; "maximum consecutive rejection 5" against `4`. Recorded as
+  **CAL-12**. The *control flow* is faithful — its Step 4 is exactly the three branches in
+  `CalibratorImpl.generateNewParam`:349–365.
+* On the CC-4 weighting question it gives partial evidence: §3.1 states "the default weighting factors
+  [of the] three measurement types are taken as 1", so the paper's own experiments use the
+  **unweighted** objective. That does not by itself settle `1/(1+SD)` versus `1/(1+SD²)` for the Hong
+  Kong application, but it removes the assumption that SD weighting is the paper's default.
+* Its §2.8.2 lists exactly six metamodel schemes — quadratic; analytical linear with and without
+  traffic-model improvement (Eq (30)); and GD-I/II/III — which is the legacy `MetaModel` taxonomy, so
+  the scheme names in the code are the paper's names.
+
+A third fact, which lands directly on CC-4 and on step 8 of the work order:
+
+* **Eq (18) defines the objective as `(1/2)·Σ_t Σ_l (x*_{l,t} − x^obs_{l,t})²` — unweighted, with an
+  explicit `1/2`** — and Eq (19) gives its gradient as the residual-weighted contraction
+  `Σ (x* − x^obs)·∇θx*`. So the gradient of the objective is *linear in the residual*, which is what
+  makes it cheap to validate against finite differences. Two discrepancies with the legacy code to
+  settle deliberately rather than assume:
+  * the legacy `ObjectiveCalculator` (both the plain and the SD-weighted branches) omits the `1/2`
+    factor — a constant scaling, so it changes gradient magnitudes but not the argmin;
+  * **this paper's OD-estimation objective carries no SD weighting at all**, whereas PRAISEHK offers
+    plain / SD-weighted / GEH / SD-weighted-GEH variants. Which variant is canonically "the"
+    objective, and whether the `1/(1+SD)` or `1/(1+SD²)` form is intended, cannot be resolved from
+    the 2023 paper — it is a (2021) or publication-independent question, and is the first thing the
+    objective step must decide.
+
+#### Published oracle: the two-link network (2023, §3, Tables 1–2)
+
+The paper's small-network validation is directly reproducible as a fixture: two links `O→D`, BPR with
+`α = 0.15`, `β = 4`, logit route choice, demands `q = 10` and `q = 100`.
+
+**Parameters — the paper's prose contradicts its own table, and the table wins.** §3.2 says "Both L1
+and L2 have a free flow travel time of 10 … their capacities are different, 50 and 70, respectively."
+No parameterisation of the logit reproduces the published Table 1 from those values:
+
+* free-flow 10 and 10 makes the links near-symmetric at `q = 10` (the BPR terms differ by ~6e-4 in
+  travel time), so `P(link 1) ≈ 0.5`, not the published **0.9933**;
+* a single logit scale `θ` fits the `q = 100` row at `θ ≈ 1`, and that same `θ = 1` forces `≈ 0.5`
+  at `q = 10` — **no `θ` fits both rows** under the prose values;
+* with free flow **(10, 15)** and capacities **(50, 75)**, `θ = 1` reproduces **every published
+  value in both rows**: `P(link 1) = 1/(1+e^{−5}) = 0.9933` and `t₂ = 15.000` at `q = 10`; at
+  `q = 100`, `t₁ = 10(1+0.15(65.629/50)⁴) = 14.455` and `c₂ = 34.371/(0.044)^{1/4} = 75.0`.
+
+The fixture therefore uses free flow **(10, 15)** and capacities **(50, 75)**, which reproduces every
+published number exactly. **But that is not the only reading** — see PUB-1: a free-flow of 10 on both
+links with a constant **+5 on link 2** also reproduces the `q = 10` rows exactly (and the `q = 100`
+row to 0.06%), and it honours the prose's capacity of 70. The tables exclude the *literal* prose
+(which fails every row — `5.000` against `9.933`, and `4.167` against `10.000`) but do not single out
+one parameterisation. The choice between them was the author's, and **the author has confirmed free
+flow (10, 15) with capacities (50, 75) as intended** (PUB-1, Decision), so the fixture uses those
+values as an explicitly recorded decision rather than a silent one. This is the concrete reason the
+rule at the top of this section is written as reproduce-the-numbers rather than trust-the-text.
+Published equilibrium values (Table 1, SUE):
+
+| q | link 1 flow | link 2 flow | P(link 1) | P(link 2) | t₁ | t₂ |
+|---|---|---|---|---|---|---|
+| 10 | 9.933 | 0.067 | 0.9933 | 0.0067 | 10.002 | 15 |
+| 100 | 65.629 | 34.371 | 0.6563 | 0.3437 | 14.453 | 15.099 |
+
+Published gradients (Table 2, IB against FD): at `q = 10`, `∇t = (9.35E-04, 5.71E-13)` with FD
+reporting `0` for the second component; at `q = 100`, `∇x = (0.1242, 0.8758)`,
+`∇w = (0.0053, 0.0053)`, `∇t = (0.0338, 0.0101)`. The single IB/FD disagreement in the paper is a
+**documented machine-precision artefact**, not an algorithm error: the true change was ~5.7E-21
+against a 1E-8 step, below MATLAB's 1E-16 precision.
+
+This is an **external oracle in the strongest sense** — published numbers from an independent
+implementation — and it should be encoded before any derivative leaf is trusted, because one fixture
+then exercises the forward SUE, the logit derivative, the route-flow product rule, link-flow
+aggregation and the objective gradient together. The paper's own FD uses a **forward** difference at
+a fixed `c = 1E-8`; the harness's central-difference sweep over several step sizes is better
+conditioned, and where the two disagree at `1E-8` the artefact above explains why.
+
+### Method — evidence from the implementation
+
+**Conclusion: this is the authors' Iterative Backpropagation (IB).** It is **not** reverse-mode
+automatic differentiation of an objective covector, and **not** finite differences. The naming has to
+be stated precisely, because it is easy to get wrong in either direction:
+
+* The published method is *named* "iterative backpropagation"; the paper names the gradient step
+  itself "gradient backpropagation" (§2.2) and labels Step 3 of the algorithm the "**backward pass**"
+  (§3.2, Figure 1) with Step 2 the "forward pass". So "backpropagation" is the authors' own term —
+  it is **not** a misnomer, and an earlier revision of this document was wrong to say it was.
+* What "backward pass" means here is a **reverse-order sweep over the assignment sub-components
+  within an iteration** (cost → choice → flow), not a reverse sweep of the whole equilibrium. The
+  sensitivity carrier is a dense `double[]` with one entry per decision variable — a Jacobian column,
+  not an objective covector — and it is accumulated **across** iterations by the MSA recursion of
+  Eq (7)/(13).
+
+**Withdrawn:** the earlier claim that "the README's 'back propagation' label is misleading and must
+not be carried into modern naming". Recorded here rather than deleted so the correction is visible.
+
 
 Evidence:
 

@@ -4,13 +4,13 @@ name: deterministic-tests
 # to it.
 #
 # Design notes:
-#  * TEMPORARY CI SCOPE. All Maven invocations set working-directory to
-#    MetaModelCalibration. A root reactor POM now exists, so this is no longer forced;
-#    it is kept because the harness historically pinned the CWD there. Before a SECOND
-#    module is added this gate MUST move to the reactor root, otherwise a new module
-#    could be added and never be exercised by the required check. Moving it is safe:
-#    Surefire pins workingDirectory to ${project.basedir}, which is still the module
-#    directory under reactor execution (verified: a root-level run reports 0 skipped).
+#  * SCOPE IS THE REACTOR ROOT. All Maven invocations run at the repository root so
+#    that every module is exercised. This gate used to set working-directory to
+#    MetaModelCalibration, which was safe only while that was the single module; the
+#    `differentiation` module makes that scope wrong, because a module added later
+#    would never be seen by the required check. Moving to the root is safe: Surefire
+#    pins workingDirectory to ${project.basedir}, which under reactor execution is
+#    still the module directory.
 #    See docs/modernization/ARCHITECTURE.md section 5.
 #  * `mvn` (not `mvn -o`) is used: a fresh runner has an empty ~/.m2, so the build
 #    must be allowed to download dependencies once; the cache below makes later
@@ -59,23 +59,23 @@ jobs:
           mvn -version
 
       - name: Compile (main + test)
-        working-directory: MetaModelCalibration
         run: mvn -B clean test-compile
 
       - name: Run deterministic tests
-        working-directory: MetaModelCalibration
         run: mvn -B test
 
       - name: Assert the test count did not silently collapse
-        working-directory: MetaModelCalibration
         # A suite that reports fewer tests than expected is a failure, not a pass:
         # the legacy nondeterministic test is quarantined in the POM, and a
-        # mis-edited <excludes> must not be able to hide the whole suite.
+        # mis-edited <excludes> must not be able to hide a whole module. The
+        # threshold spans every module in the reactor (MetaModelCalibration 192,
+        # differentiation 16 at the time of writing), so dropping a module from
+        # the reactor trips this guard rather than passing quietly.
         run: |
-          total=$(awk -F'[:,]' '/^Tests run:/ {s+=$2} END {print s+0}' target/surefire-reports/*.txt)
+          total=$(awk -F'[:,]' '/^Tests run:/ {s+=$2} END {print s+0}' */target/surefire-reports/*.txt)
           echo "total tests reported: ${total}"
-          if [ "${total}" -lt 80 ]; then
-            echo "::error::expected at least 80 tests, got ${total}"
+          if [ "${total}" -lt 180 ]; then
+            echo "::error::expected at least 180 tests across the reactor, got ${total}"
             exit 1
           fi
 
@@ -84,5 +84,5 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: surefire-reports
-          path: MetaModelCalibration/target/surefire-reports/
+          path: '*/target/surefire-reports/'
           if-no-files-found: ignore

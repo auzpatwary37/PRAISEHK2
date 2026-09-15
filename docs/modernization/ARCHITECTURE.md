@@ -27,11 +27,14 @@ Root cause and remedy: `PRAISE_MATSIMHK_RELATIONSHIP.md`, `DEPENDENCIES.md`.
 ```
 PRAISEHK2/
 ├── pom.xml                         # reactor aggregator (root-level `mvn test`); no deps, no parent
-├── MetaModelCalibration/           # the single module today
+├── MetaModelCalibration/           # module 1: the legacy calibration toolkit
 │   ├── pom.xml                     # + junit5/surefire, + jcool system dep; MATSim-HK dependency REMOVED
 │   └── src/{main,test}/java/ust/hk/praisehk/metamodelcalibration/
 │       ├── transit/fare/           # NEW: 2 vendored classes (FareCalculator, FareLink)
 │       └── ...                     # unchanged packages
+├── differentiation/                # NEW module 2: ODEstimation forward-sensitivity reference
+│   ├── pom.xml                     # depends on MetaModelCalibration (legacy direction; see ARCH-1)
+│   └── src/{main,test}/java/{analyticalModel,core,optimizer,differentiation}/
 ├── docs/modernization/             # NEW: audit + TDD foundation
 │   ├── ARCHITECTURE.md
 │   ├── LEGACY_BEHAVIOR.md
@@ -44,9 +47,11 @@ PRAISEHK2/
 └── README.md
 ```
 
-Build: `mvn -o -B clean test` from the repository root, or `cd MetaModelCalibration && mvn -o -B
-clean test` → BUILD SUCCESS, **192 tests (1 skipped), 0 failures**, offline. Both invocations are
-verified equivalent.
+Build: `mvn -o -B clean test` from the repository root → BUILD SUCCESS, **208 tests (3 skipped),
+0 failures**, offline, across both modules. A module can still be built alone
+(`cd MetaModelCalibration && mvn -o -B clean test`, 192 tests); `differentiation` resolves
+`MetaModelCalibration` from the reactor, so it is built either with `mvn -pl differentiation -am test`
+or as part of a full reactor run.
 
 The Hong Kong MATSim fork was first imported as a 153-file module, then reduced: the dependency
 closure was measured at 39 files / 11k LOC, but only **two** of those classes have any active use in
@@ -153,21 +158,20 @@ matsim-adapter/      ◀── matsimIntegration/*, and the vendored transit.far
 
 ## 5. Build & test infrastructure (as of this PR)
 
-* **One module, plus a root aggregator.** `pom.xml` at the repository root is a pure aggregator: it
-  declares `<module>MetaModelCalibration</module>` and nothing else (no parent, no dependencies, no
-  plugins), so the module keeps its own coordinates and build. It exists so `mvn test` works from the
-  repository root and so the planned multi-module system has a place to grow. CI still runs inside
-  `MetaModelCalibration/` deliberately, because the surefire working directory is pinned there.
+* **Two modules, plus a root aggregator.** `pom.xml` at the repository root is a pure aggregator: it
+  declares `<module>MetaModelCalibration</module>` and `<module>differentiation</module>` (no parent,
+  no dependencies, no plugins), so each module keeps its own coordinates and build. It exists so
+  `mvn test` works from the repository root and so the planned multi-module system has a place to grow.
 * JUnit 5 + `junit-vintage-engine`; surefire 3.2.5 with the legacy nondeterministic test excluded.
-* **CI scope rule (temporary by design).** The required build/test gate currently runs *inside*
-  `MetaModelCalibration`. That is harmless while the reactor has one module, but it must not become
-  accidental architecture: hard-coding `cd MetaModelCalibration` would let a future module be added to
-  the reactor and never be exercised by the required check. **Before the second module is added, move
-  the required gate to the reactor root.** That move is safe: Surefire pins
+* **CI scope: at the reactor root.** The required build/test gate runs `mvn` at the repository root, so
+  every module is exercised. This was previously a *pending requirement* — the gate ran inside
+  `MetaModelCalibration`, which was harmless while the reactor had one module but would have let the
+  next module be added and never be exercised by the required check. Adding `differentiation` is what
+  forced the move. It is safe because Surefire pins
   `<workingDirectory>${project.basedir}</workingDirectory>`, and `${project.basedir}` is still the
-  module directory when the module is built from the reactor — verified by running `mvn -o -B test`
-  from the repository root, which reports **0 skipped**, so `ParamReader`'s CWD-dependent
-  characterization still runs its substantive assertion (PARAM-1).
+  module directory when a module is built from the reactor — so `ParamReader`'s CWD-dependent
+  characterization still runs its substantive assertion (PARAM-1). The count guard now spans the
+  reactor, so dropping a module trips it rather than passing quietly.
 * Fixtures live in `src/test/java/.../fixtures/` and are data + in-memory network builders only.
 * No test requires: Hong Kong data, absolute paths, MATLAB, network access, `Math.random()`, or
   `HashMap` iteration order.
@@ -179,8 +183,8 @@ matsim-adapter/      ◀── matsimIntegration/*, and the vendored transit.far
   process-level network sandbox**, so residual egress remains possible for a client using a raw socket,
   `Proxy.NO_PROXY`, or its own proxy configuration. Hard isolation, if required, needs enforcement
   outside the JVM (network namespace, firewall, or a no-egress container) and is **not** in place.
-* Offline verification: `cd MetaModelCalibration && mvn -o -B clean test`
-  → BUILD SUCCESS, **192 tests (1 skipped), 0 failures**, zero compiler diagnostics.
+* Offline verification: `mvn -o -B clean test` from the repository root
+  → BUILD SUCCESS, **208 tests (3 skipped), 0 failures**, zero compiler diagnostics.
 
 ## 6. Delivery roadmap (small, behaviour-protected PRs)
 
@@ -194,9 +198,9 @@ it is the gate for Track C.
 
 | Item | Content | Status |
 |---|---|---|
-| CI | `.github/workflows/ci.yml` — deterministic suite on every PR into the trunk, plus a guard that fails if fewer than 80 tests report | done |
+| CI | `.github/workflows/ci.yml` — deterministic suite on every PR into the trunk, plus a guard that fails if fewer than 180 tests report across the reactor | done |
 | Protection | `modernization/main` requires the `mvn -B clean test (JDK 17)` check (strict); force-push and deletion disallowed | done |
-| CI scope | move the required gate from `MetaModelCalibration` to the reactor root — **required before the second module is added** | pending |
+| CI scope | move the required gate from `MetaModelCalibration` to the reactor root — **done**, forced by the `differentiation` module; the guard threshold moved with it | done |
 
 ### Track A — PRAISEHK characterization
 
